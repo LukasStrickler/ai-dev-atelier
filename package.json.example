@@ -1,0 +1,33 @@
+{
+  "name": "your-project-name",
+  "version": "1.0.0",
+  "scripts": {
+    "ada::agent:finalize": "bash /ai-dev-atelier/skills/code-quality/scripts/finalize.sh agent",
+    "ada::ci:finalize": "bash /ai-dev-atelier/skills/code-quality/scripts/finalize.sh ci",
+    "ada::docs:check": "bash /ai-dev-atelier/skills/docs-check/scripts/check-docs.sh",
+    "ada::review:task": "bash /ai-dev-atelier/skills/code-review/scripts/review-run.sh task",
+    "ada::review:pr": "bash /ai-dev-atelier/skills/code-review/scripts/review-run.sh pr",
+    "ada::review:read": "bash /ai-dev-atelier/skills/code-review/scripts/review-read.sh",
+    "ada::review:cleanup": "bash /ai-dev-atelier/skills/code-review/scripts/review-cleanup.sh",
+    "ada::pr:comments": "bash /ai-dev-atelier/skills/pr-review/scripts/pr-comments-fetch.sh read",
+    "ada::pr:comments:detect": "bash /ai-dev-atelier/skills/pr-review/scripts/pr-comments-detect.sh",
+    "ada::pr:comments:get": "bash /ai-dev-atelier/skills/pr-review/scripts/pr-comments-get.sh",
+    "ada::pr:comments:resolve": "bash /ai-dev-atelier/skills/pr-review/scripts/pr-comments-resolve.sh",
+    "ada::pr:comments:resolve:interactive": "bash /ai-dev-atelier/skills/pr-review/scripts/pr-comments-fetch.sh resolve",
+    "ada::pr:comments:dismiss": "bash /ai-dev-atelier/skills/pr-review/scripts/pr-comments-dismiss.sh",
+    "ada::pr:comments:cleanup": "bash /ai-dev-atelier/skills/pr-review/scripts/pr-comments-cleanup.sh --all",
+    "ada::pr:list": "bash /ai-dev-atelier/skills/pr-review/scripts/pr-comments-fetch.sh list",
+    "ada::research:list": "bash /ai-dev-atelier/skills/research/scripts/research-list.sh",
+    "ada::research:show": "bash /ai-dev-atelier/skills/research/scripts/research-show.sh",
+    "ada::research:status": "bash /ai-dev-atelier/skills/research/scripts/research-status.sh",
+    "ada::research:cleanup": "bash /ai-dev-atelier/skills/research/scripts/research-cleanup.sh",
+    "ada::agent:spawn": "bash /ai-dev-atelier/skills/agent-orchestration/scripts/agent-spawn.sh",
+    "ada::agent:wait": "bash /ai-dev-atelier/skills/agent-orchestration/scripts/agent-wait.sh",
+    "ada::agent:collect": "bash /ai-dev-atelier/skills/agent-orchestration/scripts/agent-collect.sh",
+    "ada::agent:merge": "bash /ai-dev-atelier/skills/agent-orchestration/scripts/agent-merge.sh",
+    "ada::agent:discard": "bash /ai-dev-atelier/skills/agent-orchestration/scripts/agent-discard.sh",
+    "ada::agent:orchestrate": "bash /ai-dev-atelier/skills/agent-orchestration/scripts/agent-orchestrate.sh",
+    "ada::agent:cleanup": "bash /ai-dev-atelier/skills/agent-orchestration/scripts/agent-cleanup.sh"
+  }
+}
+

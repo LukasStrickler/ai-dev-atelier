@@ -1,0 +1,86 @@
+{
+  "topic": "Distributed Consensus Algorithms",
+  "created": "2025-01-15T10:30:00Z",
+  "updated": "2025-01-15T10:30:00Z",
+  "research_question": "What consensus algorithm should we use for our distributed system?",
+  "original_intent": {
+    "problem": "We need to implement consensus in our distributed system but are unsure which algorithm to choose",
+    "desired_outcome": "Make an informed decision about which consensus algorithm best fits our requirements",
+    "constraints": "Must support high throughput, low latency, and handle network partitions gracefully"
+  },
+  "approaches": [
+    {
+      "id": "approach-1",
+      "name": "Paxos-based Consensus",
+      "evidence_card": "evidence-card-approach-1.md",
+      "papers": ["paper-1", "paper-2", "paper-3"]
+    },
+    {
+      "id": "approach-2",
+      "name": "Raft Consensus",
+      "evidence_card": "evidence-card-approach-2.md",
+      "papers": ["paper-4", "paper-5"]
+    }
+  ],
+  "papers": [
+    {
+      "id": "paper-1",
+      "title": "Paper Title",
+      "authors": ["Author 1", "Author 2"],
+      "year": 2024,
+      "doi": "10.1234/example.doi",
+      "urls": {
+        "official": "https://example.com/paper.pdf",
+        "arxiv": "https://arxiv.org/abs/1234.5678",
+        "publisher": "https://publisher.com/paper",
+        "open_access": "https://open-access-url.com/paper.pdf"
+      },
+      "approach": "approach-1",
+      "download_date": "2025-01-15T10:35:00Z",
+      "pdf_path": ".ada/temp/research/downloads/paper-1.pdf",
+      "pdf_cleared": false,
+      "quality_indicator": "high|medium|low",
+      "quality_notes": "Highly cited, peer-reviewed journal",
+      "notes": "Optional notes about this paper"
+    }
+  ],
+  "evidence_cards": [
+    {
+      "id": "approach-1",
+      "file": "evidence-card-approach-1.md",
+      "approach_name": "Paxos-based Consensus",
+      "papers_count": 3,
+      "created": "2025-01-15T10:40:00Z"
+    },
+    {
+      "id": "approach-2",
+      "file": "evidence-card-approach-2.md",
+      "approach_name": "Raft Consensus",
+      "papers_count": 2,
+      "created": "2025-01-15T10:45:00Z"
+    }
+  ],
+  "search_queries": [
+    {
+      "query": "distributed consensus algorithms",
+      "timestamp": "2025-01-15T10:30:00Z",
+      "results_count": 25,
+      "mcp_used": "openalex",
+      "papers_found": ["paper-1", "paper-2", "paper-4"]
+    }
+  ],
+  "research_report": "research-report.md",
+  "papers_processed": 5,
+  "approaches_identified": 2,
+  "research_metrics": {
+    "papers_total": 0,
+    "papers_high_quality": 0,
+    "papers_medium_quality": 0,
+    "papers_low_quality": 0,
+    "papers_recent": 0,
+    "approaches_identified": 0,
+    "evidence_cards_created": 0,
+    "synthesis_completeness": "in_progress|complete",
+    "coverage_assessment": "comprehensive|moderate|limited"
+  }
+}
