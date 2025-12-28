@@ -1,6 +1,6 @@
 # AI Dev Atelier Setup Guide
 
-Quick setup guide for integrating AI Dev Atelier tools into your project.
+Quick setup guide for installing AI Dev Atelier skills into Codex.
 
 > **📦 Need to install dependencies first?** See [INSTALL.md](./INSTALL.md) for complete installation instructions including all required and optional dependencies.
 
@@ -10,163 +10,182 @@ Quick setup guide for integrating AI Dev Atelier tools into your project.
 # 1. Clone AI Dev Atelier
 git clone https://github.com/LukasStrickler/ai-dev-atelier.git /ai-dev-atelier
 
-# 2. Navigate to your project
-cd /path/to/your/project
-
-# 3. Run setup script
+# 2. Verify skill structure
 bash /ai-dev-atelier/setup.sh
 
-# 4. Configure skills in your AI agent (REQUIRED)
-# See "Configure Skills in Your AI Agent" section below
+# 3. Install skills to Codex
+bash /ai-dev-atelier/install.sh
+
+# 4. Verify skills are loaded in Codex
+# Ask Codex: "What skills are available?"
 ```
 
-The setup script automatically adds all required npm scripts to your `package.json`. It will:
-- ✅ Check prerequisites (jq, package.json)
-- ✅ Add missing scripts (preserves existing ones)
-- ✅ Create a backup of your package.json
-- ✅ Show a summary of what was added
+The setup script verifies that all skills are properly structured. The install script copies skills to Codex's skills directory (`~/.codex/skills`).
 
-**Important**: After setup, you must configure the skills in your AI agent for the agent to discover and use them. See the "Configure Skills in Your AI Agent" section below.
+**Important**: Skills follow the [Anthropic Agent Skills](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills) standard. Scripts are embedded within each skill directory and are executed by agents when they use the skill.
 
 ## Prerequisites
 
-Before running the setup script, ensure you have:
+Before running the setup and install scripts, ensure you have:
 
 - **Git** - Version control
-- **Node.js 18+** or **Bun** - JavaScript runtime
-- **jq** - JSON processor
-- **package.json** - In your project root
+- **Bash** - Shell (included on macOS/Linux, Git Bash on Windows)
+- **Codex** - AI agent that supports skills (skills are installed to `~/.codex/skills`)
 
 > **📖 Detailed installation instructions:** See [INSTALL.md](./INSTALL.md) for platform-specific installation commands and optional dependencies (GitHub CLI, CodeRabbit CLI, TypeScript, ESLint, Prettier).
 
-## What Gets Added
+## What Gets Installed
 
-The setup script adds 15 npm scripts with the `ada::` prefix to your `package.json`. These scripts work independently via command line.
+The install script copies skills from the local repository to `~/.codex/skills`. Each skill includes:
 
-**Note**: The npm scripts are separate from the agent skills. To use the skills in your AI agent (for automatic triggering), you must configure them separately (see "Configure Skills in Your AI Agent" section).
+- **SKILL.md** - Skill definition with YAML frontmatter and instructions
+- **scripts/** - Executable scripts embedded within the skill
+- **references/** - Additional documentation and templates (if applicable)
 
-### Available Scripts
+### Available Skills
 
-### Code Quality
-- `ada::agent:finalize` - Run all quality checks (typecheck, lint, format, markdown)
-- `ada::ci:finalize` - CI mode (read-only checks)
+- **code-quality** - Code quality checks (typecheck, lint, format, markdown)
+- **docs-check** - Documentation update detection
+- **docs-write** - Documentation writing and updates
+- **code-review** - CodeRabbit reviews (task and pr modes)
+- **pr-review** - GitHub PR comments management
+- **search** - Web and library documentation search (Tavily, Context7)
+- **research** - Academic research with evidence cards (OpenAlex, PDF extraction)
+- **agent-orchestration** - Spawn and manage hierarchical AI sub-agents
 
-### Documentation
-- `ada::docs:check` - Check for documentation updates needed
+## Installation Process
 
-### Code Review (CodeRabbit)
-- `ada::review:task` - Review uncommitted changes
-- `ada::review:pr` - Review PR changes vs main
-- `ada::review:read` - Read latest review results
-- `ada::review:cleanup` - Clean up old reviews
-
-### PR Comments
-- `ada::pr:comments [PR_NUMBER]` - Fetch PR comments
-- `ada::pr:comments:detect` - Detect PR number
-- `ada::pr:comments:get [PR_NUMBER] [INDEX_OR_ID]` - Get single comment
-- `ada::pr:comments:resolve [PR_NUMBER] <ID>...` - Resolve comments
-- `ada::pr:comments:resolve:interactive` - Interactive resolve
-- `ada::pr:comments:dismiss [PR_NUMBER] <ID> <REASON>` - Dismiss comment
-- `ada::pr:comments:cleanup [--all] [PR_NUMBER]` - Clean up files
-- `ada::pr:list` - List open PRs
-
-## Verify Installation
+### Step 1: Verify Skill Structure
 
 ```bash
-# Check scripts were added
-npm run | grep "ada::"
-
-# Test a script
-npm run ada::docs:check
+bash /ai-dev-atelier/setup.sh
 ```
+
+This script:
+- ✅ Verifies skills directory exists
+- ✅ Checks for required skills (code-quality, docs-check, code-review, pr-review)
+- ✅ Validates SKILL.md files are present
+- ✅ Reports any missing or invalid skills
+
+### Step 2: Install Skills to Codex
+
+```bash
+bash /ai-dev-atelier/install.sh
+```
+
+This script:
+- ✅ Copies skills to `~/.codex/skills`
+- ✅ Preserves existing `.system` directory in Codex
+- ✅ Shows smart diff before overwriting existing skills
+- ✅ Asks for confirmation before overwriting (use `--yes` to skip)
+
+**Options:**
+- `--yes` or `-y` - Skip confirmation prompts (auto-overwrite)
+- `--help` or `-h` - Show help message
+
+### Step 3: Verify Installation
+
+Ask Codex: "What skills are available?"
+
+Codex should list: `code-quality`, `docs-check`, `docs-write`, `code-review`, `pr-review`, `search`, `research`, `agent-orchestration`
+
+## Testing and Validation
+
+Verify the integrity and structure of all skills using the validation script:
+
+```bash
+bash .test/scripts/validate-skills.sh
+```
+
+## How Agents Use Skills
+
+Skills follow the Anthropic Agent Skills standard:
+
+1. **Discovery**: Agents scan skill directories (like `~/.codex/skills`) for directories containing `SKILL.md` files
+2. **Loading**: Agents read `SKILL.md` files which contain:
+   - YAML frontmatter with `name` and `description`
+   - Detailed instructions on when and how to use the skill
+   - References to embedded scripts in `scripts/` subdirectories
+3. **Execution**: When an agent decides to use a skill, it:
+   - Reads the skill instructions from `SKILL.md`
+   - Executes scripts via `bash skills/<skill-name>/scripts/<script-name>.sh`
+   - Scripts are called directly, not through npm or package.json
+
+**Key Points:**
+- Scripts are embedded within skill directories
+- Agents read `SKILL.md` to understand how to use each skill
+- Scripts are executed via bash, with paths relative to the skill directory
+- No package.json or npm scripts required
 
 ## Customization
 
 ### Different Installation Path
 
-If AI Dev Atelier is not at `/ai-dev-atelier`, update the paths in your `package.json` scripts:
+If AI Dev Atelier is not at `/ai-dev-atelier`, the install script automatically detects the correct path based on where it's located.
 
-```json
-{
-  "scripts": {
-    "ada::agent:finalize": "bash /custom/path/skills/code-quality/scripts/finalize.sh agent"
-  }
-}
+### Updating Skills
+
+To update skills after making changes to the local repository:
+
+```bash
+# Re-run install script
+bash /ai-dev-atelier/install.sh
+
+# Or use --yes to auto-overwrite
+bash /ai-dev-atelier/install.sh --yes
 ```
 
-### Existing Scripts
-
-The setup script **never modifies or removes** existing scripts. Your project scripts remain untouched.
+The script will show a diff of changes before overwriting (unless `--yes` is used).
 
 ## Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
-| `jq: command not found` | See [INSTALL.md](./INSTALL.md) for installation instructions |
-| `package.json not found` | Run setup from project root directory |
-| Scripts not found at `/ai-dev-atelier/skills/` | Verify clone location or update paths in package.json |
-| Permission denied | `chmod +x /ai-dev-atelier/skills/*/scripts/*.sh` |
+| Skills directory not found | Verify AI Dev Atelier is cloned correctly |
+| SKILL.md not found | Ensure you're running from the AI Dev Atelier root directory |
+| Permission denied | `chmod +x /ai-dev-atelier/install.sh` |
+| Skills not appearing in Codex | Verify skills are installed to `~/.codex/skills` |
+| Codex doesn't recognize skills | Restart Codex after installation |
 
 > **📖 More troubleshooting:** See [INSTALL.md](./INSTALL.md) for comprehensive troubleshooting guide and verification checklist.
 
-## Configure Skills in Your AI Agent
-
-**IMPORTANT**: After running the setup script, you must configure the skills in your AI agent (Claude Code, Codex, etc.) for the agent to discover and use them.
-
-### For Claude Code / Codex
-
-1. **Add skills directory to agent configuration:**
-   - Skills are located at: `/ai-dev-atelier/skills/`
-   - Configure your agent to load skills from this directory
-   - See your agent's documentation for how to add skill directories
-
-2. **Verify skills are loaded:**
-   - Ask your agent: "What skills are available?"
-   - The agent should list: `code-quality`, `docs-check`, `docs-write`, `code-review`, `pr-review`
-
-3. **Test skill triggering:**
-   - Try: "Run code quality checks" (should trigger `code-quality` skill)
-   - Try: "Check if documentation needs updates" (should trigger `docs-check` skill)
-
-### For Other Agents
-
-- **Cursor**: Add skills directory in Cursor settings
-- **VS Code Copilot**: Configure skills path in settings
-- **Other agents**: Refer to your agent's documentation for skill configuration
-
-**Note**: The npm scripts (`ada::*`) work independently of agent skills. You can use them via command line even if skills aren't configured in your agent.
-
 ## Next Steps
 
-1. **Configure skills in your AI agent** (see above)
+1. **Verify skills are loaded in Codex:**
+   - Ask Codex: "What skills are available?"
+   - Should list all installed skills
 
-2. **Read the documentation:**
+2. **Read the skills documentation:**
    ```bash
    cat /ai-dev-atelier/skills/README.md
    ```
 
-3. **Test the tools:**
-   ```bash
-   npm run ada::docs:check
-   npm run ada::agent:finalize
-   ```
+3. **Test a skill:**
+   - Ask Codex: "Run code quality checks" (triggers `code-quality` skill)
+   - Ask Codex: "Check if documentation needs updates" (triggers `docs-check` skill)
 
-4. **Integrate into workflow:**
-   - Add `ada::agent:finalize` to pre-commit hooks
-   - Use `ada::review:task` before committing
-   - Use PR comment tools when working on pull requests
+4. **Learn about individual skills:**
+   - Read `skills/<skill-name>/SKILL.md` for detailed instructions
+   - Each skill documents its scripts and usage patterns
 
 ## Re-running Setup
 
-Safe to run multiple times. The script only adds missing scripts:
+Safe to run multiple times:
 
 ```bash
+# Verify structure
 bash /ai-dev-atelier/setup.sh
+
+# Re-install skills (with confirmation)
+bash /ai-dev-atelier/install.sh
+
+# Re-install skills (auto-overwrite)
+bash /ai-dev-atelier/install.sh --yes
 ```
 
 ## Support
 
 - **Installation Guide:** [INSTALL.md](./INSTALL.md) - Complete dependency installation instructions
-- **Documentation:** `/ai-dev-atelier/skills/README.md`
-- **Script help:** See individual skill documentation in `skills/*/SKILL.md`
+- **Skills Documentation:** `/ai-dev-atelier/skills/README.md`
+- **Individual Skills:** See `skills/*/SKILL.md` for detailed skill documentation
 - **Repository:** https://github.com/LukasStrickler/ai-dev-atelier

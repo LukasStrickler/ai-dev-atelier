@@ -1,6 +1,6 @@
 ---
 name: docs-check
-description: Analyze git diff to identify code changes requiring documentation updates. Categorizes changes (database/schema, API endpoints, components, configuration, authentication) and suggests relevant documentation files to review. Use when: (1) After making code changes, (2) Before committing significant changes, (3) When adding new features or modifying APIs, (4) During PR preparation, (5) When working with database schemas, API routes, components, or configuration files, (6) To ensure documentation stays synchronized with code changes, (7) For documentation sync and maintenance, or (8) For pre-commit documentation checks. Triggers: "check docs", "docs check", "documentation check", "update docs", "sync documentation", "what docs need updating", "check if docs are up to date", "after code changes", "before committing".
+description: "Analyze git diff to identify code changes requiring documentation updates. Categorizes changes (database/schema, API endpoints, components, configuration, authentication) and suggests relevant documentation files to review. Use when: (1) After making code changes, (2) Before committing significant changes, (3) When adding new features or modifying APIs, (4) During PR preparation, (5) When working with database schemas, API routes, components, or configuration files, (6) To ensure documentation stays synchronized with code changes, (7) For documentation sync and maintenance, or (8) For pre-commit documentation checks. Triggers: check docs, docs check, documentation check, update docs, sync documentation, what docs need updating, check if docs are up to date, after code changes, before committing."
 ---
 
 # Documentation Check
@@ -23,7 +23,7 @@ The tool categorizes changes and suggests relevant documentation files:
 
 ## Workflow
 
-1. **Run check**: `npm run ada::docs:check` (or `-- --verbose` for details)
+1. **Run check**: `bash skills/docs-check/scripts/check-docs.sh` (or `--verbose` for details)
    - Analyzes git diff for code changes requiring documentation updates
 
 2. **Review output**: Categorized changes with suggested documentation files
@@ -45,13 +45,13 @@ The tool categorizes changes and suggests relevant documentation files:
 ### Example 1: Basic Usage
 
 ```bash
-npm run ada::docs:check
+bash skills/docs-check/scripts/check-docs.sh
 ```
 
 ### Example 2: Verbose Mode
 
 ```bash
-npm run ada::docs:check -- --verbose
+bash skills/docs-check/scripts/check-docs.sh --verbose
 ```
 
 ## References

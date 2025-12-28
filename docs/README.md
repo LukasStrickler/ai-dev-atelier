@@ -26,7 +26,7 @@ The following skills help maintain documentation:
 
 ## Tools
 
-Use `npm run ada::docs:check` to automatically detect when code changes require documentation updates.
+Use `bash skills/docs-check/scripts/check-docs.sh` to automatically detect when code changes require documentation updates.
 
 ## Quick Reference
 
@@ -34,7 +34,7 @@ Use `npm run ada::docs:check` to automatically detect when code changes require 
 
 Before creating a PR:
 
-- [ ] Run `npm run ada::docs:check` to identify needed updates
+- [ ] Run `bash skills/docs-check/scripts/check-docs.sh` to identify needed updates
 - [ ] Review changed files and determine documentation impact
 - [ ] Update relevant documentation files
 - [ ] Update diagrams if schemas/workflows changed

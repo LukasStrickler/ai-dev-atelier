@@ -8,61 +8,102 @@ Skills are organized directories containing `SKILL.md` files that follow the [An
 
 ## Available Skills
 
-| Skill | Description | Tools |
-|-------|-------------|-------|
-| [`code-quality`](./code-quality/SKILL.md) | Run comprehensive code quality checks including typecheck, lint, format, and markdown validation | `ada::agent:finalize`, `ada::ci:finalize` |
-| [`docs-check`](./docs-check/SKILL.md) | Analyze git diff to identify code changes requiring documentation updates | `ada::docs:check` |
+| Skill | Description | Scripts |
+|-------|-------------|---------|
+| [`code-quality`](./code-quality/SKILL.md) | Run comprehensive code quality checks including typecheck, lint, format, and markdown validation | `scripts/finalize.sh` (agent/ci modes) |
+| [`docs-check`](./docs-check/SKILL.md) | Analyze git diff to identify code changes requiring documentation updates | `scripts/check-docs.sh` |
 | [`docs-write`](./docs-write/SKILL.md) | Write or update documentation with clear style, structure, visuals, API/ADR/runbook patterns | N/A (workflow skill) |
-| [`code-review`](./code-review/SKILL.md) | Review code changes using CodeRabbit - uncommitted files (task mode) or all PR files vs main (pr mode) | `ada::review:task`, `ada::review:pr`, `ada::review:read`, `ada::review:cleanup` |
-| [`pr-review`](./pr-review/SKILL.md) | Manage GitHub PR comments - fetch, resolve, dismiss, and interact with review comments | `ada::pr:comments:*` |
+| [`code-review`](./code-review/SKILL.md) | Review code changes using CodeRabbit - uncommitted files (task mode) or all PR files vs main (pr mode) | `scripts/review-*.sh` |
+| [`pr-review`](./pr-review/SKILL.md) | Manage GitHub PR comments - fetch, resolve, dismiss, and interact with review comments | `scripts/pr-comments-*.sh` |
 | [`search`](./search/SKILL.md) | Search the web and library documentation using Tavily and Context7 MCPs | N/A (MCP-based skill) |
-| [`research`](./research/SKILL.md) | Conduct academic research using OpenAlex, PDF extraction, and paper search MCPs with evidence cards | `ada::research:list`, `ada::research:show`, `ada::research:cleanup` |
-| [`agent-orchestrator`](./agent-orchestrator/SKILL.md) | Design hierarchical multi-agent workflows with structured plans, role prompts, context packages, and verification checklists | N/A (workflow skill) |
+| [`research`](./research/SKILL.md) | Conduct academic research using OpenAlex, PDF extraction, and paper search MCPs with evidence cards | `scripts/research-*.sh` |
+| [`agent-orchestration`](./agent-orchestration/SKILL.md) | Spawn and manage hierarchical AI sub-agents with role-aware wrappers and verification templates | `scripts/agent-*.sh`, `scripts/orchestrator-*.sh` |
 
 ## Quick Reference
 
 ### Code Quality
 - **When to use**: Before committing, in CI pipelines, after making changes
-- **Command**: `npm run ada::agent:finalize` (auto-fixes) or `npm run ada::ci:finalize` (read-only)
+- **How agents use it**: Agents read `SKILL.md` and execute `scripts/finalize.sh` with `agent` or `ci` mode
+- **Scripts**: Embedded in `skills/code-quality/scripts/finalize.sh`
 
 ### Documentation Check
 - **When to use**: After making code changes, before committing
-- **Command**: `npm run ada::docs:check`
-- **References**: See [Documentation Guide](docs/DOCUMENTATION_GUIDE.md) for what to document
+- **How agents use it**: Agents read `SKILL.md` and execute `scripts/check-docs.sh`
+- **Scripts**: Embedded in `skills/docs-check/scripts/check-docs.sh`
+- **References**: See [Documentation Guide](../docs/DOCUMENTATION_GUIDE.md) for what to document
 
 ### Documentation Write
 - **When to use**: Creating or updating documentation after code changes, during PR preparation
-- **Workflow**: Follow the skill instructions in [docs-write/SKILL.md](./docs-write/SKILL.md)
-- **References**: See [Documentation Guide](docs/DOCUMENTATION_GUIDE.md) for documentation standards
+- **How agents use it**: Agents follow instructions in `SKILL.md` (workflow skill, no scripts)
+- **References**: See [Documentation Guide](../docs/DOCUMENTATION_GUIDE.md) for documentation standards
 
 ### Code Review
-- **When to use**: 
+- **When to use**:
   - Task mode: For subtasks, uncommitted files, before committing
   - PR mode: For complete PR review, all changed files vs main branch
-- **Commands**: `npm run ada::review:task` or `npm run ada::review:pr`
+- **How agents use it**: Agents read `SKILL.md` and execute `scripts/review-run.sh` with `task` or `pr` mode
+- **Scripts**: Embedded in `skills/code-review/scripts/review-*.sh`
 
 ### PR Review
 - **When to use**: When working on PRs with comments, need to resolve/dismiss feedback
-- **Commands**: `ada::pr:comments:*` (fetch, detect, get, resolve, dismiss, cleanup)
+- **How agents use it**: Agents read `SKILL.md` and execute scripts in `scripts/pr-comments-*.sh`
+- **Scripts**: Embedded in `skills/pr-review/scripts/pr-comments-*.sh`
 
 ### Search
 - **When to use**: Looking up documentation, code examples, API references, troubleshooting guides, best practices
+- **How agents use it**: Agents read `SKILL.md` and use MCP tools (Tavily, Context7)
 - **MCPs**: Tavily (web search), Context7 (library documentation)
 - **Setup**: Configure MCP servers in `mcp.json` (see `mcp.json.example`)
 
 ### Research
 - **When to use**: Researching software architecture patterns, finding academic papers, conducting literature reviews, building evidence cards
+- **How agents use it**: Agents read `SKILL.md` and execute scripts in `scripts/research-*.sh` or use MCP tools
+- **Scripts**: Embedded in `skills/research/scripts/research-*.sh`
 - **MCPs**: OpenAlex (paper discovery), PDF extractor (text extraction), Paper-search (optional, multi-platform download)
-- **Commands**: `ada::research:list`, `ada::research:show <topic>`, `ada::research:cleanup`
 - **Setup**: Configure MCP servers in `mcp.json` (see `mcp.json.example`)
+
+### Agent Orchestration
+- **When to use**: Delegating work to subagents, parallel research/implementation/testing, hierarchical orchestration
+- **How agents use it**: Agents read `SKILL.md` and execute scripts in `scripts/agent-*.sh` and `scripts/orchestrator-*.sh`
+- **Scripts**: Embedded in `skills/agent-orchestration/scripts/agent-*.sh`
+
+## How Agents Call Skills
+
+Skills follow the Anthropic Agent Skills standard:
+
+1. **Discovery**: Agents scan skill directories (like `~/.codex/skills`) for directories containing `SKILL.md` files
+2. **Loading**: Agents read `SKILL.md` files which contain:
+   - YAML frontmatter with `name` and `description`
+   - Detailed instructions on when and how to use the skill
+   - References to embedded scripts in `scripts/` subdirectories
+3. **Execution**: When an agent decides to use a skill, it:
+   - Reads the skill instructions from `SKILL.md`
+   - Executes scripts via `bash skills/<skill-name>/scripts/<script-name>.sh`
+   - Scripts are called directly, not through npm or package.json
+
+**Key Points:**
+- Scripts are embedded within skill directories (`scripts/` subdirectory)
+- Agents read `SKILL.md` to understand how to use each skill
+- Scripts are executed via bash, with paths relative to the skill directory
+- No package.json or npm scripts required
 
 ## Tools and Scripts
 
 Scripts are organized in `scripts/` directories within each skill. Each skill contains its executable scripts and utilities in the `scripts/` subdirectory, following the Agent Skills standard structure.
 
+Scripts are executed by agents when they use the skill. Each skill's `SKILL.md` file contains instructions on when and how to execute these scripts.
+
 ## Documentation
 
-Skills that check or update documentation reference the [Documentation Guide](docs/DOCUMENTATION_GUIDE.md) for standards and best practices.
+Skills that check or update documentation reference the [Documentation Guide](../docs/DOCUMENTATION_GUIDE.md) for standards and best practices.
+
+## Testing and Validation
+
+Verify the integrity and structure of all skills:
+
+```bash
+bash .test/scripts/validate-skills.sh
+```
 
 ## Skill Format
 
@@ -86,8 +127,5 @@ The body contains detailed instructions, workflows, examples, and references.
 
 ## See Also
 
-- [Documentation Guide](docs/DOCUMENTATION_GUIDE.md) - Documentation standards
-- [Setup Guide](SETUP.md) - Installation and setup
-
-
-
+- [Documentation Guide](../docs/DOCUMENTATION_GUIDE.md) - Documentation standards
+- [Setup Guide](../SETUP.md) - Installation and setup

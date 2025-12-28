@@ -15,7 +15,7 @@ RUNTIME="await"
 BASE_BRANCH="main"
 PROMPT=""
 PARENT_RUN_ID=""
-MAX_DEPTH="2"
+MAX_DEPTH="3"
 MODEL="auto"
 QUICK_MERGE="false"
 
@@ -71,6 +71,7 @@ if [ -z "$PROMPT" ]; then
   exit 1
 fi
 
+
 if [ "$MODE" != "work" ] && [ "$MODE" != "research" ]; then
   echo "Error: --mode must be 'work' or 'research'" >&2
   exit 1
@@ -115,6 +116,9 @@ create_progress_file "$WORKTREE_PATH"
 if [ "$MODE" = "research" ]; then
   create_answer_file "$WORKTREE_PATH"
 fi
+
+# Persist prompt.md into run directory for reference
+cp "${WORKTREE_PATH}/prompt.md" "${RUN_DIR}/prompt.md"
 
 # Prepare environment variables JSON
 ENV_VARS_JSON=$(cat <<EOF
@@ -170,4 +174,3 @@ if [ "$RUNTIME" = "await" ]; then
   AGENT_SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   bash "${AGENT_SCRIPTS_DIR}/agent-wait.sh" "$RUN_ID"
 fi
-

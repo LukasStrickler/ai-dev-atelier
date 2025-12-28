@@ -323,7 +323,7 @@ read_pdf({
 
 // Extract specific pages from URL
 read_pdf({
-  sources: [{ 
+  sources: [{
     url: "https://arxiv.org/pdf/1234.5678.pdf",
     pages: [1, 2, 3, 10, 11]
   }],

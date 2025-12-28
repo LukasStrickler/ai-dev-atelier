@@ -1,6 +1,6 @@
 {
-  "_comment": "MCP (Model Context Protocol) Configuration Example",
-  "_instructions": "Copy this file to your MCP configuration location (e.g., ~/.config/claude/mcp.json for Claude Desktop) and update API keys",
+  "_comment": "MCP (Model Context Protocol) Configuration",
+  "_instructions": "This file defines all MCP servers. API keys are automatically populated from .env file during installation.",
   "mcpServers": {
     "tavily-remote-mcp": {
       "_description": "Tavily MCP - Web search and research. Required for 'search' skill.",
@@ -10,10 +10,15 @@
       }
     },
     "context7": {
+      "_description": "Context7 MCP - Developer documentation search. Required for 'search' skill.",
       "url": "https://mcp.context7.com/mcp",
       "headers": {
         "CONTEXT7_API_KEY": "CONTEXT7_API_KEY"
       }
+    },
+    "grep": {
+      "_description": "Grep MCP - Search across a million public GitHub repositories. Required for 'search' skill.",
+      "url": "https://mcp.grep.app"
     },
     "openalex-research": {
       "_description": "OpenAlex MCP - Academic paper discovery and citation analysis. Required for 'research' skill.",
@@ -21,7 +26,8 @@
       "args": ["-y", "openalex-research-mcp"],
       "env": {
         "OPENALEX_EMAIL": "you@example.com"
-      }    },
+      }
+    },
     "pdf-reader": {
       "_description": "PDF Reader MCP - PDF text extraction. Required for 'research' skill.",
       "command": "npx",
@@ -32,10 +38,8 @@
       "_note": "Includes Google Scholar + Sci-Hub integration. Check Terms of Service and legal considerations.",
       "command": "npx",
       "args": ["-y", "paper-search-mcp-nodejs"]
-    },
-    "grep": {
-      "_description": "Grep MCP - Search across a million public GitHub repositories. Required for 'search' skill.",
-      "url": "https://mcp.grep.app"
     }
   }
 }
+
+

@@ -48,7 +48,7 @@ update_process_status "$RUN_ID" "$PID" "0"
 # Verify process exists
 if ! check_process_alive "$PID"; then
   # Process already done
-  local elapsed=$(read_meta_json "$RUN_ID" "elapsedSeconds" 2>/dev/null || echo "0")
+  elapsed=$(read_meta_json "$RUN_ID" "elapsedSeconds" 2>/dev/null || echo "0")
   update_process_status "$RUN_ID" "$PID" "$elapsed"
   write_meta_json "$RUN_ID" "status" "completed" "completedAt" "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   exit 0
@@ -80,4 +80,3 @@ else
     exit 1
   fi
 fi
-

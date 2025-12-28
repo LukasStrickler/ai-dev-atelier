@@ -1,6 +1,6 @@
 ---
 name: docs-write
-description: Write or update documentation (tutorial, how-to, reference, explanation) with clear style, structure, visuals, API/ADR/runbook patterns. Use when: (1) Creating or updating docs after code changes, (2) During PR preparation or addressing review feedback, (3) Adding new features that need documentation, (4) Updating API endpoints, database schemas, or configuration, (5) Creating ADRs or runbooks, (6) Adding or updating diagrams and visual documentation, (7) When documentation needs to be written or revised, (8) For tutorial creation, how-to guides, or technical writing, or (9) For documentation standards compliance and structure. Triggers: "write docs", "update documentation", "create documentation", "write tutorial", "document API", "write ADR", "create runbook", "add documentation", "document this", "write how-to".
+description: "Write or update documentation (tutorial, how-to, reference, explanation) with clear style, structure, visuals, API/ADR/runbook patterns. Use when: (1) Creating or updating docs after code changes, (2) During PR preparation or addressing review feedback, (3) Adding new features that need documentation, (4) Updating API endpoints, database schemas, or configuration, (5) Creating ADRs or runbooks, (6) Adding or updating diagrams and visual documentation, (7) When documentation needs to be written or revised, (8) For tutorial creation, how-to guides, or technical writing, or (9) For documentation standards compliance and structure. Triggers: write docs, update documentation, create documentation, write tutorial, document API, write ADR, create runbook, add documentation, document this, write how-to."
 ---
 
 # Docs Write
@@ -58,7 +58,7 @@ description: Write or update documentation (tutorial, how-to, reference, explana
    - Add cross-references to related documentation
    - Ensure consistent terminology (check guide for exact terms)
 
-9. **Verify**: Run `npm run ada::docs:check` to ensure documentation is complete
+9. **Verify**: Run `bash skills/docs-check/scripts/check-docs.sh` to ensure documentation is complete
 
 ## Reference Files
 

@@ -1,6 +1,6 @@
 ---
 name: pr-review
-description: Manage GitHub PR review comments - fetch, resolve, dismiss, and interact with PR review threads. Handles comment detection, fetching, resolution, and dismissal with reasons. Use when: (1) Working on a PR with review comments, (2) Need to fetch and review PR feedback, (3) Want to resolve comments after making fixes, (4) Need to dismiss comments that are not applicable, (5) Managing PR comment files, (6) When GitHub PR comments need to be processed, (7) When working with pull requests that have received feedback, (8) For PR workflow automation and comment organization, or (9) For GitHub API integration and PR management. Triggers: "PR comments", "review comments", "fetch PR feedback", "resolve comment", "dismiss comment", "PR review", "pull request comments", "handle review feedback", "get PR comments", "manage PR comments".
+description: "Manage GitHub PR review comments - fetch, resolve, dismiss, and interact with PR review threads. Handles comment detection, fetching, resolution, and dismissal with reasons. Use when: (1) Working on a PR with review comments, (2) Need to fetch and review PR feedback, (3) Want to resolve comments after making fixes, (4) Need to dismiss comments that are not applicable, (5) Managing PR comment files, (6) When GitHub PR comments need to be processed, (7) When working with pull requests that have received feedback, (8) For PR workflow automation and comment organization, or (9) For GitHub API integration and PR management. Triggers: PR comments, review comments, fetch PR feedback, resolve comment, dismiss comment, PR review, pull request comments, handle review feedback, get PR comments, manage PR comments."
 ---
 
 # PR Review
@@ -20,23 +20,23 @@ description: Manage GitHub PR review comments - fetch, resolve, dismiss, and int
 
 ### Fetching Comments
 
-1. **Detect PR number** (optional): Run `npm run ada::pr:comments:detect` to auto-detect the current PR
+1. **Detect PR number** (optional): Run `bash skills/pr-review/scripts/pr-comments-detect.sh` to auto-detect the current PR
    - Tool checks git remote and current branch to find associated PR
    - Displays PR number if found
 
-2. **Fetch all comments**: Run `npm run ada::pr:comments [PR_NUMBER]` or `npm run ada::pr:comments` (auto-detects)
+2. **Fetch all comments**: Run `bash skills/pr-review/scripts/pr-comments-fetch.sh [PR_NUMBER]` or `bash skills/pr-review/scripts/pr-comments-fetch.sh` (auto-detects)
    - Fetches all review comments from the PR
    - Saves to `.ada/data/pr-comments/pr-comments-{PR}-{SHA}.md` (unresolved only)
    - Saves full metadata to `.ada/data/pr-comments/pr-comments-{PR}-{SHA}.json`
 
-3. **Get specific comment**: Run `npm run ada::pr:comments:get [PR_NUMBER] [INDEX_OR_ID]`
+3. **Get specific comment**: Run `bash skills/pr-review/scripts/pr-comments-get.sh [PR_NUMBER] [INDEX_OR_ID]`
    - Use 1-based index (e.g., `1` for first unresolved comment)
    - Or use comment ID (e.g., `2507094339`)
    - Shows comment with file context and code snippet
 
 ### Resolving Comments
 
-1. **Review comment**: Use `npm run ada::pr:comments:get [PR_NUMBER] 1` to see the first unresolved comment
+1. **Review comment**: Use `bash skills/pr-review/scripts/pr-comments-get.sh [PR_NUMBER] 1` to see the first unresolved comment
    - Review the file path, line number, and code context
    - Understand what change is requested
 
@@ -44,27 +44,27 @@ description: Manage GitHub PR review comments - fetch, resolve, dismiss, and int
    - Edit the file at the specified location
    - Address the reviewer's concern
 
-3. **Resolve comment**: Run `npm run ada::pr:comments:resolve [PR_NUMBER] <COMMENT_ID>`
-   - Can resolve multiple comments: `npm run ada::pr:comments:resolve [PR_NUMBER] <ID1> <ID2>`
+3. **Resolve comment**: Run `bash skills/pr-review/scripts/pr-comments-resolve.sh [PR_NUMBER] <COMMENT_ID>`
+   - Can resolve multiple comments: `bash skills/pr-review/scripts/pr-comments-resolve.sh [PR_NUMBER] <ID1> <ID2>`
    - Marks comment as resolved on GitHub
 
-4. **Interactive mode**: Use `npm run ada::pr:comments:resolve:interactive` for guided resolution
+4. **Interactive mode**: Use `bash skills/pr-review/scripts/pr-comments-resolve.sh [PR_NUMBER] --interactive` for guided resolution
    - Shows each unresolved comment
    - Prompts to resolve or skip
 
 ### Dismissing Comments
 
-1. **Review comment**: Use `npm run ada::pr:comments:get [PR_NUMBER] <COMMENT_ID>` to see the comment
+1. **Review comment**: Use `bash skills/pr-review/scripts/pr-comments-get.sh [PR_NUMBER] <COMMENT_ID>` to see the comment
    - Understand why the comment might not be applicable
 
-2. **Dismiss with reason**: Run `npm run ada::pr:comments:dismiss [PR_NUMBER] <COMMENT_ID> <REASON>`
+2. **Dismiss with reason**: Run `bash skills/pr-review/scripts/pr-comments-dismiss.sh [PR_NUMBER] <COMMENT_ID> <REASON>`
    - Common reasons: `"not applicable"`, `"false positive"`, `"out of scope"`, `"bloat"`
    - Reason is recorded on GitHub
 
 ### Managing Comment Files
 
-- **List PRs**: Run `npm run ada::pr:list` to see all open PRs
-- **Cleanup**: Run `npm run ada::pr:comments:cleanup [--all] [PR_NUMBER]` to remove old comment files
+- **List PRs**: Use GitHub CLI directly: `gh pr list`
+- **Cleanup**: Run `bash skills/pr-review/scripts/pr-comments-cleanup.sh [--all] [PR_NUMBER]` to remove old comment files
   - `--all` removes all PR comment files
   - Specify PR number to clean up specific PR files
 
@@ -72,16 +72,16 @@ description: Manage GitHub PR review comments - fetch, resolve, dismiss, and int
 
 ```bash
 # Fetch comments (auto-detect or specify PR)
-npm run ada::pr:comments [PR_NUMBER]
+bash skills/pr-review/scripts/pr-comments-fetch.sh [PR_NUMBER]
 
 # Get comment (index or ID)
-npm run ada::pr:comments:get [PR_NUMBER] [INDEX_OR_ID]
+bash skills/pr-review/scripts/pr-comments-get.sh [PR_NUMBER] [INDEX_OR_ID]
 
 # Resolve comments
-npm run ada::pr:comments:resolve [PR_NUMBER] <COMMENT_ID>...
+bash skills/pr-review/scripts/pr-comments-resolve.sh [PR_NUMBER] <COMMENT_ID>...
 
 # Dismiss comment
-npm run ada::pr:comments:dismiss [PR_NUMBER] <COMMENT_ID> <REASON>
+bash skills/pr-review/scripts/pr-comments-dismiss.sh [PR_NUMBER] <COMMENT_ID> <REASON>
 ```
 
 ## References

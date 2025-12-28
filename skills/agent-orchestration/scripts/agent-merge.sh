@@ -9,13 +9,32 @@ source "${SCRIPT_DIR}/lib/agent-utils.sh"
 
 # Parse arguments
 RUN_ID="${1:-}"
-TARGET_BRANCH="${2:-main}"
-AUTO_RESOLVE="${3:-false}"
+AUTO_RESOLVE="false"
+TARGET_BRANCH=""
 
 if [ -z "$RUN_ID" ]; then
   echo "Usage: $0 <runId> [targetBranch] [--auto-resolve]" >&2
   exit 1
 fi
+
+shift 1
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --auto-resolve)
+      AUTO_RESOLVE="true"
+      shift
+      ;;
+    *)
+      if [ -z "$TARGET_BRANCH" ]; then
+        TARGET_BRANCH="$1"
+        shift
+      else
+        echo "Unknown option: $1" >&2
+        exit 1
+      fi
+      ;;
+  esac
+done
 
 # Read metadata
 META_JSON=$(read_meta_json "$RUN_ID")
@@ -29,6 +48,13 @@ if command -v jq &> /dev/null; then
   MODE=$(echo "$META_JSON" | jq -r '.mode // "work"')
 else
   MODE=$(echo "$META_JSON" | grep -o '"mode":"[^"]*"' | sed 's/"mode":"\([^"]*\)"/\1/' || echo "work")
+fi
+
+if [ -z "$TARGET_BRANCH" ]; then
+  TARGET_BRANCH=$(read_meta_json "$RUN_ID" "baseBranch" 2>/dev/null || echo "")
+  if [ -z "$TARGET_BRANCH" ]; then
+    TARGET_BRANCH="main"
+  fi
 fi
 
 # Validate mode
@@ -61,11 +87,24 @@ fi
       write_meta_json "$RUN_ID" "mergedAt" "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" "mergedTo" "$TARGET_BRANCH"
     else
       echo "Merge conflicts detected" >&2
-      if [ "$AUTO_RESOLVE" = "true" ] || [ "$AUTO_RESOLVE" = "--auto-resolve" ]; then
-        echo "Attempting auto-resolve..." >&2
-        # Auto-resolve logic would go here
+      if [ -f ".git/MERGE_HEAD" ]; then
+        git merge --abort >/dev/null 2>&1 || true
       fi
-      exit 1
+      if [ "$AUTO_RESOLVE" = "true" ]; then
+        echo "Attempting auto-resolve (theirs strategy)..." >&2
+        if git merge --no-ff -X theirs "$branchName" -m "Merge agent work: $RUN_ID" >/dev/null 2>&1; then
+          echo "Auto-resolve merge successful" >&2
+          write_meta_json "$RUN_ID" "mergedAt" "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" "mergedTo" "$TARGET_BRANCH" "mergeStrategy" "theirs"
+        else
+          echo "Auto-resolve failed" >&2
+          if [ -f ".git/MERGE_HEAD" ]; then
+            git merge --abort >/dev/null 2>&1 || true
+          fi
+          exit 1
+        fi
+      else
+        exit 1
+      fi
     fi
   else
     # Branch doesn't exist or has no commits - copy files from worktree
@@ -108,4 +147,3 @@ fi
 cleanup_worktree "$RUN_ID"
 
 echo "Merge completed for $RUN_ID"
-

@@ -402,7 +402,7 @@ This research compared five consensus algorithm approaches (Paxos, Raft, PBFT, A
 
 ### Search Strategy
 
-- **Primary Queries:** 
+- **Primary Queries:**
   - "distributed consensus algorithms"
   - "Raft vs Paxos comparison"
   - "consensus algorithms for microservices"

@@ -39,7 +39,7 @@ git --version  # Should show version 2.0+
 
 ### 2. Node.js or Bun
 
-JavaScript runtime (required for npm scripts and code quality tools).
+JavaScript runtime (required for code quality tools and optional dependencies).
 
 **Option A: Node.js 18+**
 
@@ -71,9 +71,11 @@ node --version  # Should show v18.0.0 or higher
 bun --version   # Should show latest Bun version
 ```
 
-### 3. jq
+### 3. Codex
 
-JSON processor (required for setup script and PR tools).
+AI agent that supports skills installation. Skills are installed to `~/.codex/skills`.
+
+**Note:** Only Codex is currently supported for skills installation. Gemini does not support skills.
 
 **Installation:**
 
@@ -95,26 +97,15 @@ choco install jq
 
 **Verify:**
 ```bash
-jq --version  # Should show version 1.6+
-```
-
-### 4. package.json
-
-Your project must have a `package.json` file. If you don't have one:
-
-```bash
-# Initialize npm project
-npm init -y
-
-# OR initialize with Bun
-bun init -y
+# Verify Codex is installed and skills directory exists
+ls -la ~/.codex/skills
 ```
 
 ## Optional Dependencies
 
 ### GitHub CLI (gh)
 
-Required for PR review tools (`ada::pr:*` commands).
+Required for PR review tools (used by the `pr-review` skill).
 
 **Installation:**
 
@@ -146,7 +137,7 @@ gh auth status
 
 ### CodeRabbit CLI
 
-Required for code review tools (`ada::review:*` commands).
+Required for code review tools (used by the `code-review` skill).
 
 **Installation:**
 
@@ -235,22 +226,16 @@ Create `.prettierrc` or `prettier.config.js` in your project root.
 npx prettier --version
 ```
 
-### Package.json Scripts
+### Project Scripts (for code-quality skill)
 
-Your `package.json` should include these scripts for the code-quality skill:
+Your project should have these commands available for the code-quality skill to use:
 
-```json
-{
-  "scripts": {
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint .",
-    "format:check": "prettier --check .",
-    "format:write": "prettier --write ."
-  }
-}
-```
+- `typecheck` - TypeScript type checking (e.g., `tsc --noEmit`)
+- `lint` - ESLint linting (e.g., `eslint .`)
+- `format:check` - Prettier format checking (e.g., `prettier --check .`)
+- `format:write` - Prettier format writing (e.g., `prettier --write .`)
 
-**Note:** The exact commands may vary based on your project setup. Adjust as needed.
+**Note:** These can be in `package.json` scripts or available as direct commands. The code-quality skill will use them when executing quality checks.
 
 ## Installation Steps
 
@@ -264,41 +249,49 @@ git clone https://github.com/LukasStrickler/ai-dev-atelier.git /ai-dev-atelier
 
 **Alternative locations:**
 
-If you prefer a different location, update the paths in `package.json` after setup:
+You can clone to any location. The install script will automatically detect the correct path.
 
 ```bash
 git clone https://github.com/LukasStrickler/ai-dev-atelier.git ~/ai-dev-atelier
 # Or any other path
 ```
 
-### 2. Navigate to Your Project
-
-```bash
-cd /path/to/your/project
-```
-
-**Important:** Run the setup script from your project root directory (where `package.json` is located).
-
-### 3. Run Setup Script
+### 2. Verify Skill Structure
 
 ```bash
 bash /ai-dev-atelier/setup.sh
 ```
 
 The setup script will:
-- ✅ Check prerequisites (jq, package.json)
-- ✅ Add npm scripts to your `package.json`
-- ✅ Create a backup of your `package.json`
-- ✅ Show a summary of what was added
+- ✅ Verify skills directory exists
+- ✅ Check for required skills (code-quality, docs-check, code-review, pr-review)
+- ✅ Validate SKILL.md files are present
+- ✅ Report any missing or invalid skills
+
+### 3. Install Skills to Codex
+
+```bash
+bash /ai-dev-atelier/install.sh
+```
+
+The install script will:
+- ✅ Copy skills to `~/.codex/skills`
+- ✅ Preserve existing `.system` directory in Codex
+- ✅ Show smart diff before overwriting existing skills
+- ✅ Ask for confirmation before overwriting (use `--yes` to skip)
+
+**Options:**
+- `--yes` or `-y` - Skip confirmation prompts (auto-overwrite)
+- `--help` or `-h` - Show help message
 
 ### 4. Verify Installation
 
 ```bash
-# Check scripts were added
-npm run | grep "ada::"
+# Check skills are installed
+ls -la ~/.codex/skills
 
-# Test a script
-npm run ada::docs:check
+# Ask Codex: "What skills are available?"
+# Should list: code-quality, docs-check, docs-write, code-review, pr-review, search, research, agent-orchestration
 ```
 
 > **📖 Next steps:** See [SETUP.md](./SETUP.md) for configuring skills in your AI agent and usage examples.
@@ -311,11 +304,11 @@ npm run ada::docs:check
 - TypeScript installed in project
 - ESLint installed in project
 - Prettier installed in project
-- `package.json` scripts: `typecheck`, `lint`, `format:check`, `format:write`
+- Commands available: `typecheck`, `lint`, `format:check`, `format:write`
 
-**Commands:**
-- `npm run ada::agent:finalize` - Auto-fixes formatting
-- `npm run ada::ci:finalize` - Read-only checks
+**Usage:**
+- Ask Codex: "Run code quality checks" (triggers `code-quality` skill)
+- The skill will execute scripts embedded in `skills/code-quality/scripts/finalize.sh`
 
 ### Documentation Check
 
@@ -323,8 +316,9 @@ npm run ada::docs:check
 - Git repository initialized
 - Git remote configured (optional, for better branch detection)
 
-**Commands:**
-- `npm run ada::docs:check` - Check for documentation updates
+**Usage:**
+- Ask Codex: "Check if documentation needs updates" (triggers `docs-check` skill)
+- The skill will execute scripts embedded in `skills/docs-check/scripts/check-docs.sh`
 
 ### Code Review (CodeRabbit)
 
@@ -332,11 +326,9 @@ npm run ada::docs:check
 - CodeRabbit CLI installed and authenticated
 - Git repository initialized
 
-**Commands:**
-- `npm run ada::review:task` - Review uncommitted changes
-- `npm run ada::review:pr` - Review PR changes
-- `npm run ada::review:read` - Read review results
-- `npm run ada::review:cleanup` - Clean up old reviews
+**Usage:**
+- Ask Codex: "Review my code changes" (triggers `code-review` skill)
+- The skill will execute scripts embedded in `skills/code-review/scripts/review-run.sh`
 
 ### PR Review Tools
 
@@ -345,13 +337,9 @@ npm run ada::docs:check
 - Git repository with GitHub remote configured
 - jq installed
 
-**Commands:**
-- `npm run ada::pr:comments` - Fetch PR comments
-- `npm run ada::pr:comments:detect` - Auto-detect PR number
-- `npm run ada::pr:comments:get` - Get single comment
-- `npm run ada::pr:comments:resolve` - Resolve comments
-- `npm run ada::pr:comments:dismiss` - Dismiss comments
-- `npm run ada::pr:list` - List open PRs
+**Usage:**
+- Ask Codex: "Fetch PR comments" (triggers `pr-review` skill)
+- The skill will execute scripts embedded in `skills/pr-review/scripts/pr-comments-*.sh`
 
 ### MCP Dependencies (for Search and Research Skills)
 
@@ -367,6 +355,13 @@ npm run ada::docs:check
   - **Installation:** `npm install -g @context7/mcp-server` or use `npx -y @context7/mcp-server`
   - **API Key Required:** No
   - **Usage:** Library/framework documentation, API references, installation instructions
+
+- **Grep MCP** - Search across a million public GitHub repositories for code examples and patterns
+  - **Installation:** Automatically configured by `install.sh` (no manual installation needed)
+  - **API Key Required:** No
+  - **Configuration:** Automatically added to Codex MCP config (`~/.codex/mcp.json` or `$XDG_CONFIG_HOME/codex/mcp.json`)
+  - **Usage:** Finding real-world code examples, implementation patterns, API usage, error handling patterns
+  - **Note:** All MCPs from `mcp.json.example` are automatically configured by the installer. Update API keys after installation.
 
 **Required for Research Skill:**
 
@@ -390,33 +385,49 @@ npm run ada::docs:check
 
 **Configuration:**
 
+**For Codex (Automatic):**
+- The `install.sh` script automatically configures all MCPs from `mcp.json.example` for Codex
+- MCP configuration is created/updated at `~/.codex/mcp.json` (or `$XDG_CONFIG_HOME/codex/mcp.json`)
+- Existing MCP configurations are preserved; only missing MCPs are added
+- All MCPs from the example file are configured: Tavily, Context7, OpenAlex, PDF Reader, Paper-search, and Grep
+- Requires `jq` to be installed for automatic configuration
+- **Important:** After installation, update API keys in the MCP config file (TAVILY_API_KEY, CONTEXT7_API_KEY, OPENALEX_EMAIL)
+
+**For Other Agents (Manual):**
 1. Copy `mcp.json.example` to your MCP configuration location (typically `~/.config/claude/mcp.json` for Claude Desktop)
 2. Update API keys in the configuration file
 3. Restart your AI agent to load MCP servers
 
 See `mcp.json.example` for complete configuration format.
 
-## Configure Skills in Your AI Agent
+## How Agents Use Skills
 
-**IMPORTANT:** After running the setup script, you must configure the skills in your AI agent for automatic discovery and use.
+**IMPORTANT:** After installing skills, Codex will automatically discover them from `~/.codex/skills`.
 
-> **📖 Detailed configuration:** See [SETUP.md](./SETUP.md) for complete agent configuration instructions.
+> **📖 Detailed information:** See [SETUP.md](./SETUP.md) for complete setup instructions.
 
-### Quick Summary
+### How It Works
 
-1. **Add skills directory to agent configuration:**
-   - Skills are located at: `/ai-dev-atelier/skills/`
-   - Configure your agent to load skills from this directory
+1. **Skills are installed to `~/.codex/skills`:**
+   - Each skill is a directory with `SKILL.md` and `scripts/` subdirectory
+   - Codex automatically scans this directory for skills
 
-2. **Verify skills are loaded:**
-   - Ask your agent: "What skills are available?"
-   - The agent should list: `code-quality`, `docs-check`, `docs-write`, `code-review`, `pr-review`
+2. **Agents discover skills:**
+   - Codex reads `SKILL.md` files which contain YAML frontmatter and instructions
+   - Skills are triggered based on their descriptions and trigger keywords
 
-3. **Test skill triggering:**
+3. **Agents execute scripts:**
+   - When a skill is triggered, Codex reads the instructions in `SKILL.md`
+   - Scripts are executed via `bash skills/<skill-name>/scripts/<script-name>.sh`
+   - Scripts are embedded within skill directories, not in package.json
+
+4. **Verify skills are loaded:**
+   - Ask Codex: "What skills are available?"
+   - Should list: `code-quality`, `docs-check`, `docs-write`, `code-review`, `pr-review`, `search`, `research`, `agent-orchestration`
+
+5. **Test skill triggering:**
    - Try: "Run code quality checks" (should trigger `code-quality` skill)
    - Try: "Check if documentation needs updates" (should trigger `docs-check` skill)
-
-**Note:** The npm scripts (`ada::*`) work independently of agent skills. You can use them via command line even if skills aren't configured in your agent.
 
 ## Troubleshooting
 
@@ -424,17 +435,20 @@ See `mcp.json.example` for complete configuration format.
 
 | Issue | Solution |
 |-------|----------|
-| `jq: command not found` | Install jq: `brew install jq` (macOS) or see installation instructions above |
-| `package.json not found` | Run setup from project root directory where `package.json` is located |
+| Skills directory not found | Verify AI Dev Atelier is cloned correctly |
+| SKILL.md not found | Ensure you're running setup from the AI Dev Atelier root directory |
 | `bash: command not found` | Install Git Bash (Windows) or use WSL |
-| Scripts not found at `/ai-dev-atelier/skills/` | Verify clone location or update paths in `package.json` |
-| Permission denied | `chmod +x /ai-dev-atelier/skills/*/scripts/*.sh` |
+| Permission denied | `chmod +x /ai-dev-atelier/install.sh` |
+| Skills not appearing in Codex | Verify skills are installed to `~/.codex/skills` and restart Codex |
+| Codex doesn't recognize skills | Restart Codex after installation |
 | `gh: command not found` | Install GitHub CLI: `brew install gh && gh auth login` |
 | `coderabbit: command not found` | Install CodeRabbit CLI: `npm install -g @coderabbitai/cli && coderabbit auth login` |
 | TypeScript errors | Install TypeScript: `npm install --save-dev typescript` |
 | ESLint errors | Install ESLint: `npm install --save-dev eslint` |
 | Prettier errors | Install Prettier: `npm install --save-dev prettier` |
 | `bun: command not found` | Install Bun or use Node.js instead |
+| MCP configuration failed | Install jq: `brew install jq` (macOS) or `sudo apt-get install jq` (Linux) |
+| Grep MCP not working | Verify MCP config exists at `~/.codex/mcp.json` and restart Codex |
 
 ### Verification Checklist
 
@@ -444,7 +458,9 @@ Run these commands to verify your installation:
 # Check required tools
 git --version
 node --version  # OR bun --version
-jq --version
+
+# Check Codex skills directory
+ls -la ~/.codex/skills
 
 # Check optional tools (if using PR/review features)
 gh --version
@@ -456,11 +472,11 @@ npx tsc --version
 npx eslint --version
 npx prettier --version
 
-# Check npm scripts
-npm run | grep "ada::"
+# Verify skills are installed
+bash /ai-dev-atelier/setup.sh
 
-# Test a script
-npm run ada::docs:check
+# Validate skill structure and integrity
+bash .test/scripts/validate-skills.sh
 ```
 
 ## Next Steps

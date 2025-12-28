@@ -1,16 +1,17 @@
 ---
 name: code-quality
-description: Run comprehensive code quality checks including TypeScript typecheck, ESLint linting, Prettier formatting, and Markdown validation. Auto-fixes formatting issues in agent mode or provides read-only checks for CI pipelines. Use when: (1) Before committing code changes, (2) In CI/CD pipelines for automated quality gates, (3) After making significant code changes, (4) When preparing code for review, (5) When ensuring code meets quality standards, (6) For type checking, linting, formatting, and markdown validation, (7) In pre-commit hooks, or (8) For automated quality gates before merging. Triggers: "finalize", "code quality", "typecheck", "lint", "format", "check code", "quality check", "run checks", "pre-commit", "before commit", "CI checks", "validate code".
+description: "Run comprehensive code quality checks including TypeScript typecheck, ESLint linting, Prettier formatting, and Markdown validation. Auto-fixes formatting issues in agent mode or provides read-only checks for CI pipelines. Use when: (1) Before committing code changes, (2) In CI/CD pipelines for automated quality gates, (3) After making significant code changes, (4) When preparing code for review, (5) When ensuring code meets quality standards, (6) For type checking, linting, formatting, and markdown validation, (7) In pre-commit hooks, or (8) For automated quality gates before merging. Triggers: finalize, code quality, typecheck, lint, format, check code, quality check, run checks, pre-commit, before commit, CI checks, validate code."
 ---
 
 # Code Quality
 
 Run comprehensive code quality checks: TypeScript typecheck, ESLint linting, Prettier formatting, and Markdown validation.
 
-## Tools
+## Scripts
 
-- `ada::agent:finalize` - Auto-fixes formatting issues (agent mode)
-- `ada::ci:finalize` - Read-only checks for CI pipelines (no auto-fixes)
+Scripts are embedded in `skills/code-quality/scripts/finalize.sh`. Agents execute:
+- `bash skills/code-quality/scripts/finalize.sh agent` - Auto-fixes formatting issues (agent mode)
+- `bash skills/code-quality/scripts/finalize.sh ci` - Read-only checks for CI pipelines (no auto-fixes)
 
 ## Checks Performed
 
@@ -24,8 +25,8 @@ Run comprehensive code quality checks: TypeScript typecheck, ESLint linting, Pre
 ### Running Quality Checks
 
 1. **Choose mode**:
-   - Agent mode: `npm run ada::agent:finalize` - Auto-fixes formatting issues while checking for type and lint errors
-   - CI mode: `npm run ada::ci:finalize` - Read-only checks suitable for CI pipelines (no auto-fixes)
+   - Agent mode: Execute `bash skills/code-quality/scripts/finalize.sh agent` - Auto-fixes formatting issues while checking for type and lint errors
+   - CI mode: Execute `bash skills/code-quality/scripts/finalize.sh ci` - Read-only checks suitable for CI pipelines (no auto-fixes)
 
 2. **Review results**: Check terminal output for errors and warnings
    - TypeScript errors show file paths and line numbers
@@ -44,24 +45,26 @@ Run comprehensive code quality checks: TypeScript typecheck, ESLint linting, Pre
 
 ### Integration with Other Skills
 
-- Run after `ada::code-review` to ensure reviewed code meets quality standards
-- Run before `ada::docs:check` to ensure code is clean before documentation review
+- Run after code-review skill to ensure reviewed code meets quality standards
+- Run before docs-check skill to ensure code is clean before documentation review
 - Use in CI pipelines as a quality gate before merging PRs
 
 ## Examples
 
+When agents use this skill, they execute:
+
 ```bash
 # Agent mode (auto-fixes)
-npm run ada::agent:finalize
+bash skills/code-quality/scripts/finalize.sh agent
 
 # CI mode (read-only)
-npm run ada::ci:finalize
+bash skills/code-quality/scripts/finalize.sh ci
 ```
 
 ## Integration
 
-- Run after `ada::code-review` to ensure reviewed code meets quality standards
-- Run before `ada::docs:check` to ensure code is clean before documentation review
+- Run after code-review skill to ensure reviewed code meets quality standards
+- Run before docs-check skill to ensure code is clean before documentation review
 - Use in CI pipelines as a quality gate before merging PRs
 
 ## References

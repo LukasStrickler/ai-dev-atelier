@@ -113,9 +113,9 @@ Continue: Never read more than 2 papers/sources before writing
 **Goal:** Create 5+ evidence cards, each synthesizing 1-2 papers/sources, covering diverse and potentially conflicting approaches.
 
 **MANDATORY - Write after each 1-2 papers/sources:**
-   
+
    **REMINDER: Never read more than 2 papers before writing an evidence card and updating references.json**
-   
+
    - **Read paper/source 1:**
      - Download PDF to `.ada/temp/research/downloads/{doi-or-id}.pdf` (if academic paper)
      - Use `read_pdf` to extract content directly to context (if academic paper)
@@ -130,7 +130,7 @@ Continue: Never read more than 2 papers/sources before writing
        - Update `updated` timestamp
      - **SAVE `references.json`**
      - **Context Checkpoint:** Verify evidence card and `references.json` are saved before continuing
-   
+
    - **Read paper/source 2:**
      - Extract content with `read_pdf` (if academic) or from source (if non-academic)
      - **Check existing evidence cards** - Does this paper/source align with existing approach?
@@ -152,8 +152,8 @@ Continue: Never read more than 2 papers/sources before writing
          - Update `updated` timestamp
      - **SAVE `references.json`**
      - **Context Checkpoint:** Verify files are saved before continuing
-   
-   - **Continue incrementally:** 
+
+   - **Continue incrementally:**
      - Read paper/source 3 → Check alignment → Update/create evidence card → Update `references.json` → SAVE → Context Checkpoint
      - Read paper/source 4 → Check alignment → Update/create evidence card → Update `references.json` → SAVE → Context Checkpoint
      - **Key:** Write cards as you read (after each 1-2 papers/sources), see alignment early, make grouping decisions in real-time

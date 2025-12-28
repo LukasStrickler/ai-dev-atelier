@@ -1,0 +1,66 @@
+{
+  "_comment": "Skills installation configuration for different AI agents",
+  "_instructions": "Set 'install: false' to disable a skill for a specific agent. Set 'install: true' or omit to enable.",
+  "agents": {
+    "codex": {
+      "_description": "Codex agent configuration",
+      "skills": {
+        "code-quality": {
+          "install": true
+        },
+        "docs-check": {
+          "install": true
+        },
+        "docs-write": {
+          "install": true
+        },
+        "code-review": {
+          "install": true
+        },
+        "pr-review": {
+          "install": true
+        },
+        "search": {
+          "install": true
+        },
+        "research": {
+          "install": true
+        },
+        "agent-orchestration": {
+          "install": true
+        }
+      }
+    },
+    "opencode": {
+      "_description": "OpenCode agent configuration",
+      "skills": {
+        "code-quality": {
+          "install": true
+        },
+        "docs-check": {
+          "install": true
+        },
+        "docs-write": {
+          "install": true
+        },
+        "code-review": {
+          "install": true
+        },
+        "pr-review": {
+          "install": true
+        },
+        "search": {
+          "install": true
+        },
+        "research": {
+          "install": true
+        },
+        "agent-orchestration": {
+          "install": false,
+          "_reason": "Agent orchestration is built-in to OpenCode"
+        }
+      }
+    }
+  }
+}
+

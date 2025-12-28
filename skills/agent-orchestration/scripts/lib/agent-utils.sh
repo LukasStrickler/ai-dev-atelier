@@ -121,15 +121,6 @@ write_meta_json() {
     done
   else
     # Basic JSON update without jq
-    # Parse and rebuild JSON manually
-    local jsonPairs=""
-    local inKeyValue=false
-    local currentKey=""
-    local currentValue=""
-    
-    # Simple approach: rebuild JSON from scratch with all key-value pairs
-    # This is a simplified implementation - for production, a proper JSON parser would be better
-    # For now, we'll use a basic string replacement approach
     updatedJson="$existingJson"
     while [ $# -ge 2 ]; do
       local key="$1"
@@ -139,13 +130,18 @@ write_meta_json() {
       # Escape value for JSON
       local escapedValue=$(echo "$value" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
       
-      # Remove existing key if present, then add new one
-      # This is a very basic implementation
-      updatedJson=$(echo "$updatedJson" | sed "s/\"$key\":\"[^\"]*\"/\"$key\":\"$escapedValue\"/g" | sed "s/\"$key\":[^,}]*/\"$key\":\"$escapedValue\"/g")
-      
-      # If key doesn't exist, add it
-      if ! echo "$updatedJson" | grep -q "\"$key\""; then
-        # Add new key-value pair
+      # Replace existing key if present
+      if echo "$updatedJson" | grep -q "\"$key\""; then
+        updatedJson=$(echo "$updatedJson" | sed "s/\"$key\":\"[^\"]*\"/\"$key\":\"$escapedValue\"/g" | sed "s/\"$key\":[^,}]*/\"$key\":\"$escapedValue\"/g")
+        continue
+      fi
+
+      # Insert new key
+      local compactJson
+      compactJson=$(echo "$updatedJson" | tr -d '\n' | tr -d '\t' | tr -d ' ')
+      if [ -z "$compactJson" ] || [ "$compactJson" = "{}" ]; then
+        updatedJson="{\"$key\":\"$escapedValue\"}"
+      else
         updatedJson=$(echo "$updatedJson" | sed 's/}$/,\n  "'"$key"'": "'"$escapedValue"'"}/')
       fi
     done
@@ -208,6 +204,7 @@ $prompt
 ## Instructions
 
 - Review this prompt.md file to understand your task
+- prompt.md is the single source of truth; re-read it if context is lost
 - For research mode: Write your final answer to answer.md
 - For work mode: Make the necessary code changes
 - Update progress.md as you work (optional)
@@ -474,7 +471,7 @@ generate_diff_artifacts() {
       hasUncommitted=true
     fi
     # Also check for untracked files (new files)
-    local untrackedFiles=$(git ls-files --others --exclude-standard 2>/dev/null | wc -l | tr -d ' ')
+    local untrackedFiles=$(git ls-files --others --exclude-standard 2>/dev/null | grep -vE '(^|/)(\.agent-level|prompt\.md|progress\.md)$' | wc -l | tr -d ' ')
     if [ "$untrackedFiles" -gt 0 ]; then
       hasUncommitted=true
     fi
@@ -502,7 +499,7 @@ generate_diff_artifacts() {
         git diff HEAD 2>/dev/null || true
         git diff --cached 2>/dev/null || true
         # Add untracked files as new files
-        untrackedFiles=$(git ls-files --others --exclude-standard 2>/dev/null)
+        untrackedFiles=$(git ls-files --others --exclude-standard 2>/dev/null | grep -vE '(^|/)(\.agent-level|prompt\.md|progress\.md)$')
         if [ -n "$untrackedFiles" ]; then
           echo ""
           echo "# Untracked files (new files):"
@@ -521,7 +518,7 @@ generate_diff_artifacts() {
         git diff --name-only HEAD 2>/dev/null || true
         git diff --cached --name-only 2>/dev/null || true
         git ls-files --others --exclude-standard 2>/dev/null || true
-      } | sort -u > "${runDir}/changed_files.txt"
+      } | grep -vE '(^|/)(\.agent-level|prompt\.md|progress\.md)$' | sort -u > "${runDir}/changed_files.txt"
       
       # Generate diffstat from uncommitted changes
       {
@@ -940,6 +937,7 @@ check_result_exists() {
   local worktreePath=$(get_worktree_path "$runId")
   local runDir=$(get_run_directory "$runId")
   local patchFile="${runDir}/patch.diff"
+  local changedFilesFile="${runDir}/changed_files.txt"
   
   # Step 1: Check if patch exists and has content
   if [ ! -f "$patchFile" ] || [ ! -s "$patchFile" ]; then
@@ -948,16 +946,37 @@ check_result_exists() {
   
   # Step 2: Analyze patch for work (PATCH-FIRST)
   if check_work_from_patch "$runDir" "$mode"; then
-    return 0  # Work detected in patch
+    if [ "$mode" = "research" ]; then
+      # Confirm answer isn't placeholder before accepting patch-only success
+      if [ -f "${worktreePath}/answer.md" ] && [ -s "${worktreePath}/answer.md" ]; then
+        local answer_content=$(cat "${worktreePath}/answer.md" 2>/dev/null)
+        local content=$(echo "$answer_content" | grep -v "^#" | grep -v "^$" | head -c 200)
+        if [ -n "$content" ] && \
+           ! echo "$answer_content" | grep -qi "Agent will write final answer here" && \
+           ! echo "$answer_content" | grep -qE "^# Answer$" && \
+           [ $(echo "$content" | wc -c) -gt 50 ]; then
+          return 0
+        fi
+      fi
+
+      # Accept other markdown outputs if answer.md is empty/placeholder
+      if [ -f "$changedFilesFile" ]; then
+        if grep -vE '^answer\.md$' "$changedFilesFile" 2>/dev/null | grep -qE '\.md$'; then
+          return 0
+        fi
+      fi
+    else
+      return 0  # Work detected in patch
+    fi
   fi
-  
+
   # Step 3: Fall back to file-based checks (for backward compatibility)
   if [ "$mode" = "research" ]; then
     # Check for answer.md in root (existing behavior)
     if [ -f "${worktreePath}/answer.md" ] && [ -s "${worktreePath}/answer.md" ]; then
       local answer_content=$(cat "${worktreePath}/answer.md" 2>/dev/null)
       local content=$(echo "$answer_content" | grep -v "^#" | grep -v "^$" | head -c 200)
-      
+
       # Check if content exists, is not placeholder, and has minimum length
       if [ -n "$content" ] && \
          ! echo "$answer_content" | grep -qi "Agent will write final answer here" && \
@@ -1068,4 +1087,3 @@ validate_level() {
   
   return 0
 }
-

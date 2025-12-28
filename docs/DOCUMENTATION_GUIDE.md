@@ -363,7 +363,7 @@ See [API Documentation](../api/endpoints.md) for API usage.
 
 Before creating a PR:
 
-- [ ] Run `docs:check` (if available) to identify needed updates
+- [ ] Run `bash skills/docs-check/scripts/check-docs.sh` to identify needed updates
 - [ ] Review changed files and determine documentation impact
 - [ ] Update relevant documentation files
 - [ ] Update Mermaid diagrams (inline) or PlantUML files (.puml) if schemas/workflows changed
@@ -413,7 +413,7 @@ Search for: Root-level markdown files, `.docs/` directory and subdirectories, RE
 # Examples: npm run docs:check, bun run docs:check, yarn docs:check
 ```
 
-For AI Dev Atelier, use: `npm run ada::docs:check`
+For AI Dev Atelier, use: `bash skills/docs-check/scripts/check-docs.sh`
 
 ## Summary
 

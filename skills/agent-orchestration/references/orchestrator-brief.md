@@ -29,7 +29,7 @@
 ## Workstreams
 
 - **R1 (Research):**
-  - Owner: Research Specialist
+  - Owner: Researcher
   - Output: answer.md or research summary
 
 - **I1 (Implementation):**
@@ -41,7 +41,7 @@
   - Output: test results + fixes
 
 - **D1 (Docs):**
-  - Owner: Doc Writer
+  - Owner: Documenter
   - Output: doc updates + summary
 
 - **V1 (Verification):**
