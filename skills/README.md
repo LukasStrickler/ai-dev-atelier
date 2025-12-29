@@ -30,12 +30,12 @@ Skills are organized directories containing `SKILL.md` files that follow the [An
 - **When to use**: After making code changes, before committing
 - **How agents use it**: Agents read `SKILL.md` and execute `scripts/check-docs.sh`
 - **Scripts**: Embedded in `skills/docs-check/scripts/check-docs.sh`
-- **References**: See [Documentation Guide](../docs/DOCUMENTATION_GUIDE.md) for what to document
+- **References**: See `docs-check/references/documentation-guide.md` for what to document
 
 ### Documentation Write
 - **When to use**: Creating or updating documentation after code changes, during PR preparation
 - **How agents use it**: Agents follow instructions in `SKILL.md` (workflow skill, no scripts)
-- **References**: See [Documentation Guide](../docs/DOCUMENTATION_GUIDE.md) for documentation standards
+- **References**: See `docs-write/references/documentation-guide.md` for documentation standards
 
 ### Code Review
 - **When to use**:
@@ -53,14 +53,14 @@ Skills are organized directories containing `SKILL.md` files that follow the [An
 - **When to use**: Looking up documentation, code examples, API references, troubleshooting guides, best practices
 - **How agents use it**: Agents read `SKILL.md` and use MCP tools (Tavily, Context7)
 - **MCPs**: Tavily (web search), Context7 (library documentation)
-- **Setup**: Configure MCP servers in `mcp.json` (see `mcp.json.example`)
+- **Setup**: Configure MCP servers in `mcp.json`
 
 ### Research
 - **When to use**: Researching software architecture patterns, finding academic papers, conducting literature reviews, building evidence cards
 - **How agents use it**: Agents read `SKILL.md` and execute scripts in `scripts/research-*.sh` or use MCP tools
 - **Scripts**: Embedded in `skills/research/scripts/research-*.sh`
 - **MCPs**: OpenAlex (paper discovery), PDF extractor (text extraction), Paper-search (optional, multi-platform download)
-- **Setup**: Configure MCP servers in `mcp.json` (see `mcp.json.example`)
+- **Setup**: Configure MCP servers in `mcp.json`
 
 ### Agent Orchestration
 - **When to use**: Delegating work to subagents, parallel research/implementation/testing, hierarchical orchestration
@@ -95,7 +95,7 @@ Scripts are executed by agents when they use the skill. Each skill's `SKILL.md` 
 
 ## Documentation
 
-Skills that check or update documentation reference the [Documentation Guide](../docs/DOCUMENTATION_GUIDE.md) for standards and best practices.
+Skills that check or update documentation reference `docs-write/references/documentation-guide.md` for standards and best practices.
 
 ## Testing and Validation
 
@@ -112,7 +112,7 @@ Each skill follows the Anthropic/Codex standard:
 ```yaml
 ---
 name: skill-name
-description: What it does and when to use it (max 500 chars, one line)
+description: What it does and when to use it (max 1024 chars, one line)
 ---
 ```
 
@@ -127,5 +127,5 @@ The body contains detailed instructions, workflows, examples, and references.
 
 ## See Also
 
-- [Documentation Guide](../docs/DOCUMENTATION_GUIDE.md) - Documentation standards
+- `docs-write/references/documentation-guide.md` - Documentation standards
 - [Setup Guide](../SETUP.md) - Installation and setup

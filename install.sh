@@ -273,6 +273,64 @@ check_source_dir() {
   log_success "Found ${skill_count} skill(s) in source directory"
 }
 
+check_dependencies() {
+  local missing=0
+  local cmd
+  local required_cmds=("git" "diff" "cp" "rm" "awk" "sed" "mkdir" "basename" "dirname")
+
+  for cmd in "${required_cmds[@]}"; do
+    if ! command -v "$cmd" > /dev/null 2>&1; then
+      log_error "Missing required command: ${cmd}"
+      missing=$((missing + 1))
+    fi
+  done
+
+  if [ "$missing" -gt 0 ]; then
+    log_error "Missing required commands. Install them and re-run."
+    exit 1
+  fi
+
+  if ! command -v jq > /dev/null 2>&1; then
+    log_warning "jq not found. MCP configuration will be skipped."
+  fi
+
+
+}
+
+check_write_access() {
+  local target="$1"
+  local probe="$target"
+
+  while [ ! -d "$probe" ]; do
+    probe=$(dirname "$probe")
+    if [ "$probe" = "/" ]; then
+      break
+    fi
+  done
+
+  if [ ! -w "$probe" ]; then
+    log_error "No write access to ${target} (closest existing dir: ${probe})"
+    return 1
+  fi
+
+  return 0
+}
+
+preflight_checks() {
+  check_dependencies
+
+  local failed=0
+  check_write_access "$CODEX_SKILLS_DIR" || failed=$((failed + 1))
+  check_write_access "$OPENCODE_SKILLS_DIR" || failed=$((failed + 1))
+  check_write_access "$(dirname "$CODEX_MCP_CONFIG")" || failed=$((failed + 1))
+  check_write_access "$(dirname "$OPENCODE_CONFIG")" || failed=$((failed + 1))
+
+  if [ "$failed" -gt 0 ]; then
+    log_error "Preflight checks failed. Fix permissions and re-run."
+    exit 1
+  fi
+}
+
 # ============================================================================
 # SKILL INSTALLATION
 # ============================================================================
@@ -387,12 +445,12 @@ show_diff_preview() {
 # ----------------------------------------------------------------------------
 # Convert JSON MCP Config to TOML Format
 # ----------------------------------------------------------------------------
-# Converts a single MCP server from JSON format (mcp.json.example) to TOML format
+# Converts a single MCP server from JSON format (mcp.json) to TOML format
 # for Codex config.toml.
 #
 # Parameters:
 #   $1 - Server name
-#   $2 - Server config (JSON string from mcp.json.example)
+#   $2 - Server config (JSON string from mcp.json)
 #
 # Returns:
 #   TOML-formatted config block via stdout
@@ -465,7 +523,7 @@ convert_mcp_to_toml() {
 # Configure MCP Servers for Codex
 # ----------------------------------------------------------------------------
 # Configures MCP servers for Codex agent using TOML format (config.toml).
-# Reads from mcp.json.example and adds missing servers to Codex config.
+# Reads from mcp.json and adds missing servers to Codex config.
 #
 # IMPORTANT: Preserves existing MCP configurations and only adds missing ones.
 # It will NEVER overwrite an existing MCP server configuration.
@@ -487,7 +545,7 @@ configure_mcp() {
     log_info "Install jq to enable automatic MCP configuration:"
     log_info "  macOS: brew install jq"
     log_info "  Linux: sudo apt-get install jq"
-    log_info "  Or manually configure MCPs using mcp.json.example"
+    log_info "  Or manually configure MCPs using mcp.json"
     return
   fi
   
@@ -823,7 +881,7 @@ convert_mcp_to_opencode() {
 # Configure MCP Servers for OpenCode
 # ----------------------------------------------------------------------------
 # Configures MCP servers for OpenCode agent using OpenCode format.
-# Reads from mcp.json.example, converts to OpenCode format, and updates opencode.json.
+# Reads from mcp.json, converts to OpenCode format, and updates opencode.json.
 #
 # IMPORTANT: Preserves existing MCP configurations and only adds missing ones.
 # It will NEVER overwrite an existing MCP server configuration.
@@ -852,7 +910,7 @@ configure_mcp_opencode() {
     log_info "Install jq to enable automatic MCP configuration:"
     log_info "  macOS: brew install jq"
     log_info "  Linux: sudo apt-get install jq"
-    log_info "  Or manually configure MCPs using mcp.json.example"
+    log_info "  Or manually configure MCPs using mcp.json"
     return
   fi
   
@@ -1244,6 +1302,40 @@ install_skills_to_agent() {
   echo ""
 }
 
+post_install_check() {
+  local agent_type="$1"
+  local target_dir="$2"
+  local missing=()
+  local skill_dir
+
+  for skill_dir in "${SOURCE_SKILLS_DIR}"/*; do
+    if [ ! -d "$skill_dir" ] || [ ! -f "${skill_dir}/SKILL.md" ]; then
+      continue
+    fi
+
+    local skill_name
+    skill_name=$(basename "$skill_dir")
+
+    if [ "$skill_name" = ".system" ]; then
+      continue
+    fi
+
+    if ! should_install_skill "$skill_name" "$agent_type"; then
+      continue
+    fi
+
+    if [ ! -f "${target_dir}/${skill_name}/SKILL.md" ]; then
+      missing+=("$skill_name")
+    fi
+  done
+
+  if [ ${#missing[@]} -gt 0 ]; then
+    log_warning "Post-install check (${agent_type}) missing skills: ${missing[*]}"
+  else
+    log_success "Post-install check (${agent_type}) verified skills present"
+  fi
+}
+
 # ============================================================================
 # MAIN EXECUTION
 # ============================================================================
@@ -1268,7 +1360,11 @@ main() {
   
   # Parse arguments
   parse_args "$@"
-  
+
+  log_info "Running preflight checks..."
+  preflight_checks
+  echo ""
+
   if [ -f "$SKILLS_CONFIG" ]; then
     log_info "Using skills configuration: ${SKILLS_CONFIG}"
   fi
@@ -1315,9 +1411,11 @@ main() {
   
   log_info "━━━ Installing Skills to Codex ━━━"
   install_skills_to_agent "codex" "$CODEX_SKILLS_DIR"
+  post_install_check "codex" "$CODEX_SKILLS_DIR"
   
   log_info "━━━ Installing Skills to OpenCode ━━━"
   install_skills_to_agent "opencode" "$OPENCODE_SKILLS_DIR"
+  post_install_check "opencode" "$OPENCODE_SKILLS_DIR"
   
   echo ""
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

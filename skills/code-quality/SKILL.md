@@ -69,7 +69,7 @@ bash skills/code-quality/scripts/finalize.sh ci
 
 ## References
 
-- `docs/DOCUMENTATION_GUIDE.md` - Documentation standards
+- `references/documentation-guide.md` - Documentation standards
 
 ## Output
 

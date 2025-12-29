@@ -25,7 +25,7 @@
 
 **Specific Files/Areas Relevant:**
 - `src/services/coordination/` - needs consensus for leader election
-- `docs/architecture.md` - documents current distributed system design
+- `.docs/architecture.md` - documents current distributed system design
 - `k8s/deployments/` - Kubernetes configurations
 
 ## Research Question / Problem Statement

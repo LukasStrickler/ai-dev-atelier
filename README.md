@@ -1,143 +1,95 @@
 # AI Dev Atelier
 
-AI agent tools for code quality, documentation checking, code reviews, and PR comment management.
+```text
+     █████╗ ████████╗███████╗██╗     ██╗███████╗██████╗                     
+    ██╔══██╗╚══██╔══╝██╔════╝██║     ██║██╔════╝██╔══██╗                   
+    ███████║   ██║   █████╗  ██║     ██║█████╗  ██████╔╝                   
+    ██╔══██║   ██║   ██╔══╝  ██║     ██║██╔══╝  ██╔══██╗                    
+    ██║  ██║   ██║   ███████╗███████╗██║███████╗██║  ██║                    
+    ╚═╝  ╚═╝   ╚═╝   ╚══════╝╚══════╝╚═╝╚══════╝╚═╝  ╚═╝                    
 
-## Overview
+            🎨 A I   D E V   A T E L I E R 🎨                     
+                                                                              
+             🖌️ Where AI Agents Craft Quality Code                              
+      🔍      📝     ✍️     🔬     💬      🔎       📚
+    quality  docs   docs   code    pr     search  research
+    check    check  write  review  review 
+```
 
-AI Dev Atelier provides a collection of tools, skills, and documentation standards to help AI agents maintain code quality and automate common development workflows.
+
+![License](https://img.shields.io/badge/license-BSL%201.1-blue) ![Agent Skills](https://img.shields.io/badge/Agent%20Skills-Anthropic-orange) ![OpenCode](https://img.shields.io/badge/OpenCode-supported-1f6feb) ![Codex](https://img.shields.io/badge/Codex-supported-6f42c1) ![MCP](https://img.shields.io/badge/MCP-enabled-2ea043)
+
+Production-grade skill pack for AI-assisted development: code quality, documentation, code review, research, and orchestration via Agent Skills and MCP.
+
+Quick links: [WORKFLOW_EXAMPLE.md](./WORKFLOW_EXAMPLE.md) | [SETUP.md](./SETUP.md) | [INSTALL.md](./INSTALL.md)
 
 ## Quick Start
 
-```bash
-# 1. Clone AI Dev Atelier
-git clone https://github.com/LukasStrickler/ai-dev-atelier.git /ai-dev-atelier
-
-# 2. Verify skill structure
-bash /ai-dev-atelier/setup.sh
-
-# 3. Install skills to Codex
-bash /ai-dev-atelier/install.sh
-
-# 4. Verify skills are loaded in Codex
-# Ask Codex: "What skills are available?"
-```
-
-See [SETUP.md](./SETUP.md) for detailed setup instructions.
-
-## Testing and Validation
-
-Verify the integrity and structure of all skills:
+Before install, copy `.env.example` to `.env` and set MCP API keys you plan to use.
 
 ```bash
-bash .test/scripts/validate-skills.sh
+git clone https://github.com/LukasStrickler/ai-dev-atelier.git ~/ai-dev-atelier
+bash ~/ai-dev-atelier/setup.sh
+bash ~/ai-dev-atelier/install.sh
 ```
 
-## Components
+`install.sh` installs skills and MCPs for both Codex and OpenCode, preserves existing configs, and supports agent-specific filtering via `skills-config.json`.
 
-### Skills
+Verify in your agent:
+- Ask: "What skills are available?"
+- Or check: `~/.codex/skills` and `~/.opencode/skill`
 
-AI agent skills following [Anthropic Agent Skills](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills) format:
+## Agent Compatibility
 
-- **[code-quality](./skills/code-quality/SKILL.md)** - Code quality checks (typecheck, lint, format, markdown)
-- **[docs-check](./skills/docs-check/SKILL.md)** - Documentation update detection
-- **[docs-write](./skills/docs-write/SKILL.md)** - Documentation writing and updates
-- **[code-review](./skills/code-review/SKILL.md)** - CodeRabbit reviews (task and pr modes)
-- **[pr-review](./skills/pr-review/SKILL.md)** - GitHub PR comments management
-- **[search](./skills/search/SKILL.md)** - Web and library documentation search (Tavily, Context7)
-- **[research](./skills/research/SKILL.md)** - Academic research with evidence cards (OpenAlex, PDF extraction)
-- **[agent-orchestration](./skills/agent-orchestration/SKILL.md)** - Spawn and manage hierarchical AI sub-agents
+- Agent Skills are primarily aimed at raw Codex.
+- OpenCode supports skills, but relies on native subagents for orchestration.
 
-See [skills/README.md](./skills/README.md) for complete overview.
+## What You Get
 
-### Scripts
+| Skill | Purpose | Entry Point |
+| --- | --- | --- |
+| `code-quality` | Typecheck, lint, format, markdown validation | `skills/code-quality/scripts/finalize.sh` |
+| `docs-check` | Detect documentation impact from git diffs | `skills/docs-check/scripts/check-docs.sh` |
+| `docs-write` | Write/update docs using standards | Workflow skill (no script) |
+| `code-review` | CodeRabbit reviews (task/pr modes) | `skills/code-review/scripts/review-run.sh` |
+| `pr-review` | Fetch/resolve/dismiss PR comments | `skills/pr-review/scripts/pr-comments-*.sh` |
+| `search` | Web and library documentation search | MCP-based (no script) |
+| `research` | Academic research with evidence cards | `skills/research/scripts/research-*.sh` |
+| `agent-orchestration` | Spawn and manage sub-agents | `skills/agent-orchestration/scripts/agent-*.sh` |
 
-Shell scripts are embedded within each skill directory in `scripts/` subdirectories:
+## MCP Integration
 
-- **code-quality**: `skills/code-quality/scripts/finalize.sh`
-- **docs-check**: `skills/docs-check/scripts/check-docs.sh`
-- **code-review**: `skills/code-review/scripts/review-*.sh`
-- **pr-review**: `skills/pr-review/scripts/pr-comments-*.sh`
-- **research**: `skills/research/scripts/research-*.sh`
-- **agent-orchestration**: `skills/agent-orchestration/scripts/agent-*.sh`
+| MCP Server | Purpose | API Key / Env |
+| --- | --- | --- |
+| `tavily-remote-mcp` | Web search and research | `TAVILY_API_KEY` required |
+| `context7` | Library documentation | `CONTEXT7_API_KEY` (if used) |
+| `openalex-research` | Academic papers and citations | `OPENALEX_EMAIL` required |
+| `pdf-reader` | PDF extraction | None |
+| `paper-search` | Multi-platform paper search | Optional keys |
+| `grep` | GitHub code search | None |
 
-Scripts are executed by agents when they use the skill. Each skill's `SKILL.md` file contains instructions on when and how to execute these scripts.
+## Data and Outputs
 
-### Documentation
+| Output Type | Location |
+| --- | --- |
+| Code reviews | `.ada/data/reviews/` |
+| PR comments | `.ada/data/pr-comments/` |
+| Research evidence cards | `.ada/data/research/{topic}/` |
+| Research downloads (temp) | `.ada/temp/research/downloads/` |
 
-Documentation standards and guides:
+## Safety and Guardrails
 
-- **[Documentation Guide](./docs/DOCUMENTATION_GUIDE.md)** - Best practices for maintaining documentation
-- **[docs/README.md](./docs/README.md)** - Documentation overview
+- Skills are driven by `SKILL.md` instructions and execute scripts via bash.
+- The installer preserves existing Codex/OpenCode configurations.
+- Outputs are written to `.ada/` directories; no hidden state.
+- Use `skills-config.json` to disable skills per agent.
 
-## How It Works Together
+## Docs and Setup
 
-```
-┌─────────────┐
-│   Skills    │  ← AI agent capabilities (SKILL.md + embedded scripts)
-└──────┬──────┘
-       │ contains
-       ▼
-┌─────────────┐
-│   Scripts   │  ← Executable tools (embedded in skills/ subdirectories)
-└──────┬──────┘
-       │ uses
-       ▼
-┌─────────────┐
-│    Docs     │  ← Standards and guides
-└─────────────┘
-```
-
-1. **Skills** define AI agent capabilities with `SKILL.md` files and contain embedded scripts
-2. **Scripts** are executed by agents when they use the skill (via bash, not npm)
-3. **Documentation** provides standards and best practices
-
-## How Agents Use Skills
-
-Skills follow the [Anthropic Agent Skills](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills) standard:
-
-1. **Discovery**: Agents scan skill directories (like `~/.codex/skills`) for directories containing `SKILL.md` files
-2. **Loading**: Agents read `SKILL.md` files which contain:
-   - YAML frontmatter with `name` and `description`
-   - Detailed instructions on when and how to use the skill
-   - References to embedded scripts in `scripts/` subdirectories
-3. **Execution**: When an agent decides to use a skill, it:
-   - Reads the skill instructions from `SKILL.md`
-   - Executes scripts via `bash skills/<skill-name>/scripts/<script-name>.sh`
-   - Scripts are called directly, not through npm or package.json
-
-## Usage
-
-After installation, agents (like Codex) will automatically discover and use skills. You can trigger skills by asking the agent:
-
-```bash
-# Code quality
-"Run code quality checks" → triggers code-quality skill
-
-# Documentation check
-"Check if documentation needs updates" → triggers docs-check skill
-
-# Code review
-"Review my code changes" → triggers code-review skill
-
-# PR comments
-"Fetch PR comments" → triggers pr-review skill
-
-# Research
-"List research sessions" → triggers research skill
-
-# Search
-"Search for React documentation" → triggers search skill
-```
-
-Each skill's `SKILL.md file contains detailed instructions on when and how agents should use it.
-
-## Resources
-
-- [Setup Guide](./SETUP.md) - Installation and setup
-- [Installation Guide](./INSTALL.md) - Complete dependency installation
-- [Skills](./skills/README.md) - AI agent skills documentation
-- [Documentation](./docs/README.md) - Documentation standards
+- [SETUP.md](./SETUP.md): Verify the repository and skill structure before installing.
+- [INSTALL.md](./INSTALL.md): Full dependency and MCP setup across platforms.
+- [WORKFLOW_EXAMPLE.md](./WORKFLOW_EXAMPLE.md): Personal OpenCode (oh-my-opencode) and Vibekanban setup example.
 
 ## License
 
-See [LICENSE](./LICENSE) file.
+Business Source License 1.1. Change License: Apache 2.0. See [LICENSE](./LICENSE).

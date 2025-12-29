@@ -1,1 +1,23 @@
+# Environment
 .env
+.env.local
+.env*.local
+
+# Output directories
+.ada/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Backup files
+*.backup
+
+# Node modules
+node_modules/

@@ -87,7 +87,7 @@ bash skills/docs-check/scripts/check-docs.sh
 
 ## References
 
-- [Documentation Guide](docs/DOCUMENTATION_GUIDE.md) - For when to document changes
+- [Documentation Guide](references/documentation-guide.md) - For when to document changes
 
 ## Output
 

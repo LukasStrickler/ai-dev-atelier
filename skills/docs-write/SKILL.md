@@ -19,41 +19,41 @@ description: "Write or update documentation (tutorial, how-to, reference, explan
 
 ### Writing Documentation
 
-**IMPORTANT**: Before writing documentation, read `docs/DOCUMENTATION_GUIDE.md` to understand all standards, patterns, and requirements. Do not make assumptions about documentation style, structure, or content - always reference the guide for specific details.
+**IMPORTANT**: Before writing documentation, read `references/documentation-guide.md` to understand all standards, patterns, and requirements. Do not make assumptions about documentation style, structure, or content - always reference the guide for specific details.
 
-1. **Read the full guide first**: Load `docs/DOCUMENTATION_GUIDE.md` to understand complete documentation standards
+1. **Read the full guide first**: Load `references/documentation-guide.md` to understand complete documentation standards
    - This ensures you have all context about style, structure, doc types, and examples
    - Do not proceed with writing until the guide is loaded in context
 
-2. **Determine doc type**: Read `docs/DOCUMENTATION_GUIDE.md` section "Doc Types (Divio)" to choose tutorial, how-to, reference, or explanation
+2. **Determine doc type**: Read `references/documentation-guide.md` section "Doc Types (Divio)" to choose tutorial, how-to, reference, or explanation
    - Tutorial: Learning-oriented, step-by-step for beginners
    - How-to: Goal-oriented, task-focused
    - Reference: Fact-oriented, API/technical details
    - Explanation: Understanding-oriented, concepts and context
 
-3. **Review style guidelines**: Read `docs/DOCUMENTATION_GUIDE.md` sections:
+3. **Review style guidelines**: Read `references/documentation-guide.md` sections:
    - "Style and Voice" - Active voice, clear language, consistent terminology
    - "Structure and Skimmability" - Headings, examples first, clear organization
    - Reference the guide for exact formatting, terminology, and style requirements
 
 4. **Draft content**: Use the checklist above, include code examples, and follow the structure guidelines from the guide
 
-5. **Add visuals if needed**: Read `docs/DOCUMENTATION_GUIDE.md` section "Visuals and Diagrams"
+5. **Add visuals if needed**: Read `references/documentation-guide.md` section "Visuals and Diagrams"
    - Use Mermaid for inline diagrams (ER diagrams, sequence diagrams)
    - Use PlantUML (.puml files) for diagrams referenced from multiple docs
    - See examples in the guide for exact syntax - do not guess
 
-6. **For API documentation**: Read `docs/DOCUMENTATION_GUIDE.md` section "API Documentation"
+6. **For API documentation**: Read `references/documentation-guide.md` section "API Documentation"
    - Document authentication, request/response formats, error codes
    - Include examples for all endpoints (see guide for format)
    - Document breaking changes prominently
 
-7. **For ADRs/Runbooks**: Read `docs/DOCUMENTATION_GUIDE.md` section "ADRs and Runbooks"
+7. **For ADRs/Runbooks**: Read `references/documentation-guide.md` section "ADRs and Runbooks"
    - ADRs: Context, decision, consequences
    - Runbooks: Steps, rollback procedures, contacts
    - Follow exact templates from the guide
 
-8. **Review and finalize**: Read `docs/DOCUMENTATION_GUIDE.md` section "Templates and Checklists"
+8. **Review and finalize**: Read `references/documentation-guide.md` section "Templates and Checklists"
    - Verify all checklist items are addressed
    - Add cross-references to related documentation
    - Ensure consistent terminology (check guide for exact terms)
@@ -62,9 +62,9 @@ description: "Write or update documentation (tutorial, how-to, reference, explan
 
 ## Reference Files
 
-**REQUIRED**: Always read `docs/DOCUMENTATION_GUIDE.md` before writing documentation. The guide contains all standards, examples, and requirements. Do not make assumptions - load the guide and reference specific sections.
+**REQUIRED**: Always read `references/documentation-guide.md` before writing documentation. The guide contains all standards, examples, and requirements. Do not make assumptions - load the guide and reference specific sections.
 
-Read these sections from `docs/DOCUMENTATION_GUIDE.md` as needed:
+Read these sections from `references/documentation-guide.md` as needed:
 
 - **Style and Voice** (`#style-and-voice`) - Writing style, active voice, terminology
 - **Structure and Skimmability** (`#structure-and-skimmability`) - Organization, headings, examples
@@ -75,7 +75,7 @@ Read these sections from `docs/DOCUMENTATION_GUIDE.md` as needed:
 - **Templates and Checklists** (`#templates-and-checklists`) - Documentation checklists
 - **When to Document** (`#when-to-document`) - What changes require documentation
 
-**Full guide**: `docs/DOCUMENTATION_GUIDE.md` - Complete documentation standards and best practices
+**Full guide**: `references/documentation-guide.md` - Complete documentation standards and best practices
 
 ## Integration with Other Skills
 

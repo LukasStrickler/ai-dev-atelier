@@ -244,7 +244,7 @@ Your project should have these commands available for the code-quality skill to 
 ### 1. Clone AI Dev Atelier
 
 ```bash
-git clone https://github.com/LukasStrickler/ai-dev-atelier.git /ai-dev-atelier
+git clone https://github.com/LukasStrickler/ai-dev-atelier.git ~/ai-dev-atelier
 ```
 
 **Alternative locations:**
@@ -252,14 +252,14 @@ git clone https://github.com/LukasStrickler/ai-dev-atelier.git /ai-dev-atelier
 You can clone to any location. The install script will automatically detect the correct path.
 
 ```bash
-git clone https://github.com/LukasStrickler/ai-dev-atelier.git ~/ai-dev-atelier
+git clone https://github.com/LukasStrickler/ai-dev-atelier.git ~/projects/ai-dev-atelier
 # Or any other path
 ```
 
 ### 2. Verify Skill Structure
 
 ```bash
-bash /ai-dev-atelier/setup.sh
+bash ~/ai-dev-atelier/setup.sh
 ```
 
 The setup script will:
@@ -271,7 +271,7 @@ The setup script will:
 ### 3. Install Skills to Codex
 
 ```bash
-bash /ai-dev-atelier/install.sh
+bash ~/ai-dev-atelier/install.sh
 ```
 
 The install script will:
@@ -361,7 +361,7 @@ ls -la ~/.codex/skills
   - **API Key Required:** No
   - **Configuration:** Automatically added to Codex MCP config (`~/.codex/mcp.json` or `$XDG_CONFIG_HOME/codex/mcp.json`)
   - **Usage:** Finding real-world code examples, implementation patterns, API usage, error handling patterns
-  - **Note:** All MCPs from `mcp.json.example` are automatically configured by the installer. Update API keys after installation.
+  - **Note:** All MCPs from `mcp.json` are automatically configured by the installer. Update API keys after installation.
 
 **Required for Research Skill:**
 
@@ -386,7 +386,7 @@ ls -la ~/.codex/skills
 **Configuration:**
 
 **For Codex (Automatic):**
-- The `install.sh` script automatically configures all MCPs from `mcp.json.example` for Codex
+- The `install.sh` script automatically configures all MCPs from `mcp.json` for Codex
 - MCP configuration is created/updated at `~/.codex/mcp.json` (or `$XDG_CONFIG_HOME/codex/mcp.json`)
 - Existing MCP configurations are preserved; only missing MCPs are added
 - All MCPs from the example file are configured: Tavily, Context7, OpenAlex, PDF Reader, Paper-search, and Grep
@@ -394,11 +394,11 @@ ls -la ~/.codex/skills
 - **Important:** After installation, update API keys in the MCP config file (TAVILY_API_KEY, CONTEXT7_API_KEY, OPENALEX_EMAIL)
 
 **For Other Agents (Manual):**
-1. Copy `mcp.json.example` to your MCP configuration location (typically `~/.config/claude/mcp.json` for Claude Desktop)
+1. Copy `mcp.json` to your MCP configuration location (typically `~/.config/claude/mcp.json` for Claude Desktop)
 2. Update API keys in the configuration file
 3. Restart your AI agent to load MCP servers
 
-See `mcp.json.example` for complete configuration format.
+See `mcp.json` for complete configuration format.
 
 ## How Agents Use Skills
 
@@ -438,7 +438,7 @@ See `mcp.json.example` for complete configuration format.
 | Skills directory not found | Verify AI Dev Atelier is cloned correctly |
 | SKILL.md not found | Ensure you're running setup from the AI Dev Atelier root directory |
 | `bash: command not found` | Install Git Bash (Windows) or use WSL |
-| Permission denied | `chmod +x /ai-dev-atelier/install.sh` |
+| Permission denied | `chmod +x ~/ai-dev-atelier/install.sh` |
 | Skills not appearing in Codex | Verify skills are installed to `~/.codex/skills` and restart Codex |
 | Codex doesn't recognize skills | Restart Codex after installation |
 | `gh: command not found` | Install GitHub CLI: `brew install gh && gh auth login` |
@@ -473,7 +473,7 @@ npx eslint --version
 npx prettier --version
 
 # Verify skills are installed
-bash /ai-dev-atelier/setup.sh
+bash ~/ai-dev-atelier/setup.sh
 
 # Validate skill structure and integrity
 bash .test/scripts/validate-skills.sh
@@ -490,7 +490,6 @@ After installation, see [SETUP.md](./SETUP.md) for:
 ## Support
 
 - **Setup Guide:** [SETUP.md](./SETUP.md) - Quick setup and configuration
-- **Documentation:** `/ai-dev-atelier/skills/README.md`
+- **Documentation:** `~/ai-dev-atelier/skills/README.md`
 - **Script help:** See individual skill documentation in `skills/*/SKILL.md`
-- **Repository:** https://github.com/LukasStrickler/ai-dev-atelier
 

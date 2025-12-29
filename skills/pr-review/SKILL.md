@@ -86,7 +86,7 @@ bash skills/pr-review/scripts/pr-comments-dismiss.sh [PR_NUMBER] <COMMENT_ID> <R
 
 ## References
 
-- [Documentation Guide](docs/DOCUMENTATION_GUIDE.md) - For documentation standards
+- [Documentation Guide](references/documentation-guide.md) - For documentation standards
 
 ## Output
 

@@ -408,12 +408,13 @@ Search for: Root-level markdown files, `.docs/` directory and subdirectories, RE
 
 **Checking for updates:**
 
+Use the `docs-check` skill to identify documentation that needs updating:
+
 ```bash
-# Use your project's documentation check command
-# Examples: npm run docs:check, bun run docs:check, yarn docs:check
+bash skills/docs-check/scripts/check-docs.sh
 ```
 
-For AI Dev Atelier, use: `bash skills/docs-check/scripts/check-docs.sh`
+This script analyzes git diff to detect code changes that may require documentation updates.
 
 ## Summary
 
@@ -427,7 +428,3 @@ Effective documentation:
 - ✅ Provides **context** and **examples**
 - ✅ Maintains **consistency** across all docs
 - ✅ Keeps **code comments** and **documentation** in sync
-
-
-
-

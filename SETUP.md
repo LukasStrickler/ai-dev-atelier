@@ -8,13 +8,13 @@ Quick setup guide for installing AI Dev Atelier skills into Codex.
 
 ```bash
 # 1. Clone AI Dev Atelier
-git clone https://github.com/LukasStrickler/ai-dev-atelier.git /ai-dev-atelier
+git clone https://github.com/LukasStrickler/ai-dev-atelier.git ~/ai-dev-atelier
 
 # 2. Verify skill structure
-bash /ai-dev-atelier/setup.sh
+bash ~/ai-dev-atelier/setup.sh
 
 # 3. Install skills to Codex
-bash /ai-dev-atelier/install.sh
+bash ~/ai-dev-atelier/install.sh
 
 # 4. Verify skills are loaded in Codex
 # Ask Codex: "What skills are available?"
@@ -58,7 +58,7 @@ The install script copies skills from the local repository to `~/.codex/skills`.
 ### Step 1: Verify Skill Structure
 
 ```bash
-bash /ai-dev-atelier/setup.sh
+bash ~/ai-dev-atelier/setup.sh
 ```
 
 This script:
@@ -70,7 +70,7 @@ This script:
 ### Step 2: Install Skills to Codex
 
 ```bash
-bash /ai-dev-atelier/install.sh
+bash ~/ai-dev-atelier/install.sh
 ```
 
 This script:
@@ -121,7 +121,7 @@ Skills follow the Anthropic Agent Skills standard:
 
 ### Different Installation Path
 
-If AI Dev Atelier is not at `/ai-dev-atelier`, the install script automatically detects the correct path based on where it's located.
+If AI Dev Atelier is not at `~/ai-dev-atelier`, the install script automatically detects the correct path based on where it's located.
 
 ### Updating Skills
 
@@ -129,10 +129,10 @@ To update skills after making changes to the local repository:
 
 ```bash
 # Re-run install script
-bash /ai-dev-atelier/install.sh
+bash ~/ai-dev-atelier/install.sh
 
 # Or use --yes to auto-overwrite
-bash /ai-dev-atelier/install.sh --yes
+bash ~/ai-dev-atelier/install.sh --yes
 ```
 
 The script will show a diff of changes before overwriting (unless `--yes` is used).
@@ -143,7 +143,7 @@ The script will show a diff of changes before overwriting (unless `--yes` is use
 |-------|----------|
 | Skills directory not found | Verify AI Dev Atelier is cloned correctly |
 | SKILL.md not found | Ensure you're running from the AI Dev Atelier root directory |
-| Permission denied | `chmod +x /ai-dev-atelier/install.sh` |
+| Permission denied | `chmod +x ~/ai-dev-atelier/install.sh` |
 | Skills not appearing in Codex | Verify skills are installed to `~/.codex/skills` |
 | Codex doesn't recognize skills | Restart Codex after installation |
 
@@ -157,7 +157,7 @@ The script will show a diff of changes before overwriting (unless `--yes` is use
 
 2. **Read the skills documentation:**
    ```bash
-   cat /ai-dev-atelier/skills/README.md
+   cat ~/ai-dev-atelier/skills/README.md
    ```
 
 3. **Test a skill:**
@@ -174,18 +174,17 @@ Safe to run multiple times:
 
 ```bash
 # Verify structure
-bash /ai-dev-atelier/setup.sh
+bash ~/ai-dev-atelier/setup.sh
 
 # Re-install skills (with confirmation)
-bash /ai-dev-atelier/install.sh
+bash ~/ai-dev-atelier/install.sh
 
 # Re-install skills (auto-overwrite)
-bash /ai-dev-atelier/install.sh --yes
+bash ~/ai-dev-atelier/install.sh --yes
 ```
 
 ## Support
 
 - **Installation Guide:** [INSTALL.md](./INSTALL.md) - Complete dependency installation instructions
-- **Skills Documentation:** `/ai-dev-atelier/skills/README.md`
+- **Skills Documentation:** `~/ai-dev-atelier/skills/README.md`
 - **Individual Skills:** See `skills/*/SKILL.md` for detailed skill documentation
-- **Repository:** https://github.com/LukasStrickler/ai-dev-atelier

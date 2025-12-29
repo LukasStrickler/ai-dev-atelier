@@ -7,7 +7,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SKILLS_DIR="$(cd "$SCRIPT_DIR/../../skills" && pwd)"
+DEFAULT_SKILLS_DIR="$(cd "$SCRIPT_DIR/../../skills" && pwd)"
+SKILLS_DIR="${SKILLS_DIR_OVERRIDE:-$DEFAULT_SKILLS_DIR}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -20,6 +21,19 @@ TOTAL_SKILLS=0
 PASSED_SKILLS=0
 FAILED_SKILLS=0
 WARNINGS=0
+SKILL_NAMES=""
+
+name_exists() {
+  local needle="$1"
+  if [ -z "$SKILL_NAMES" ]; then
+    return 1
+  fi
+
+  case "|$SKILL_NAMES|" in
+    *"|$needle|"*) return 0 ;;
+  esac
+  return 1
+}
 
 validate_skill() {
   local skill_dir="$1"
@@ -47,38 +61,112 @@ validate_skill() {
   else
     echo -e "${GREEN}✓${NC} YAML frontmatter present"
   fi
-  
-  # Check name field
-  if ! grep -q "^name:" "$skill_md"; then
+
+  local fm_end=""
+  fm_end=$(awk 'NR>1 && $0=="---" {print NR; exit}' "$skill_md")
+  if [ -z "$fm_end" ]; then
+    echo -e "${RED}❌ Missing closing YAML frontmatter delimiter (---)${NC}"
+    ((errors++))
+  fi
+
+  local frontmatter=""
+  if [ -n "$fm_end" ]; then
+    frontmatter=$(awk "NR>1 && NR<${fm_end}" "$skill_md")
+  fi
+
+  local name_line=""
+  name_line=$(printf "%s\n" "$frontmatter" | grep -m1 "^name:" || true)
+  if [ -z "$name_line" ]; then
     echo -e "${RED}❌ Missing 'name' field in frontmatter${NC}"
     ((errors++))
   else
-    local name_value=$(grep "^name:" "$skill_md" | sed 's/name: *//' | tr -d '"')
-    echo -e "${GREEN}✓${NC} name: $name_value"
+    local name_value
+    name_value=$(printf "%s" "$name_line" | sed 's/^name:[[:space:]]*//' | tr -d '"' | tr -d "'")
+    local name_length=${#name_value}
+    local name_valid=true
+
+    if [ -z "$name_value" ]; then
+      echo -e "${RED}❌ 'name' field is empty${NC}"
+      ((errors++))
+      name_valid=false
+    fi
+
+    if [ "$name_length" -gt 64 ]; then
+      echo -e "${RED}❌ 'name' too long: ${name_length} chars (max 64)${NC}"
+      ((errors++))
+      name_valid=false
+    fi
+
+    if [ "$name_valid" = true ] && ! echo "$name_value" | grep -Eq '^[a-z0-9-]+$'; then
+      echo -e "${RED}❌ 'name' must match ^[a-z0-9-]+$${NC}"
+      ((errors++))
+      name_valid=false
+    fi
+
+    if [ "$name_valid" = true ] && name_exists "$name_value"; then
+      echo -e "${RED}❌ Duplicate skill name detected: ${name_value}${NC}"
+      ((errors++))
+      name_valid=false
+    fi
+
+    if [ "$name_valid" = true ]; then
+      if [ -z "$SKILL_NAMES" ]; then
+        SKILL_NAMES="$name_value"
+      else
+        SKILL_NAMES="${SKILL_NAMES}|$name_value"
+      fi
+      echo -e "${GREEN}✓${NC} name: $name_value"
+    fi
   fi
-  
-  # Check description field
-  if ! grep -q "^description:" "$skill_md"; then
+
+  local desc_line=""
+  desc_line=$(printf "%s\n" "$frontmatter" | grep -m1 "^description:" || true)
+  if [ -z "$desc_line" ]; then
     echo -e "${RED}❌ Missing 'description' field in frontmatter${NC}"
     ((errors++))
   else
-    echo -e "${GREEN}✓${NC} description field present"
+    if echo "$desc_line" | grep -Eq "description:[[:space:]]*[>|]$"; then
+      echo -e "${RED}❌ 'description' must be a single line (no block scalars)${NC}"
+      ((errors++))
+    fi
+
+    local desc_value
+    desc_value=$(printf "%s" "$desc_line" | sed 's/^description:[[:space:]]*//')
+    desc_value=$(printf "%s" "$desc_value" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+    desc_value=${desc_value#\"}
+    desc_value=${desc_value%\"}
+    desc_value=${desc_value#\'}
+    desc_value=${desc_value%\'}
+
+    if [ -z "$desc_value" ]; then
+      echo -e "${RED}❌ 'description' field is empty${NC}"
+      ((errors++))
+    else
+      local desc_length=${#desc_value}
+      if [ "$desc_length" -gt 1024 ]; then
+        echo -e "${RED}❌ 'description' too long: ${desc_length} chars (max 1024)${NC}"
+        ((errors++))
+      else
+        echo -e "${GREEN}✓${NC} description field present"
+      fi
+    fi
   fi
-  
-  local desc_line=$(grep "^description:" "$skill_md")
-  if echo "$desc_line" | grep -Eqi "use when|should be used when|when Claude|when users|when the user"; then
-    echo -e "${GREEN}✓${NC} Description includes a WHEN clause"
-  else
-    echo -e "${YELLOW}⚠${NC}  Description may be missing a WHEN clause (e.g., \"Use when\")"
-    ((warns++))
-  fi
-  
-  # Check for triggers
-  if echo "$desc_line" | grep -qi "Triggers:"; then
-    echo -e "${GREEN}✓${NC} Triggers list present"
-  else
-    echo -e "${YELLOW}⚠${NC}  No triggers list found in description"
-    ((warns++))
+
+  if [ -n "$desc_line" ]; then
+    if echo "$desc_line" | grep -Eqi "use when|should be used when|when Claude|when users|when the user"; then
+      echo -e "${GREEN}✓${NC} Description includes a WHEN clause"
+    else
+      echo -e "${YELLOW}⚠${NC}  Description may be missing a WHEN clause (e.g., \"Use when\")"
+      ((warns++))
+    fi
+
+    # Check for triggers
+    if echo "$desc_line" | grep -qi "Triggers:"; then
+      echo -e "${GREEN}✓${NC} Triggers list present"
+    else
+      echo -e "${YELLOW}⚠${NC}  No triggers list found in description"
+      ((warns++))
+    fi
   fi
   
   # Check word count (<5000 recommended, <2000 ideal)
@@ -208,6 +296,52 @@ if [ $FAILED_SKILLS -gt 0 ]; then
   echo -e "Failed: ${RED}$FAILED_SKILLS${NC}"
 else
   echo "Failed: 0"
+fi
+
+# Check documentation-guide.md consistency across skills
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Checking documentation-guide.md consistency"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+DOC_GUIDE_FILES=()
+for skill_dir in "$SKILLS_DIR"/*/; do
+  doc_guide="${skill_dir}references/documentation-guide.md"
+  if [ -f "$doc_guide" ]; then
+    DOC_GUIDE_FILES+=("$doc_guide")
+  fi
+done
+
+if [ ${#DOC_GUIDE_FILES[@]} -eq 0 ]; then
+  echo -e "${YELLOW}⚠${NC}  No documentation-guide.md files found in skill references/"
+elif [ ${#DOC_GUIDE_FILES[@]} -eq 1 ]; then
+  echo -e "${GREEN}✓${NC} Only one documentation-guide.md found: ${DOC_GUIDE_FILES[0]}"
+else
+  # Compare all files against the first one
+  REFERENCE_FILE="${DOC_GUIDE_FILES[0]}"
+  REFERENCE_HASH=$(md5 -q "$REFERENCE_FILE" 2>/dev/null || md5sum "$REFERENCE_FILE" | cut -d' ' -f1)
+  DOC_GUIDE_CONSISTENT=true
+  INCONSISTENT_FILES=()
+  
+  for doc_file in "${DOC_GUIDE_FILES[@]:1}"; do
+    FILE_HASH=$(md5 -q "$doc_file" 2>/dev/null || md5sum "$doc_file" | cut -d' ' -f1)
+    if [ "$FILE_HASH" != "$REFERENCE_HASH" ]; then
+      DOC_GUIDE_CONSISTENT=false
+      INCONSISTENT_FILES+=("$doc_file")
+    fi
+  done
+  
+  if [ "$DOC_GUIDE_CONSISTENT" = true ]; then
+    echo -e "${GREEN}✓${NC} All ${#DOC_GUIDE_FILES[@]} documentation-guide.md files are identical"
+  else
+    echo -e "${RED}❌ documentation-guide.md files are NOT identical!${NC}"
+    echo "   Reference: $REFERENCE_FILE"
+    echo "   Inconsistent files:"
+    for f in "${INCONSISTENT_FILES[@]}"; do
+      echo "     - $f"
+    done
+    FAILED_SKILLS=$((FAILED_SKILLS + 1))
+  fi
 fi
 echo ""
 

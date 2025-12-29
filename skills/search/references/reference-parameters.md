@@ -95,7 +95,7 @@ Complete reference for all Tavily MCP tool parameters.
 
 ### Path & Domain Filtering
 - `select_paths` (array of strings, regex patterns) - Select only URLs with specific path patterns
-  - Example: `["/docs/.*", "/api/.*"]`
+  - Example: `["/\\.docs/.*", "/api/.*"]`
 - `exclude_paths` (array of strings, regex patterns) - Exclude URLs with specific path patterns
   - Example: `["/private/.*", "/admin/.*"]`
 - `select_domains` (array of strings, regex patterns) - Restrict to specific domains/subdomains

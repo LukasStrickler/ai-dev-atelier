@@ -31,6 +31,29 @@ log_error() {
   echo -e "${RED}❌${NC} $1" >&2
 }
 
+check_dependencies() {
+  local missing=0
+  local cmd
+  local required_cmds=("bash" "git")
+
+  for cmd in "${required_cmds[@]}"; do
+    if ! command -v "$cmd" > /dev/null 2>&1; then
+      log_error "Missing required command: ${cmd}"
+      missing=$((missing + 1))
+    fi
+  done
+
+  if [ "$missing" -gt 0 ]; then
+    exit 1
+  fi
+
+  if ! command -v jq > /dev/null 2>&1; then
+    log_warning "jq not found. MCP configuration will be skipped during install."
+  fi
+
+
+}
+
 # Check if skills directory exists
 check_skills_dir() {
   local skills_dir="${ATELIER_DIR}/skills"
@@ -110,6 +133,10 @@ main() {
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo "AI Dev Atelier Setup"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+
+  log_info "Running preflight checks..."
+  check_dependencies
   echo ""
   
   # Check skills directory

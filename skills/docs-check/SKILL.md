@@ -28,9 +28,9 @@ The tool categorizes changes and suggests relevant documentation files:
 
 2. **Review output**: Categorized changes with suggested documentation files
 
-3. **Validate structure**: Read `docs/DOCUMENTATION_GUIDE.md` to verify existing docs follow standards
+3. **Validate structure**: Read `references/documentation-guide.md` to verify existing docs follow standards
 
-4. **Update documentation**: Use `skills/docs-write/SKILL.md` workflow, reference `docs/DOCUMENTATION_GUIDE.md` for requirements
+4. **Update documentation**: Use `skills/docs-write/SKILL.md` workflow, reference `references/documentation-guide.md` for requirements
 
 5. **Verify**: Re-run check until all suggestions addressed
 
@@ -56,13 +56,13 @@ bash skills/docs-check/scripts/check-docs.sh --verbose
 
 ## References
 
-**REQUIRED READING**: Always load `docs/DOCUMENTATION_GUIDE.md` to:
+**REQUIRED READING**: Always load `references/documentation-guide.md` to:
 1. **Validate existing documentation** - Check if suggested docs follow correct structure, style, and alignment
 2. **Guide updates** - Reference standards when writing or updating documentation
 
 The guide contains all standards, examples, patterns, and requirements. Do not make assumptions about documentation format, style, or structure - always reference the guide.
 
-- **Documentation Guide**: `docs/DOCUMENTATION_GUIDE.md` - **REQUIRED**: Complete documentation standards, style, structure, and examples. Load this file to validate existing docs and guide updates.
+- **Documentation Guide**: `references/documentation-guide.md` - **REQUIRED**: Complete documentation standards, style, structure, and examples. Load this file to validate existing docs and guide updates.
 - **docs-write skill**: `skills/docs-write/SKILL.md` - Complete workflow for writing/updating documentation
 
 ## Output
@@ -75,9 +75,9 @@ The tool outputs:
 ## Best Practices
 
 - Run this check before committing significant changes
-- **Always load `docs/DOCUMENTATION_GUIDE.md`** to validate documentation structure and alignment
+- **Always load `references/documentation-guide.md`** to validate documentation structure and alignment
 - Verify existing documentation follows guide standards (style, structure, format) - not just detect what needs updating
-- Review the [Documentation Guide](docs/DOCUMENTATION_GUIDE.md) to understand what changes require documentation
+- Review the [Documentation Guide](references/documentation-guide.md) to understand what changes require documentation
 - Update documentation in the same PR as code changes
 - Fix structure/alignment issues when updating content
 - Use the verbose mode for more detailed information

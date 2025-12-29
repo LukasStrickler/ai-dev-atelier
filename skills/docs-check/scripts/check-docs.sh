@@ -103,7 +103,7 @@ ALL_DOC_FILES=$(find . -type f \( -name "*.md" -o -name "*.puml" \) \
 log_verbose "Found $(echo "$ALL_DOC_FILES" | wc -l | xargs) documentation files"
 
 # Separate documentation files from code files
-DOC_FILES_CHANGED=$(echo "$ALL_CHANGED" | grep -iE "\.(md|puml)$|README|SETUP|IDEA|CONTRIBUTING|CHANGELOG|docs/" || echo "")
+DOC_FILES_CHANGED=$(echo "$ALL_CHANGED" | grep -iE "\.(md|puml)$|README|SETUP|IDEA|CONTRIBUTING|CHANGELOG|\.docs/" || echo "")
 CODE_FILES_CHANGED=$(comm -23 <(echo "$ALL_CHANGED" | sort) <(echo "$DOC_FILES_CHANGED" | sort) | grep -v '^$' || echo "")
 
 # Show documentation files that were already updated
@@ -280,8 +280,8 @@ if [ -n "$OTHER_CHANGES" ]; then
     fi
   done
   # Also check docs directory
-  if [ -d "docs" ]; then
-    find docs -type f \( -name "*.md" -o -name "*.puml" \) 2>/dev/null | head -5 | sed 's/^/    - /' || true
+  if [ -d ".docs" ]; then
+    find .docs -type f \( -name "*.md" -o -name "*.puml" \) 2>/dev/null | head -5 | sed 's/^/    - /' || true
   fi
   echo ""
   HAS_CHANGES=true
@@ -308,7 +308,7 @@ if [ "$HAS_CHANGES" = true ]; then
   echo ""
   echo "  🔍 Exploratory File Finding:"
   echo "  - Search the project for additional documentation files that may be relevant"
-  echo "  - Look for documentation in subdirectories (docs/, documentation/, etc.)"
+  echo "  - Look for documentation in subdirectories (.docs/, documentation/, etc.)"
   echo "  - Check for README files in subdirectories that might be affected"
   echo "  - Review any architecture or design documents"
   echo "  - Check for inline documentation in code comments that may need updates"

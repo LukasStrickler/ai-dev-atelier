@@ -23,7 +23,7 @@
 
 **Specific Files/Areas Relevant:**
 - {File/Area 1 - e.g., "`src/services/consensus.ts` - current consensus implementation"}
-- {File/Area 2 - e.g., "`docs/architecture.md` - architecture documentation"}
+- {File/Area 2 - e.g., "`.docs/architecture.md` - architecture documentation"}
 - {File/Area 3}
 
 ## Research Question / Problem Statement
