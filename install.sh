@@ -1100,7 +1100,8 @@ should_install_skill() {
   fi
   
   # Check agent-specific configuration
-  local install_value=$(jq -r ".agents.\"${agent_type}\".skills.\"${skill_name}\".install // true" "$SKILLS_CONFIG" 2>/dev/null)
+  # jq's // operator treats false as falsy, so we check for explicit false string instead
+  local install_value=$(jq -r ".agents.\"${agent_type}\".skills.\"${skill_name}\".install" "$SKILLS_CONFIG" 2>/dev/null)
   
   if [ "$install_value" = "false" ]; then
     return 1
