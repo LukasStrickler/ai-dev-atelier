@@ -11,7 +11,7 @@
                         🎨 A I   D E V   A T E L I E R 🎨                     
                                                                                         
                         🖌️ Where AI Agents Craft Quality Code                              
-                🔍      📝     ✍️     🔬     💬      🔎       📚
+                  🔍      📝     ✍️     🔬     💬      🔎       📚
                 quality  docs   docs   code    pr     search  research
                 check    check  write  review  review 
 ```
