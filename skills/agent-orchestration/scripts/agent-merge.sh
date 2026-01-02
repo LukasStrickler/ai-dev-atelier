@@ -111,7 +111,11 @@ fi
     echo "Branch has no commits, copying files from worktree..." >&2
     
     # Get list of files to copy (exclude metadata files)
-    filesToCopy=$(cd "$WORKTREE_PATH" && git ls-files --others --exclude-standard 2>/dev/null | grep -vE "(\.agent-level|prompt\.md|progress\.md)" || true)
+    filesToCopy=""
+    # shellcheck disable=SC2015
+    if [ -d "$WORKTREE_PATH" ]; then
+      filesToCopy=$(cd "$WORKTREE_PATH" && git ls-files --others --exclude-standard 2>/dev/null | grep -vE "(\.agent-level|prompt\.md|progress\.md)" || true)
+    fi
     
     if [ -n "$filesToCopy" ]; then
       # Copy each file to main branch
@@ -125,7 +129,11 @@ fi
       done
       
       # Also check for modified tracked files
-      modifiedFiles=$(cd "$WORKTREE_PATH" && git diff --name-only HEAD 2>/dev/null | grep -vE "(\.agent-level|prompt\.md|progress\.md)" || true)
+      modifiedFiles=""
+      if [ -d "$WORKTREE_PATH" ]; then
+        # shellcheck disable=SC2015
+        modifiedFiles=$(cd "$WORKTREE_PATH" && git diff --name-only HEAD 2>/dev/null | grep -vE "(\.agent-level|prompt\.md|progress\.md)" || true)
+      fi
       if [ -n "$modifiedFiles" ]; then
         echo "$modifiedFiles" | while read -r file; do
           if [ -f "$WORKTREE_PATH/$file" ]; then

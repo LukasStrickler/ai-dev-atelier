@@ -122,6 +122,8 @@ fi
 
 # Clean up empty directory if it exists
 if [ -d "$GITHUB_DIR" ] && [ -z "$(ls -A "$GITHUB_DIR" 2>/dev/null)" ]; then
-  rmdir "$GITHUB_DIR" 2>/dev/null && log_info "Removed empty directory: $GITHUB_DIR" || true
+  if rmdir "$GITHUB_DIR" 2>/dev/null; then
+    log_info "Removed empty directory: $GITHUB_DIR"
+  fi
 fi
 

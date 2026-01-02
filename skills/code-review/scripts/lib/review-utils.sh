@@ -2,6 +2,8 @@
 # Shared utility functions for CodeRabbit review scripts
 # This file should be sourced by review scripts, not executed directly
 
+set -euo pipefail
+
 # Constants
 readonly REVIEW_DIR=".ada/data/reviews"
 readonly KEEP_TASK_REVIEWS=2

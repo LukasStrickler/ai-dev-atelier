@@ -104,32 +104,39 @@ if [ "$SHOW_APPROACHES" = true ] || [ -n "$APPROACH_NAME" ]; then
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
     
-    if [ -n "$APPROACH_NAME" ]; then
-      # Show specific approach evidence card
-      local approach_data=$(jq --arg name "$APPROACH_NAME" '.approaches[] | select(.id == $name or .name == $name)' "$REF_FILE" 2>/dev/null)
-      if [ -n "$approach_data" ]; then
-        local evidence_card=$(echo "$approach_data" | jq -r '.evidence_card')
-        local card_file="${SESSION_DIR}/${evidence_card}"
-        if [ -f "$card_file" ]; then
-          cat "$card_file"
+    show_approaches() {
+      if [ -n "$APPROACH_NAME" ]; then
+        # Show specific approach evidence card
+        local approach_data
+        approach_data=$(jq --arg name "$APPROACH_NAME" '.approaches[] | select(.id == $name or .name == $name)' "$REF_FILE" 2>/dev/null)
+        if [ -n "$approach_data" ]; then
+          local evidence_card
+          evidence_card=$(echo "$approach_data" | jq -r '.evidence_card')
+          local card_file
+          card_file="${SESSION_DIR}/${evidence_card}"
+          if [ -f "$card_file" ]; then
+            cat "$card_file"
+          else
+            echo "⚠️  Evidence card file not found: $card_file"
+          fi
         else
-          echo "⚠️  Evidence card file not found: $card_file"
+          echo "❌ Approach not found: $APPROACH_NAME"
+          echo ""
+          echo "Available approaches:"
+          jq -r '.approaches[] | "  - \(.id) (\(.name))"' "$REF_FILE" 2>/dev/null
         fi
       else
-        echo "❌ Approach not found: $APPROACH_NAME"
-        echo ""
-        echo "Available approaches:"
-        jq -r '.approaches[] | "  - \(.id) (\(.name))"' "$REF_FILE" 2>/dev/null
+        # List all approaches
+        local approaches_count
+        approaches_count=$(jq -r '.approaches | length // 0' "$REF_FILE" 2>/dev/null)
+        if [ "$approaches_count" -gt 0 ]; then
+          jq -r '.approaches[] | "\(.name) (\(.evidence_card)) - \(.papers | length) papers"' "$REF_FILE" 2>/dev/null
+        else
+          echo "   No approaches found"
+        fi
       fi
-    else
-      # List all approaches
-      local approaches_count=$(jq -r '.approaches | length // 0' "$REF_FILE" 2>/dev/null)
-      if [ "$approaches_count" -gt 0 ]; then
-        jq -r '.approaches[] | "\(.name) (\(.evidence_card)) - \(.papers | length) papers"' "$REF_FILE" 2>/dev/null
-      else
-        echo "   No approaches found"
-      fi
-    fi
+    }
+    show_approaches
     echo ""
   fi
 fi
@@ -148,26 +155,33 @@ fi
 # Show all evidence cards if no specific approach requested
 if [ -z "$APPROACH_NAME" ] && [ "$SHOW_APPROACHES" != true ]; then
   if [ -f "$REF_FILE" ] && command -v jq &> /dev/null; then
-    local evidence_cards=$(jq -r '.evidence_cards[]?.file // empty' "$REF_FILE" 2>/dev/null)
-    if [ -n "$evidence_cards" ]; then
-      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-      echo "📄 Evidence Cards"
-      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-      echo ""
-      while IFS= read -r card_file; do
-        if [ -n "$card_file" ]; then
-          local full_path="${SESSION_DIR}/${card_file}"
-          if [ -f "$full_path" ]; then
-            echo "📋 ${card_file}"
-            echo ""
-            cat "$full_path"
-            echo ""
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo ""
+    show_evidence_cards() {
+      local evidence_cards
+      local card_file
+      local full_path
+      
+      evidence_cards=$(jq -r '.evidence_cards[]?.file // empty' "$REF_FILE" 2>/dev/null)
+      if [ -n "$evidence_cards" ]; then
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "📄 Evidence Cards"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+        while IFS= read -r card_file; do
+          if [ -n "$card_file" ]; then
+            full_path="${SESSION_DIR}/${card_file}"
+            if [ -f "$full_path" ]; then
+              echo "📋 ${card_file}"
+              echo ""
+              cat "$full_path"
+              echo ""
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo ""
+            fi
           fi
-        fi
-      done <<< "$evidence_cards"
-    fi
+        done <<< "$evidence_cards"
+      fi
+    }
+    show_evidence_cards
   fi
 fi
 
@@ -178,7 +192,7 @@ if [ "$SHOW_REFERENCES" = true ] && [ -f "$REF_FILE" ]; then
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo ""
   if command -v jq &> /dev/null; then
-    cat "$REF_FILE" | jq '.'
+    jq '.' "$REF_FILE"
   else
     cat "$REF_FILE"
   fi
@@ -192,62 +206,78 @@ if [ "$SHOW_PDF_STATUS" = true ] && [ -f "$REF_FILE" ] && command -v jq &> /dev/
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo ""
   
-  local pdf_count=0
-  while IFS= read -r paper_data; do
-    if [ -n "$paper_data" ]; then
-      local paper_id=$(echo "$paper_data" | jq -r '.id')
-      local title=$(echo "$paper_data" | jq -r '.title')
-      local pdf_path=$(echo "$paper_data" | jq -r '.pdf_path // ""')
-      local pdf_cleared=$(echo "$paper_data" | jq -r '.pdf_cleared // false')
-      
-      pdf_count=$((pdf_count + 1))
-      echo "Paper $pdf_count: $title"
-      echo "   ID: $paper_id"
-      
-      if [ -n "$pdf_path" ]; then
-        if [ -f "$pdf_path" ]; then
-          local size=$(du -h "$pdf_path" 2>/dev/null | cut -f1 || echo "unknown")
-          echo "   PDF: ✅ Exists ($size)"
-          echo "   Path: $pdf_path"
-        else
-          if [ "$pdf_cleared" = "true" ]; then
-            echo "   PDF: 🗑️  Cleared (can be re-downloaded)"
-          else
-            echo "   PDF: ❌ Not found"
-          fi
-          echo "   Path: $pdf_path"
-        fi
+  show_pdf_status() {
+    local pdf_count
+    local paper_data
+    local paper_id
+    local title
+    local pdf_path
+    local pdf_cleared
+    local size
+    local urls
+    
+    pdf_count=0
+    while IFS= read -r paper_data; do
+      if [ -n "$paper_data" ]; then
+        paper_id=$(echo "$paper_data" | jq -r '.id')
+        title=$(echo "$paper_data" | jq -r '.title')
+        pdf_path=$(echo "$paper_data" | jq -r '.pdf_path // ""')
+        pdf_cleared=$(echo "$paper_data" | jq -r '.pdf_cleared // false')
         
-        # Show URLs for re-downloading
-        local urls=$(echo "$paper_data" | jq -r '.urls // {}')
-        if [ "$urls" != "{}" ]; then
-          echo "   URLs:"
-          echo "$urls" | jq -r 'to_entries[] | "      \(.key): \(.value)"' 2>/dev/null || echo "      (available in references.json)"
+        pdf_count=$((pdf_count + 1))
+        echo "Paper $pdf_count: $title"
+        echo "   ID: $paper_id"
+        
+        if [ -n "$pdf_path" ]; then
+          if [ -f "$pdf_path" ]; then
+            size=$(du -h "$pdf_path" 2>/dev/null | cut -f1 || echo "unknown")
+            echo "   PDF: ✅ Exists ($size)"
+            echo "   Path: $pdf_path"
+          else
+            if [ "$pdf_cleared" = "true" ]; then
+              echo "   PDF: 🗑️  Cleared (can be re-downloaded)"
+            else
+              echo "   PDF: ❌ Not found"
+            fi
+            echo "   Path: $pdf_path"
+          fi
+          
+          # Show URLs for re-downloading
+          urls=$(echo "$paper_data" | jq -r '.urls // {}')
+          if [ "$urls" != "{}" ]; then
+            echo "   URLs:"
+            echo "$urls" | jq -r 'to_entries[] | "      \(.key): \(.value)"' 2>/dev/null || echo "      (available in references.json)"
+          fi
+        else
+          echo "   PDF: No path recorded"
         fi
-      else
-        echo "   PDF: No path recorded"
+        echo ""
       fi
-      echo ""
+    done < <(jq -c '.papers[]' "$REF_FILE" 2>/dev/null)
+    
+    if [ $pdf_count -eq 0 ]; then
+      echo "   No papers found in references.json"
     fi
-  done < <(jq -c '.papers[]' "$REF_FILE" 2>/dev/null)
-  
-  if [ $pdf_count -eq 0 ]; then
-    echo "   No papers found in references.json"
-  fi
+  }
+  show_pdf_status
   echo ""
 fi
 
 # Show approaches summary
 if [ -f "$REF_FILE" ] && command -v jq &> /dev/null; then
-  local approaches_count=$(jq -r '.approaches | length // 0' "$REF_FILE" 2>/dev/null)
-  if [ "$approaches_count" -gt 0 ]; then
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "🔬 Approaches Summary"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo ""
-    jq -r '.approaches[] | "\(.name): \(.papers | length) papers → \(.evidence_card)"' "$REF_FILE" 2>/dev/null
-    echo ""
-  fi
+  show_approaches_summary() {
+    local approaches_count
+    approaches_count=$(jq -r '.approaches | length // 0' "$REF_FILE" 2>/dev/null)
+    if [ "$approaches_count" -gt 0 ]; then
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      echo "🔬 Approaches Summary"
+      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+      echo ""
+      jq -r '.approaches[] | "\(.name): \(.papers | length) papers → \(.evidence_card)"' "$REF_FILE" 2>/dev/null
+      echo ""
+    fi
+  }
+  show_approaches_summary
 fi
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

@@ -1,0 +1,94 @@
+# Shellcheck configuration for ai-dev-atelier
+# https://github.com/koalaman/shellcheck/wiki/optional
+
+# Enable external sources (for sourced files)
+external-sources=true
+
+# Shell dialect
+shell=bash
+
+# Disable specific checks that are intentional patterns in this codebase:
+
+# SC1090: Can't follow non-constant source (dynamic sourcing is used)
+disable=SC1090
+
+# SC1091: Not following sourced file (may not exist at lint time)
+disable=SC1091
+
+# SC2034: Variable appears unused (lib scripts export variables for sourcing)
+disable=SC2034
+
+
+
+# SC2181: Check exit code directly with if mycmd; instead of $?
+# (Common pattern for clarity in complex conditional checks)
+disable=SC2181
+
+# SC2001: See if you can use ${variable//search/replace} instead of sed
+# (sed is often clearer for complex patterns)
+disable=SC2001
+
+# SC2016: Expressions don't expand in single quotes
+# (Intentional for jq queries and JSON templates)
+disable=SC2016
+
+
+
+# SC2064: Use single quotes for trap, otherwise expands now
+# (Intentional in some cases to capture current values)
+disable=SC2064
+
+# SC2126: Consider using grep -c instead of grep|wc -l
+# (Style preference, both work correctly)
+disable=SC2126
+
+# SC2009: Consider using pgrep instead of grepping ps output
+# (pgrep not always available or suitable for complex patterns)
+disable=SC2009
+
+# SC2012: Use find instead of ls
+# (ls is sufficient for simple directory listings)
+disable=SC2012
+
+# SC2010: Don't use ls | grep
+# (Acceptable for simple filtering)
+disable=SC2010
+
+# SC2129: Consider using { cmd1; cmd2; } >> file
+# (Style preference)
+disable=SC2129
+
+
+
+# SC2000: See if you can use ${#variable} instead
+# (Style preference)
+disable=SC2000
+
+# SC2005: Useless echo
+# (Sometimes needed for subshell output)
+disable=SC2005
+
+# SC2018/SC2019: Use [:lower:]/[:upper:] for accents
+# (Not needed for this codebase - ASCII only)
+disable=SC2018
+disable=SC2019
+
+# SC2155: Declare and assign separately to avoid masking return values
+# (Style preference - inline assignment is intentional for readability)
+disable=SC2155
+
+# SC2329: Function never invoked
+# (Error handler is triggered by trap, not direct invocation)
+disable=SC2329
+
+# SC2317: Command appears to be unreachable
+# (Error handler is triggered by trap, not direct invocation)
+disable=SC2317
+
+# SC2162: read without -r will mangle backslashes
+# (Not needed for PR numbers and simple confirmations)
+disable=SC2162
+
+# SC2295: Expansions inside ${..} need to be quoted separately
+# (Low risk pattern)
+disable=SC2295

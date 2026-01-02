@@ -1,6 +1,8 @@
 #!/bin/bash
 # Research status utilities for detecting current step, determining next actions, and loading reference files
 
+set -euo pipefail
+
 # Source shared utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/research-utils.sh"

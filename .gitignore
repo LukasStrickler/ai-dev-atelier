@@ -21,3 +21,6 @@ Thumbs.db
 
 # Node modules
 node_modules/
+
+# Pre-commit cache
+.pre-commit-cache/
