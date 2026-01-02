@@ -2,6 +2,8 @@
 # Shared utility functions for PR comments scripts
 # This file should be sourced by PR comments scripts, not executed directly
 
+set -euo pipefail
+
 # Constants
 if [ -z "${GITHUB_DIR:-}" ]; then
   readonly GITHUB_DIR=".ada/data/pr-comments"
@@ -910,13 +912,15 @@ resolve_review_thread() {
 }
 
 # Setup common script initialization
-# Usage: setup_pr_comments_script
+# Usage: setup_pr_comments_script [skip_git]
 # Note: Utils should already be sourced by caller before calling this function
 # Checks prerequisites only
 # Returns: 0 on success, 1 on failure
 setup_pr_comments_script() {
+  local skip_git="${1:-false}"
+
   # Check prerequisites (utils should already be sourced)
-  if ! check_prerequisites; then
+  if ! check_prerequisites "$skip_git"; then
     return 1
   fi
   

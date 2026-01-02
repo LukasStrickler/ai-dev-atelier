@@ -5,6 +5,7 @@
 # Usage: bash .test/scripts/validate-skills.sh [skill-name]
 
 set -euo pipefail
+set -o errtrace
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEFAULT_SKILLS_DIR="$(cd "$SCRIPT_DIR/../../skills" && pwd)"
@@ -15,6 +16,21 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
+
+# Error handler with improved debugging information
+error_handler() {
+  local exit_code=$?
+  local line="${BASH_LINENO[0]:-unknown}"
+  local cmd="${BASH_COMMAND:-unknown}"
+  echo -e "${RED}❌ Error (exit code ${exit_code}) on line ${line}: ${cmd}${NC}" >&2
+}
+
+trap 'error_handler' ERR
+
+if [ ! -d "$SKILLS_DIR" ]; then
+  echo -e "${RED}❌ Skills directory not found: $SKILLS_DIR${NC}"
+  exit 1
+fi
 
 # Counters
 TOTAL_SKILLS=0
@@ -57,7 +73,7 @@ validate_skill() {
   # Check YAML frontmatter exists
   if ! head -1 "$skill_md" | grep -q "^---$"; then
     echo -e "${RED}❌ Missing YAML frontmatter (must start with ---)${NC}"
-    ((errors++))
+    ((++errors))
   else
     echo -e "${GREEN}✓${NC} YAML frontmatter present"
   fi
@@ -66,7 +82,7 @@ validate_skill() {
   fm_end=$(awk 'NR>1 && $0=="---" {print NR; exit}' "$skill_md")
   if [ -z "$fm_end" ]; then
     echo -e "${RED}❌ Missing closing YAML frontmatter delimiter (---)${NC}"
-    ((errors++))
+    ((++errors))
   fi
 
   local frontmatter=""
@@ -78,7 +94,7 @@ validate_skill() {
   name_line=$(printf "%s\n" "$frontmatter" | grep -m1 "^name:" || true)
   if [ -z "$name_line" ]; then
     echo -e "${RED}❌ Missing 'name' field in frontmatter${NC}"
-    ((errors++))
+    ((++errors))
   else
     local name_value
     name_value=$(printf "%s" "$name_line" | sed 's/^name:[[:space:]]*//' | tr -d '"' | tr -d "'")
@@ -87,25 +103,25 @@ validate_skill() {
 
     if [ -z "$name_value" ]; then
       echo -e "${RED}❌ 'name' field is empty${NC}"
-      ((errors++))
+      ((++errors))
       name_valid=false
     fi
 
     if [ "$name_length" -gt 64 ]; then
       echo -e "${RED}❌ 'name' too long: ${name_length} chars (max 64)${NC}"
-      ((errors++))
+      ((++errors))
       name_valid=false
     fi
 
     if [ "$name_valid" = true ] && ! echo "$name_value" | grep -Eq '^[a-z0-9-]+$'; then
       echo -e "${RED}❌ 'name' must match ^[a-z0-9-]+$${NC}"
-      ((errors++))
+      ((++errors))
       name_valid=false
     fi
 
     if [ "$name_valid" = true ] && name_exists "$name_value"; then
       echo -e "${RED}❌ Duplicate skill name detected: ${name_value}${NC}"
-      ((errors++))
+      ((++errors))
       name_valid=false
     fi
 
@@ -123,11 +139,11 @@ validate_skill() {
   desc_line=$(printf "%s\n" "$frontmatter" | grep -m1 "^description:" || true)
   if [ -z "$desc_line" ]; then
     echo -e "${RED}❌ Missing 'description' field in frontmatter${NC}"
-    ((errors++))
+    ((++errors))
   else
     if echo "$desc_line" | grep -Eq "description:[[:space:]]*[>|]$"; then
       echo -e "${RED}❌ 'description' must be a single line (no block scalars)${NC}"
-      ((errors++))
+      ((++errors))
     fi
 
     local desc_value
@@ -140,12 +156,12 @@ validate_skill() {
 
     if [ -z "$desc_value" ]; then
       echo -e "${RED}❌ 'description' field is empty${NC}"
-      ((errors++))
+      ((++errors))
     else
       local desc_length=${#desc_value}
       if [ "$desc_length" -gt 1024 ]; then
         echo -e "${RED}❌ 'description' too long: ${desc_length} chars (max 1024)${NC}"
-        ((errors++))
+        ((++errors))
       else
         echo -e "${GREEN}✓${NC} description field present"
       fi
@@ -157,7 +173,7 @@ validate_skill() {
       echo -e "${GREEN}✓${NC} Description includes a WHEN clause"
     else
       echo -e "${YELLOW}⚠${NC}  Description may be missing a WHEN clause (e.g., \"Use when\")"
-      ((warns++))
+      ((++warns))
     fi
 
     # Check for triggers
@@ -165,7 +181,7 @@ validate_skill() {
       echo -e "${GREEN}✓${NC} Triggers list present"
     else
       echo -e "${YELLOW}⚠${NC}  No triggers list found in description"
-      ((warns++))
+      ((++warns))
     fi
   fi
   
@@ -173,10 +189,10 @@ validate_skill() {
   local word_count=$(wc -w < "$skill_md" | tr -d ' ')
   if [ "$word_count" -gt 5000 ]; then
     echo -e "${RED}❌ SKILL.md too long: $word_count words (max 5000)${NC}"
-    ((errors++))
+    ((++errors))
   elif [ "$word_count" -gt 2000 ]; then
     echo -e "${YELLOW}⚠${NC}  SKILL.md is $word_count words (ideal <2000)"
-    ((warns++))
+    ((++warns))
   else
     echo -e "${GREEN}✓${NC} Word count: $word_count (good)"
   fi
@@ -185,7 +201,7 @@ validate_skill() {
   local line_count=$(wc -l < "$skill_md" | tr -d ' ')
   if [ "$line_count" -gt 300 ]; then
     echo -e "${YELLOW}⚠${NC}  SKILL.md is $line_count lines (consider moving content to references/)"
-    ((warns++))
+    ((++warns))
   else
     echo -e "${GREEN}✓${NC} Line count: $line_count"
   fi
@@ -197,7 +213,7 @@ validate_skill() {
   else
     if [ "$line_count" -gt 150 ]; then
       echo -e "${YELLOW}⚠${NC}  No references/ directory - consider progressive disclosure"
-      ((warns++))
+      ((++warns))
     fi
   fi
   
@@ -214,13 +230,13 @@ validate_skill() {
       local ref_path="${skill_dir}/${ref}"
       if [ ! -f "$ref_path" ]; then
         echo -e "${RED}❌ Referenced file missing: $ref${NC}"
-        ((missing_refs++))
+        ((++missing_refs))
       fi
     fi
   done < <(grep -oE 'references/[a-zA-Z0-9_/-]+\.md' "$skill_md" 2>/dev/null || true)
   
   if [ "$missing_refs" -gt 0 ]; then
-    ((errors++))
+    ((++errors))
   elif [ "$missing_refs" -eq 0 ]; then
     local ref_mentions
     ref_mentions=$(grep -c 'references/' "$skill_md" 2>/dev/null) || ref_mentions=0
@@ -250,6 +266,15 @@ echo "╔═══════════════════════�
 echo "║          SKILL VALIDATION REPORT           ║"
 echo "╚════════════════════════════════════════════╝"
 
+shopt -s nullglob
+SKILL_DIRS=("$SKILLS_DIR"/*/)
+shopt -u nullglob
+
+if [ ${#SKILL_DIRS[@]} -eq 0 ]; then
+  echo -e "${RED}❌ No skill directories found in $SKILLS_DIR${NC}"
+  exit 1
+fi
+
 # Check if specific skill requested
 if [ $# -gt 0 ]; then
   skill_path="${SKILLS_DIR}/$1"
@@ -266,19 +291,19 @@ if [ $# -gt 0 ]; then
   fi
 else
   # Validate all skills
-  for skill_dir in "$SKILLS_DIR"/*/; do
+  for skill_dir in "${SKILL_DIRS[@]}"; do
     # Skip non-skill directories
     skill_name=$(basename "$skill_dir")
-    if [ "$skill_name" = "scripts" ] || [ "$skill_name" = ".backups-"* ]; then
+    if [ "$skill_name" = "scripts" ] || [[ "$skill_name" == ".backups-"* ]]; then
       continue
     fi
     
     if [ -f "${skill_dir}SKILL.md" ]; then
-      ((TOTAL_SKILLS++))
+      ((++TOTAL_SKILLS))
       if validate_skill "$skill_dir"; then
-        ((PASSED_SKILLS++))
+        ((++PASSED_SKILLS))
       else
-        ((FAILED_SKILLS++))
+        ((++FAILED_SKILLS))
       fi
     fi
   done
@@ -305,7 +330,7 @@ echo "Checking documentation-guide.md consistency"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 DOC_GUIDE_FILES=()
-for skill_dir in "$SKILLS_DIR"/*/; do
+for skill_dir in "${SKILL_DIRS[@]}"; do
   doc_guide="${skill_dir}references/documentation-guide.md"
   if [ -f "$doc_guide" ]; then
     DOC_GUIDE_FILES+=("$doc_guide")

@@ -1,6 +1,8 @@
 #!/bin/bash
 # Agent orchestration utilities for managing worktrees, metadata, processes, and results
 
+set -euo pipefail
+
 # Get the project root directory (assuming script is in skills/agent-orchestration/scripts/lib/)
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../../" && pwd)"
 ADA_DIR="${PROJECT_ROOT}/.ada"
@@ -20,7 +22,7 @@ mkdir -p "$RUNS_DIR" "$WORKTREES_DIR"
 # Format: YYYYMMDD-HHMMSS-<random>
 generate_run_id() {
   local timestamp=$(date +"%Y%m%d-%H%M%S")
-  local random=$(openssl rand -hex 3 2>/dev/null || echo $(date +%s | sha256sum | cut -c1-6))
+  local random=$(openssl rand -hex 3 2>/dev/null || echo "$(date +%s | sha256sum | cut -c1-6)")
   echo "${timestamp}-${random}"
 }
 
@@ -383,7 +385,7 @@ monitor_process() {
     update_process_status "$runId" "$pid" "$elapsed"
   fi
   
-  while [ $elapsed -lt $timeout ]; do
+  while [ "$elapsed" -lt "$timeout" ]; do
     if ! check_process_alive "$pid"; then
       echo "Process $pid completed after ${elapsed}s" >&2
       # Final status update
@@ -507,7 +509,7 @@ generate_diff_artifacts() {
             if [ -f "$file" ]; then
               echo "+++ b/$file"
               echo "@@ -0,0 +1,$(wc -l < "$file" | tr -d ' ') @@"
-              cat "$file" | sed 's/^/+/'
+              sed 's/^/+/' "$file"
             fi
           done
         fi
@@ -875,10 +877,10 @@ analyze_patch_for_results() {
     if [ -f "$changedFilesFile" ] && [ -s "$changedFilesFile" ]; then
       # Convert file list to JSON array
       if command -v jq &> /dev/null; then
-        changedFiles=$(cat "$changedFilesFile" | jq -R -s -c 'split("\n") | map(select(length > 0))' 2>/dev/null || echo "[]")
+        changedFiles=$(jq -R -s -c 'split("\n") | map(select(length > 0))' "$changedFilesFile" 2>/dev/null || echo "[]")
       else
         # Basic conversion without jq
-        local fileList=$(cat "$changedFilesFile" | grep -v "^$" | tr '\n' ',' | sed 's/,$//')
+        local fileList=$(grep -v "^$" "$changedFilesFile" | tr '\n' ',' | sed 's/,$//')
         if [ -n "$fileList" ]; then
           changedFiles="[\"$(echo "$fileList" | sed 's/,/","/g')\"]"
         fi
@@ -954,7 +956,7 @@ check_result_exists() {
         if [ -n "$content" ] && \
            ! echo "$answer_content" | grep -qi "Agent will write final answer here" && \
            ! echo "$answer_content" | grep -qE "^# Answer$" && \
-           [ $(echo "$content" | wc -c) -gt 50 ]; then
+           [ "$(echo "$content" | wc -c)" -gt 50 ]; then
           return 0
         fi
       fi
@@ -981,7 +983,7 @@ check_result_exists() {
       if [ -n "$content" ] && \
          ! echo "$answer_content" | grep -qi "Agent will write final answer here" && \
          ! echo "$answer_content" | grep -qE "^# Answer$" && \
-         [ $(echo "$content" | wc -c) -gt 50 ]; then
+         [ "$(echo "$content" | wc -c)" -gt 50 ]; then
         return 0
       fi
     fi

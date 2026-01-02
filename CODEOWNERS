@@ -1,0 +1,12 @@
+# Default owners for everything
+* @LukasStrickler
+
+# Skills
+/skills/ @LukasStrickler
+
+# Tests
+/.test/ @LukasStrickler
+
+# Core scripts
+/install.sh @LukasStrickler
+/setup.sh @LukasStrickler

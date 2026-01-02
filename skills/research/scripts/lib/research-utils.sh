@@ -1,6 +1,8 @@
 #!/bin/bash
 # Research utilities for managing evidence cards, papers, and PDFs
 
+set -euo pipefail
+
 # Get the project root directory (assuming script is in skills/research/scripts/lib/)
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../../" && pwd)"
 ADA_DIR="${PROJECT_ROOT}/.ada"

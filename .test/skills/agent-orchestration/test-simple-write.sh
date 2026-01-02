@@ -100,7 +100,7 @@ if [ -f ".ada/data/agents/runs/${RUN_ID}/out.ndjson" ]; then
   echo ""
   echo "Agent output (out.ndjson):"
   echo "----------------------------------------"
-  cat ".ada/data/agents/runs/${RUN_ID}/out.ndjson" | head -20
+  head -20 ".ada/data/agents/runs/${RUN_ID}/out.ndjson"
   echo "----------------------------------------"
   echo ""
 fi
@@ -113,7 +113,7 @@ else
   echo "❌ TEST FAILED: hello.md was not created"
   echo ""
   echo "Files in worktree:"
-  ls -la "$WORKTREE_PATH" | head -10
+  find "$WORKTREE_PATH" -maxdepth 1 | head -10
   exit 1
 fi
 

@@ -14,14 +14,14 @@ echo "Cleaning up agent runs older than $RETENTION_DAYS days..." >&2
 
 # Find old runs
 find "$RUNS_DIR" -mindepth 1 -maxdepth 1 -type d | while read -r runDir; do
-  local runId=$(basename "$runDir")
-  local metaFile="${runDir}/meta.json"
+  runId=$(basename "$runDir")
+  metaFile="${runDir}/meta.json"
   
   if [ -f "$metaFile" ]; then
     # Check completion time
-    local completedAt
+    completedAt=""
     if command -v jq &> /dev/null; then
-      completedAt=$(cat "$metaFile" | jq -r '.completedAt // empty' 2>/dev/null || echo "")
+      completedAt=$(jq -r '.completedAt // empty' "$metaFile" 2>/dev/null || echo "")
     else
       completedAt=$(grep -o '"completedAt":"[^"]*"' "$metaFile" | sed 's/"completedAt":"\([^"]*\)"/\1/' || echo "")
     fi

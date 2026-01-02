@@ -1,6 +1,8 @@
 #!/bin/bash
 # Cursor provider implementation
 
+set -euo pipefail
+
 # Run cursor agent
 # Usage: cursor_run workspace mode runtime prompt_file out_ndjson env_vars model
 cursor_run() {

@@ -1,0 +1,112 @@
+name: Bug Report
+description: Report a bug in skills or scripts
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Please search [existing issues](https://github.com/LukasStrickler/ai-dev-atelier/issues) first to avoid duplicates.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Pre-flight Checklist
+      options:
+        - label: I have searched existing issues and this bug has not been reported.
+          required: true
+        - label: I am using the latest version of ai-dev-atelier.
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: "When I run X, Y happens instead of Z..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Minimal steps to reproduce the behavior.
+      placeholder: |
+        1. Run `bash skills/code-quality/scripts/finalize.sh agent`
+        2. Observe error message...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened. Include error messages or logs.
+      render: shell
+    validations:
+      required: true
+
+  - type: dropdown
+    id: skill
+    attributes:
+      label: Affected Skill
+      description: Which skill is affected?
+      options:
+        - "Not sure / Multiple"
+        - "code-quality"
+        - "docs-check"
+        - "docs-write"
+        - "code-review"
+        - "pr-review"
+        - "search"
+        - "research"
+        - "agent-orchestration"
+        - "git-commit"
+        - "Install/Setup scripts"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: agent
+    attributes:
+      label: Agent Platform
+      description: Which AI agent are you using?
+      options:
+        - "Codex"
+        - "OpenCode"
+        - "Both"
+        - "Other / N/A"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      description: Your OS and version.
+      placeholder: "macOS 14.2, Ubuntu 22.04, etc."
+    validations:
+      required: true
+
+  - type: input
+    id: shell
+    attributes:
+      label: Shell Version
+      description: "Run `bash --version` or `echo $SHELL`"
+      placeholder: "bash 5.2.15, zsh 5.9, etc."
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any other relevant information (screenshots, related issues, etc.)

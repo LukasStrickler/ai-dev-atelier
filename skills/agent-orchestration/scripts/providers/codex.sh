@@ -1,6 +1,8 @@
 #!/bin/bash
 # Codex provider implementation (placeholder)
 
+set -euo pipefail
+
 # Run codex agent
 # Usage: codex_run workspace mode runtime prompt_file out_ndjson env_vars model
 codex_run() {

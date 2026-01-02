@@ -1,6 +1,8 @@
 #!/bin/bash
 # Gemini provider implementation (placeholder)
 
+set -euo pipefail
+
 # Run gemini agent
 # Usage: gemini_run workspace mode runtime prompt_file out_ndjson env_vars model
 gemini_run() {

@@ -8,6 +8,8 @@
 #   - agent: Runs format:write (auto-fixes formatting) - for agent sessions
 #   Default: agent mode
 
+set -euo pipefail
+
 MODE="${1:-agent}"
 
 # Validate mode
@@ -120,7 +122,7 @@ echo ""
 # Typecheck results
 echo "🔍 Typecheck:"
 TYPECHECK_EXIT=$(cat "$TMPDIR/typecheck.exit" 2>/dev/null || echo "1")
-if [ $TYPECHECK_EXIT -ne 0 ]; then
+if [ "$TYPECHECK_EXIT" -ne 0 ]; then
   echo "❌ Typecheck failed:"
   cat "$TMPDIR/typecheck.out"
   ERRORS=1
@@ -133,7 +135,7 @@ echo ""
 # Lint results
 echo "🔍 Lint:"
 LINT_EXIT=$(cat "$TMPDIR/lint.exit" 2>/dev/null || echo "1")
-if [ $LINT_EXIT -ne 0 ]; then
+if [ "$LINT_EXIT" -ne 0 ]; then
   echo "❌ Lint failed:"
   cat "$TMPDIR/lint.out"
   ERRORS=1
@@ -150,7 +152,7 @@ else
   echo "🔧 Format Write (agent mode):"
 fi
 FORMAT_EXIT=$(cat "$TMPDIR/format.exit" 2>/dev/null || echo "1")
-if [ $FORMAT_EXIT -ne 0 ]; then
+if [ "$FORMAT_EXIT" -ne 0 ]; then
   if [ "$MODE" = "ci" ]; then
     echo "❌ Format check failed:"
   else
@@ -172,12 +174,12 @@ echo ""
 echo "📝 Markdown Check:"
 MARKDOWN_EXIT=$(cat "$TMPDIR/markdown.exit" 2>/dev/null || echo "0")
 cat "$TMPDIR/markdown.out"
-if [ $MARKDOWN_EXIT -ne 0 ]; then
+if [ "$MARKDOWN_EXIT" -ne 0 ]; then
   ERRORS=1
 fi
 
 echo ""
-if [ $ERRORS -eq 0 ]; then
+if [ "$ERRORS" -eq 0 ]; then
   echo "✅ All checks passed!"
   exit 0
 else

@@ -100,7 +100,7 @@ WORKTREE_PATH=$(get_worktree_path "$RUN_ID" 2>/dev/null || echo "")
 if [ -n "$WORKTREE_PATH" ] && [ -d "$WORKTREE_PATH" ]; then
   echo ""
   echo "Files in worktree:"
-  ls -la "$WORKTREE_PATH" | grep -E "(status-test|hello)" || echo "  (no test files found)"
+  find "$WORKTREE_PATH" -maxdepth 1 \( -name "*status-test*" -o -name "*hello*" \) || echo "  (no test files found)"
 fi
 
 echo ""
