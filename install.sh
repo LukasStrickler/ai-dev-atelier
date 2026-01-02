@@ -62,11 +62,17 @@ fi
 # OpenCode paths (OpenCode specification)
 # Skills use "skill" (singular) per OpenCode docs: https://opencode.ai/docs/skills/
 # Note: OPENCODE_SKILLS_DIR will be set by get_opencode_skills_path() function below
+OPENCODE_CONFIG_DIR=""
 if [ -n "${XDG_CONFIG_HOME:-}" ]; then
-  OPENCODE_CONFIG="${XDG_CONFIG_HOME}/opencode/opencode.json"
+  OPENCODE_CONFIG_DIR="${XDG_CONFIG_HOME}/opencode"
 else
-  OPENCODE_CONFIG="${HOME}/.opencode/opencode.json"
+  if [ -d "${HOME}/.config/opencode" ] || [ -f "${HOME}/.config/opencode/opencode.json" ]; then
+    OPENCODE_CONFIG_DIR="${HOME}/.config/opencode"
+  else
+    OPENCODE_CONFIG_DIR="${HOME}/.opencode"
+  fi
 fi
+OPENCODE_CONFIG="${OPENCODE_CONFIG_DIR}/opencode.json"
 
 # Check project root for opencode.json (project-local config takes precedence)
 if [ -f "${ATELIER_DIR}/opencode.json" ]; then
@@ -141,6 +147,16 @@ get_opencode_skills_path() {
   # Always use global config location (like Codex)
   if [ -n "${XDG_CONFIG_HOME:-}" ]; then
     echo "${XDG_CONFIG_HOME}/opencode/skill"
+    return
+  fi
+
+  if [ -n "${OPENCODE_CONFIG_DIR:-}" ]; then
+    echo "${OPENCODE_CONFIG_DIR}/skill"
+    return
+  fi
+
+  if [ -d "${HOME}/.config/opencode" ] || [ -f "${HOME}/.config/opencode/opencode.json" ]; then
+    echo "${HOME}/.config/opencode/skill"
   else
     echo "${HOME}/.opencode/skill"
   fi
