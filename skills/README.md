@@ -13,6 +13,7 @@ Skills are organized directories containing `SKILL.md` files that follow the [An
 | [`code-quality`](./code-quality/SKILL.md) | Run comprehensive code quality checks including typecheck, lint, format, and markdown validation | `scripts/finalize.sh` (agent/ci modes) |
 | [`docs-check`](./docs-check/SKILL.md) | Analyze git diff to identify code changes requiring documentation updates | `scripts/check-docs.sh` |
 | [`docs-write`](./docs-write/SKILL.md) | Write or update documentation with clear style, structure, visuals, API/ADR/runbook patterns | N/A (workflow skill) |
+| [`git-commit`](./git-commit/SKILL.md) | Write clear git commits with Conventional Commits format, detect project conventions | N/A (workflow skill) |
 | [`code-review`](./code-review/SKILL.md) | Review code changes using CodeRabbit - uncommitted files (task mode) or all PR files vs main (pr mode) | `scripts/review-*.sh` |
 | [`pr-review`](./pr-review/SKILL.md) | Manage GitHub PR comments - fetch, resolve, dismiss, and interact with review comments | `scripts/pr-comments-*.sh` |
 | [`search`](./search/SKILL.md) | Search the web and library documentation using Tavily and Context7 MCPs | N/A (MCP-based skill) |
@@ -36,6 +37,11 @@ Skills are organized directories containing `SKILL.md` files that follow the [An
 - **When to use**: Creating or updating documentation after code changes, during PR preparation
 - **How agents use it**: Agents follow instructions in `SKILL.md` (workflow skill, no scripts)
 - **References**: See `docs-write/references/documentation-guide.md` for documentation standards
+
+### Git Commit
+- **When to use**: After completing working code, before pushing, when code builds and tests pass
+- **How agents use it**: Agents follow instructions in `SKILL.md` (workflow skill, no scripts)
+- **References**: See `git-commit/references/examples.md` for extended commit examples
 
 ### Code Review
 - **When to use**:
