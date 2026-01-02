@@ -7,7 +7,7 @@ description: "Manage GitHub PR review comments - fetch, resolve, dismiss, and in
 
 ## Tools
 
-- `ada::pr:comments [PR_NUMBER]` - Fetch PR comments (read mode)
+- `ada::pr:comments [PR_NUMBER]` - Fetch PR comments (read mode); start here for overview, then use `pr-comments-get` per comment
 - `ada::pr:comments:detect` - Auto-detect PR number
 - `ada::pr:comments:get [PR_NUMBER] [INDEX_OR_ID]` - Get single comment with context
 - `ada::pr:comments:resolve [PR_NUMBER] <COMMENT_ID>...` - Resolve comments
@@ -26,13 +26,21 @@ description: "Manage GitHub PR review comments - fetch, resolve, dismiss, and in
 
 2. **Fetch all comments**: Run `bash skills/pr-review/scripts/pr-comments-fetch.sh [PR_NUMBER]` or `bash skills/pr-review/scripts/pr-comments-fetch.sh` (auto-detects)
    - Fetches all review comments from the PR
-   - Saves to `.ada/data/pr-comments/pr-comments-{PR}-{SHA}.md` (unresolved only)
+   - Saves to `.ada/data/pr-comments/pr-comments-{PR}-{SHA}.md` (unresolved only; overview only)
    - Saves full metadata to `.ada/data/pr-comments/pr-comments-{PR}-{SHA}.json`
+   - If there are multiple unresolved comments, do not read the full markdown file; use `pr-comments-get` per comment.
 
 3. **Get specific comment**: Run `bash skills/pr-review/scripts/pr-comments-get.sh [PR_NUMBER] [INDEX_OR_ID]`
    - Use 1-based index (e.g., `1` for first unresolved comment)
    - Or use comment ID (e.g., `2507094339`)
    - Shows comment with file context and code snippet
+
+### Working Through Comments
+
+- Start with `pr-comments-fetch.sh` for counts and metadata.
+- If multiple unresolved comments exist, do not read the full markdown file. Use `pr-comments-get.sh` for each comment.
+- For each comment, decide fix vs dismiss, then use resolve/dismiss scripts with the comment ID.
+- Validate the detected PR number against the current branch/commit before taking action.
 
 ### Resolving Comments
 
@@ -74,13 +82,14 @@ description: "Manage GitHub PR review comments - fetch, resolve, dismiss, and in
 # Fetch comments (auto-detect or specify PR)
 bash skills/pr-review/scripts/pr-comments-fetch.sh [PR_NUMBER]
 
-# Get comment (index or ID)
-bash skills/pr-review/scripts/pr-comments-get.sh [PR_NUMBER] [INDEX_OR_ID]
+# Work through unresolved comments one by one
+bash skills/pr-review/scripts/pr-comments-get.sh [PR_NUMBER] 1
+bash skills/pr-review/scripts/pr-comments-get.sh [PR_NUMBER] 1  # repeat after resolve/dismiss; index shifts
 
-# Resolve comments
+# Resolve comments (after fixing)
 bash skills/pr-review/scripts/pr-comments-resolve.sh [PR_NUMBER] <COMMENT_ID>...
 
-# Dismiss comment
+# Dismiss comment (short reason)
 bash skills/pr-review/scripts/pr-comments-dismiss.sh [PR_NUMBER] <COMMENT_ID> <REASON>
 ```
 
@@ -108,6 +117,12 @@ PR comments are saved to `.ada/data/pr-comments/` directory:
 - Dismiss comments with clear reasons when not applicable
 - Use cleanup command periodically to manage disk space
 - Combine with `ada::code-review` for complete PR workflow
+
+## Anti-Patterns
+
+- Reading the full markdown file when multiple unresolved comments exist; use `pr-comments-get` per comment instead.
+- Resolving without confirming the issue in code; dismiss if it is stylistic or unclear.
+- Dismissing without a clear, short reason.
 
 ## Dismissal Reasons
 

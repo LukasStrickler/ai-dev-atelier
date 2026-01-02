@@ -642,6 +642,9 @@ read_mode() {
   echo "   Resolved: ${resolved_count}"
   echo "   Unresolved: ${unresolved_count}"
   echo ""
+  echo "Next: use pr-comments-get.sh ${pr_number} <INDEX_OR_ID> to review comments one by one."
+  echo "If multiple unresolved comments exist, avoid reading the full markdown file."
+  echo ""
 }
 
 # Resolve mode: Mark comments as resolved
