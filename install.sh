@@ -144,22 +144,7 @@ load_env_file() {
 #
 # Returns: Path to global OpenCode skills directory
 get_opencode_skills_path() {
-  # Always use global config location (like Codex)
-  if [ -n "${XDG_CONFIG_HOME:-}" ]; then
-    echo "${XDG_CONFIG_HOME}/opencode/skill"
-    return
-  fi
-
-  if [ -n "${OPENCODE_CONFIG_DIR:-}" ]; then
-    echo "${OPENCODE_CONFIG_DIR}/skill"
-    return
-  fi
-
-  if [ -d "${HOME}/.config/opencode" ] || [ -f "${HOME}/.config/opencode/opencode.json" ]; then
-    echo "${HOME}/.config/opencode/skill"
-  else
-    echo "${HOME}/.opencode/skill"
-  fi
+  echo "${OPENCODE_CONFIG_DIR}/skill"
 }
 
 # Update OPENCODE_SKILLS_DIR to use the function result
