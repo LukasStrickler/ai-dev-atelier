@@ -7,14 +7,14 @@ description: "Manage GitHub PR review comments - fetch, resolve, dismiss, and in
 
 ## Tools
 
-- `ada::pr:comments [PR_NUMBER]` - Fetch PR comments (read mode); start here for overview, then use `pr-comments-get` per comment
-- `ada::pr:comments:detect` - Auto-detect PR number
-- `ada::pr:comments:get [PR_NUMBER] [INDEX_OR_ID]` - Get single comment with context
-- `ada::pr:comments:resolve [PR_NUMBER] <COMMENT_ID>...` - Resolve comments
-- `ada::pr:comments:dismiss [PR_NUMBER] <COMMENT_ID> <REASON>` - Dismiss comments
-- `ada::pr:comments:resolve:interactive` - Interactive resolve mode
-- `ada::pr:list` - List all open PRs
-- `ada::pr:comments:cleanup [--all] [PR_NUMBER]` - Clean up comment files
+- `bash skills/pr-review/scripts/pr-comments-fetch.sh [read|resolve|list] [PR_NUMBER] [--verbose]` - Fetch PR comments (read mode); start here for overview, then use `bash skills/pr-review/scripts/pr-comments-get.sh` per comment
+- `bash skills/pr-review/scripts/pr-comments-detect.sh` - Auto-detect PR number
+- `bash skills/pr-review/scripts/pr-comments-get.sh [PR_NUMBER] [INDEX_OR_ID]` - Get single comment with context
+- `bash skills/pr-review/scripts/pr-comments-resolve.sh [PR_NUMBER] <COMMENT_ID>...` - Resolve comments
+- `bash skills/pr-review/scripts/pr-comments-dismiss.sh [PR_NUMBER] <COMMENT_ID> <REASON>` - Dismiss comments
+- `bash skills/pr-review/scripts/pr-comments-resolve.sh [PR_NUMBER] --interactive` - Interactive resolve mode
+- `bash skills/pr-review/scripts/pr-comments-fetch.sh list` - List all open PRs
+- `bash skills/pr-review/scripts/pr-comments-cleanup.sh [--all] [PR_NUMBER]` - Clean up comment files
 
 ## Workflow
 
@@ -28,7 +28,7 @@ description: "Manage GitHub PR review comments - fetch, resolve, dismiss, and in
    - Fetches all review comments from the PR
    - Saves to `.ada/data/pr-comments/pr-comments-{PR}-{SHA}.md` (unresolved only; overview only)
    - Saves full metadata to `.ada/data/pr-comments/pr-comments-{PR}-{SHA}.json`
-   - If there are multiple unresolved comments, do not read the full markdown file; use `pr-comments-get` per comment.
+   - If there are 2+ unresolved comments, do not read the full markdown file; use `bash skills/pr-review/scripts/pr-comments-get.sh` per comment.
 
 3. **Get specific comment**: Run `bash skills/pr-review/scripts/pr-comments-get.sh [PR_NUMBER] [INDEX_OR_ID]`
    - Use 1-based index (e.g., `1` for first unresolved comment)
@@ -37,8 +37,8 @@ description: "Manage GitHub PR review comments - fetch, resolve, dismiss, and in
 
 ### Working Through Comments
 
-- Start with `pr-comments-fetch.sh` for counts and metadata.
-- If multiple unresolved comments exist, do not read the full markdown file. Use `pr-comments-get.sh` for each comment.
+- Start with `bash skills/pr-review/scripts/pr-comments-fetch.sh` for counts and metadata.
+- If 2+ unresolved comments exist, do not read the full markdown file. Use `bash skills/pr-review/scripts/pr-comments-get.sh` for each comment.
 - For each comment, decide fix vs dismiss, then use resolve/dismiss scripts with the comment ID.
 - Validate the detected PR number against the current branch/commit before taking action.
 
@@ -84,7 +84,7 @@ bash skills/pr-review/scripts/pr-comments-fetch.sh [PR_NUMBER]
 
 # Work through unresolved comments one by one
 bash skills/pr-review/scripts/pr-comments-get.sh [PR_NUMBER] 1
-bash skills/pr-review/scripts/pr-comments-get.sh [PR_NUMBER] 1  # repeat after resolve/dismiss; index shifts
+bash skills/pr-review/scripts/pr-comments-get.sh [PR_NUMBER] 1  # after resolve/dismiss, next unresolved becomes index 1
 
 # Resolve comments (after fixing)
 bash skills/pr-review/scripts/pr-comments-resolve.sh [PR_NUMBER] <COMMENT_ID>...
@@ -105,22 +105,22 @@ PR comments are saved to `.ada/data/pr-comments/` directory:
 
 ### Integration with Other Skills
 
-- Use after `ada::code-review` to manage GitHub PR comments from CodeRabbit reviews
-- Run `ada::code-quality` after resolving comments to ensure fixes meet quality standards
-- Use `ada::docs:check` if comments mention missing documentation
+- Use after `bash skills/code-review/scripts/review-run.sh pr` to manage GitHub PR comments from CodeRabbit reviews
+- Run `bash skills/code-quality/scripts/finalize.sh agent` after resolving comments to ensure fixes meet quality standards
+- Use `bash skills/docs-check/scripts/check-docs.sh` if comments mention missing documentation
 
 ## Best Practices
 
 - Fetch comments regularly to stay updated
-- Use `ada::pr:comments:detect` to auto-detect PR number when possible
+- Use `bash skills/pr-review/scripts/pr-comments-detect.sh` to auto-detect PR number when possible
 - Resolve comments after fixing issues
 - Dismiss comments with clear reasons when not applicable
 - Use cleanup command periodically to manage disk space
-- Combine with `ada::code-review` for complete PR workflow
+- Combine with `bash skills/code-review/scripts/review-run.sh pr` for complete PR workflow
 
 ## Anti-Patterns
 
-- Reading the full markdown file when multiple unresolved comments exist; use `pr-comments-get` per comment instead.
+- Reading the full markdown file when 2+ unresolved comments exist; use `bash skills/pr-review/scripts/pr-comments-get.sh` per comment instead.
 - Resolving without confirming the issue in code; dismiss if it is stylistic or unclear.
 - Dismissing without a clear, short reason.
 
