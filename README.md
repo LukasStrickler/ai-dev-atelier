@@ -51,6 +51,7 @@ Verify in your agent:
 | `code-quality` | Typecheck, lint, format, markdown validation | `skills/code-quality/scripts/finalize.sh` |
 | `docs-check` | Detect documentation impact from git diffs | `skills/docs-check/scripts/check-docs.sh` |
 | `docs-write` | Write/update docs using standards | Workflow skill (no script) |
+| `git-commit` | Write clear commits with Conventional Commits format | Workflow skill (no script) |
 | `code-review` | CodeRabbit reviews (task/pr modes) | `skills/code-review/scripts/review-run.sh` |
 | `pr-review` | Fetch/resolve/dismiss PR comments | `skills/pr-review/scripts/pr-comments-*.sh` |
 | `search` | Web and library documentation search | MCP-based (no script) |
