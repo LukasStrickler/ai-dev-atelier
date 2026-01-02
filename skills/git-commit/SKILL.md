@@ -149,11 +149,13 @@ Reviewed-by: Name                        # Use hyphens in tokens
 | Situation                        | Why                                |
 | -------------------------------- | ---------------------------------- |
 | Code doesn't build               | Breaks bisect, blocks others       |
-| Tests failing                    | Not a valid checkpoint             |
+| Tests failing*                   | Not a valid checkpoint             |
 | "I think this works" (untested)  | Verify first, commit second        |
 | Mid-debugging / mid-fix          | Wait until fix is complete         |
 | Uncertain about approach         | Prototype first, commit when solid |
 | CI still running / red           | Wait for green, then commit fix    |
+
+*_Exception: TDD RED commits (test-only commits that intentionally fail) are valid._
 
 **"Commit often" means verified working increments, not untested guesses.**
 

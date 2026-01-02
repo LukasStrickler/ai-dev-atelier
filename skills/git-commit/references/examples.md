@@ -377,7 +377,7 @@ Refs: #890
 ### Merge Conflict Resolution
 
 ```text
-fix(merge): resolve conflicts in user service
+chore(merge): resolve conflicts in user service
 
 Conflicts arose from parallel feature branches.
 Kept changes from feature-auth, integrated
@@ -389,7 +389,7 @@ Both features now work together correctly.
 ### Work in Progress (AVOID - but if needed)
 
 ```text
-wip: initial structure for payment module
+chore(payment): [WIP] initial structure for payment module
 
 NOT FOR MERGE - work in progress.
 
@@ -398,4 +398,4 @@ Implementation coming in follow-up commits.
 ```
 
 **Note:** Avoid WIP commits in main branches. Use feature branches and
-squash before merge.
+squash before merge. Use `chore` type with `[WIP]` tag instead of non-standard `wip:` prefix.
