@@ -62,7 +62,6 @@ fi
 # OpenCode paths (OpenCode specification)
 # Skills use "skill" (singular) per OpenCode docs: https://opencode.ai/docs/skills/
 # Note: OPENCODE_SKILLS_DIR will be set by get_opencode_skills_path() function below
-OPENCODE_CONFIG_DIR=""
 if [ -n "${XDG_CONFIG_HOME:-}" ]; then
   OPENCODE_CONFIG_DIR="${XDG_CONFIG_HOME}/opencode"
 else
