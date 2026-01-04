@@ -320,4 +320,4 @@ Exit animations require `AnimatePresence`—without it, unmount is instant:
 - [Material Design 3 Motion](https://m3.material.io/styles/motion)
 - [Apple HIG - Motion](https://developer.apple.com/design/human-interface-guidelines/motion)
 - [tailwindcss-animate](https://github.com/jamiebuilds/tailwindcss-animate)
-- [easings.co](https://easings.co) - Custom easing explorer
+- [easings.net](https://easings.net) - Easing function cheat sheet
