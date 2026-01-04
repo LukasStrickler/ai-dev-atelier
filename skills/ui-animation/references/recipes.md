@@ -769,7 +769,7 @@ Configure drag behavior with per-direction elasticity and constraints.
 
 Built-in CSS easings are often too weak. Use these custom curves for more energetic, polished animations.
 
-> **Source**: Values below are from [easings.net](https://easings.net) (current canonical reference). They are mathematically accurate cubic-bezier approximations of polynomial easing functions. Legacy "Ceaser" values (circa 2011) are still used by some libraries but are less precise.
+> **Source**: Values below are from [easings.net](https://easings.net) (current canonical reference). They are mathematically accurate cubic-bezier approximations of polynomial easing functions. Legacy "Caesar" values (circa 2011) are still used by some libraries but are less precise.
 
 ### Ease-Out Curves (For Enter Animations)
 
