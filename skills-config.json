@@ -14,6 +14,9 @@
         "docs-write": {
           "install": true
         },
+        "git-commit": {
+          "install": true
+        },
         "code-review": {
           "install": true
         },
@@ -44,6 +47,9 @@
           "install": true
         },
         "docs-write": {
+          "install": true
+        },
+        "git-commit": {
           "install": true
         },
         "code-review": {
