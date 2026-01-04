@@ -4,7 +4,7 @@ This file defines how AI agents and contributors should work in this repository.
 
 ## Overview
 
-AI Dev Atelier: Production-grade skill pack for AI-assisted development. 9 skills following Anthropic Agent Skills standard, with MCP integrations for search/research.
+AI Dev Atelier: Production-grade skill pack for AI-assisted development. 10 skills following Anthropic Agent Skills standard, with MCP integrations for search/research.
 
 ## For AI agents
 
@@ -18,7 +18,7 @@ Read these first:
 
 ```text
 ai-dev-atelier/
-├── skills/                    # 9 skill directories
+├── skills/                    # 10 skill directories
 │   ├── <name>/SKILL.md        # YAML frontmatter + instructions
 │   ├── <name>/scripts/        # Executable bash scripts
 │   └── <name>/references/     # Guides, templates, examples
@@ -43,6 +43,7 @@ ai-dev-atelier/
 | `search` | Web + library docs + GitHub code search | MCP-based |
 | `research` | Academic research with evidence cards | `scripts/research-*.sh` |
 | `agent-orchestration` | Spawn/manage hierarchical subagents | `scripts/agent-*.sh` |
+| `ui-animation` | Tasteful UI animation & accessibility | Workflow (no script) |
 
 ## Commands
 

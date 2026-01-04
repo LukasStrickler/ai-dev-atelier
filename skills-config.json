@@ -28,6 +28,9 @@
         },
         "agent-orchestration": {
           "install": true
+        },
+        "ui-animation": {
+          "install": true
         }
       }
     },
@@ -58,6 +61,9 @@
         "agent-orchestration": {
           "install": false,
           "_reason": "Agent orchestration is built-in to OpenCode"
+        },
+        "ui-animation": {
+          "install": true
         }
       }
     }
