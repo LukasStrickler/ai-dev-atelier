@@ -66,7 +66,7 @@ Tasteful UI animation with proper timing, accessibility, and performance.
 
 ### Decision Tree
 
-```
+```text
 What triggers the animation?
 │
 ├─ User action (click, tap, open)?
