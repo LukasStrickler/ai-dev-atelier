@@ -57,6 +57,7 @@ Verify in your agent:
 | `search` | Web and library documentation search | MCP-based (no script) |
 | `research` | Academic research with evidence cards | `skills/research/scripts/research-*.sh` |
 | `agent-orchestration` | Spawn and manage sub-agents | `skills/agent-orchestration/scripts/agent-*.sh` |
+| `ui-animation` | Guide tasteful UI animation implementation | Workflow skill (no script) |
 
 ## MCP Integration
 

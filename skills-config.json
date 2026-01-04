@@ -14,6 +14,9 @@
         "docs-write": {
           "install": true
         },
+        "git-commit": {
+          "install": true
+        },
         "code-review": {
           "install": true
         },
@@ -28,6 +31,9 @@
         },
         "agent-orchestration": {
           "install": true
+        },
+        "ui-animation": {
+          "install": true
         }
       }
     },
@@ -41,6 +47,9 @@
           "install": true
         },
         "docs-write": {
+          "install": true
+        },
+        "git-commit": {
           "install": true
         },
         "code-review": {
@@ -58,6 +67,9 @@
         "agent-orchestration": {
           "install": false,
           "_reason": "Agent orchestration is built-in to OpenCode"
+        },
+        "ui-animation": {
+          "install": true
         }
       }
     }
