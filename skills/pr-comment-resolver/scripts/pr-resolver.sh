@@ -61,23 +61,28 @@ MAX_PER_CLUSTER="${MAX_COMMENTS_PER_CLUSTER:-5}"
 
 log_info "Fetching review comments for PR #${PR_NUMBER}..."
 
-# Fetch review comments via REST API
 fetch_review_comments() {
-  local api_endpoint="repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/comments"
-  local stderr_file response
-  stderr_file=$(mktemp)
-  response=$(gh api "$api_endpoint" --paginate 2>"$stderr_file")
-  local exit_code=$?
+  local response
   
-  if [ $exit_code -ne 0 ]; then
-    local error_msg
-    error_msg=$(cat "$stderr_file" 2>/dev/null || echo "")
-    rm -f "$stderr_file"
-    log_error "Failed to fetch comments: $error_msg"
+  # Use gh api with pagination, fix malformed JSON from GitHub API
+  # gh api --paginate concatenates arrays, so we use jq -s 'add' to merge them
+  response=$(gh api "repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/comments?per_page=100" \
+    --paginate 2>/dev/null | fix_json_newlines | jq -s 'add // []' 2>/dev/null)
+  
+  if [ -z "$response" ] || [ "$response" = "null" ]; then
+    log_error "Failed to fetch comments"
     echo "[]"
     return 1
   fi
-  rm -f "$stderr_file"
+  
+  response=$(printf '%s' "$response" | sanitize_json)
+  
+  if ! printf '%s' "$response" | jq -e '.' >/dev/null 2>&1; then
+    log_error "Invalid JSON response after sanitization"
+    echo "[]"
+    return 1
+  fi
+  
   normalize_json_array "$response"
 }
 
@@ -149,18 +154,26 @@ TOTAL_RESOLVED=$(echo "$REVIEW_COMMENTS_WITH_STATUS" | jq '[.[] | select(.resolv
 TOTAL_UNRESOLVED=$(echo "$REVIEW_COMMENTS_WITH_STATUS" | jq '[.[] | select(.resolved == false)] | length')
 
 # Process ALL comments (both resolved and unresolved) for full context
-echo "$REVIEW_COMMENTS_WITH_STATUS" | jq -c '.[]' | while IFS= read -r comment_json; do
-  [ -z "$comment_json" ] && continue
+# Use ASCII unit separator (0x1F) as field delimiter
+# Use Unicode U+240A (Symbol for Line Feed) as newline placeholder in body field
+DELIM=$'\x1f'
+NEWLINE_PLACEHOLDER=$'\xE2\x90\x8A'  # ␊ (U+240A)
+echo "$REVIEW_COMMENTS_WITH_STATUS" | jq -r --arg d "$DELIM" --arg nl "$NEWLINE_PLACEHOLDER" '.[] | [
+  (.id // ""),
+  (.path // "unknown"),
+  (.line // .original_line // ""),
+  (.user.login // "unknown"),
+  (.html_url // .url // ""),
+  (.thread_id // ""),
+  (.resolved // false),
+  (.in_reply_to_id // ""),
+  (.body // "" | gsub("\n"; $nl) | gsub("\r"; ""))
+] | join($d)' | while IFS="$DELIM" read -r COMMENT_ID FILE_PATH LINE_NUMBER AUTHOR COMMENT_URL THREAD_ID RESOLVED IN_REPLY_TO BODY_ESCAPED; do
+  [ -z "$COMMENT_ID" ] && continue
   
-  COMMENT_ID=$(echo "$comment_json" | jq -r '.id // empty')
-  FILE_PATH=$(echo "$comment_json" | jq -r '.path // "unknown"')
-  LINE_NUMBER=$(echo "$comment_json" | jq -r '.line // .original_line // ""')
-  AUTHOR=$(echo "$comment_json" | jq -r '.user.login // "unknown"')
-  BODY=$(echo "$comment_json" | jq -r '.body // ""')
-  COMMENT_URL=$(echo "$comment_json" | jq -r '.html_url // .url // ""')
-  THREAD_ID=$(echo "$comment_json" | jq -r '.thread_id // ""')
-  RESOLVED=$(echo "$comment_json" | jq -r '.resolved // false')
-  IN_REPLY_TO=$(echo "$comment_json" | jq -r '.in_reply_to_id // ""')
+  # Convert placeholder back to actual newlines
+  BODY=$(printf '%s' "$BODY_ESCAPED" | sed "s/$NEWLINE_PLACEHOLDER/\\
+/g")
   
   CATEGORY=""
   if [ -n "$IN_REPLY_TO" ] && [ "$IN_REPLY_TO" != "null" ] && is_reply_comment "$BODY"; then
@@ -425,6 +438,15 @@ generate_cluster_markdown() {
       echo "---"
       echo ""
     done
+    
+    echo "## Completion Requirement"
+    echo ""
+    echo "**You must process ALL ${unresolved} unresolved comments above before completing.**"
+    echo "Do not return until every [UNRESOLVED] comment has been:"
+    echo "- Fixed and resolved, OR"
+    echo "- Dismissed with evidence, OR"
+    echo "- Deferred with documentation"
+    echo ""
     
     echo "## Resolution Commands"
     echo ""

@@ -149,14 +149,56 @@ detect_pr_number() {
 # JSON Helpers
 # ============================================================================
 
+# Sanitize JSON string by removing control characters that break jq parsing
+# Preserves: tab (\t, 0x09), newline (\n, 0x0a), carriage return (\r, 0x0d)
+# Removes: null (0x00-0x08), vertical tab (0x0b), form feed (0x0c), and 0x0e-0x1f
+sanitize_json() {
+  tr -d '\000-\010\013\014\016-\037'
+}
+export -f sanitize_json
+
+# Fix malformed JSON from GitHub API where newlines appear literally inside string values
+# GitHub's diff_hunk and body fields often contain raw newlines that should be \n escapes
+fix_json_newlines() {
+  python3 -c '
+import sys
+raw = sys.stdin.read()
+result = []
+in_string = False
+escaped = False
+for char in raw:
+    if escaped:
+        result.append(char)
+        escaped = False
+        continue
+    if char == "\\":
+        escaped = True
+        result.append(char)
+        continue
+    if char == "\"":
+        in_string = not in_string
+        result.append(char)
+    elif char == "\n":
+        result.append("\\n" if in_string else char)
+    elif char == "\r":
+        result.append("\\r" if in_string else char)
+    else:
+        result.append(char)
+print("".join(result), end="")
+' 2>/dev/null || cat
+}
+export -f fix_json_newlines
+
 normalize_json_array() {
   local json_string="$1"
   if [ -z "$json_string" ] || [ "$json_string" = "null" ]; then
     echo "[]"
     return 0
   fi
+  # Sanitize control characters before jq processing (CodeRabbit emojis can include problematic bytes)
+  json_string=$(printf '%s' "$json_string" | sanitize_json)
   local json_type
-  json_type=$(echo "$json_string" | jq -r 'type' 2>/dev/null || echo "unknown")
+  json_type=$(printf '%s' "$json_string" | jq -r 'type' 2>/dev/null || echo "unknown")
   if [ "$json_type" = "array" ]; then
     echo "$json_string"
     return 0
@@ -405,7 +447,7 @@ categorize_comment_text() {
     echo "doc-fix"
     return 0
   fi
-  if [[ "$text" =~ (consider|should|might|could|suggest|recommend|prefer|better|best[[:space:]]practice|convention|style|redundant|simplif|refactor|clean[[:space:]]up|optional|nitpick|phony|portability|portable) ]]; then
+  if [[ "$text" =~ (consider|should|might|could|suggest|recommend|prefer|better|best[[:space:]]practice|convention|style|redundant|simplif|refactor|clean[[:space:]]up|optional|nitpick|phony|portability|portable|backtick|wrap[[:space:]].*in|please[[:space:]]wrap|denote|clarity|consistency) ]]; then
     echo "suggestion"
     return 0
   fi
@@ -516,129 +558,95 @@ export -f extract_backticked_identifiers
 # Semantic Duplicate Detection (Sørensen-Dice Coefficient)
 # ============================================================================
 
-# Normalize comment body for comparison
-# Removes bot prefixes, badges, markdown, filler words
-normalize_comment_for_comparison() {
-  local body="$1"
-  printf "%s" "$body" | \
-    tr '[:upper:]' '[:lower:]' | \
-    sed -E 's/!\[(high|medium|low)\]//g' | \
-    sed -E 's/\*\*[^*]+\*\*//g' | \
-    sed -E 's/`([^`]+)`/\1/g' | \
-    sed -E 's/(consider|should|please|i suggest|you might|could you)//gi' | \
-    tr -d '[:punct:]' | \
-    tr -s '[:space:]' ' ' | \
-    sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
-}
-export -f normalize_comment_for_comparison
-
-# Generate character bigrams from string
-# Usage: get_bigrams "hello" -> "he el ll lo"
-get_bigrams() {
-  local str="$1"
-  local len=${#str}
-  local bigrams=""
-  
-  for ((i=0; i<len-1; i++)); do
-    bigrams="${bigrams}${str:i:2}"$'\n'
-  done
-  
-  printf "%s" "$bigrams" | sort -u | grep -v '^$'
-}
-export -f get_bigrams
-
-# Calculate Sørensen-Dice coefficient between two strings
-# Returns: coefficient as decimal (0.00 - 1.00)
-dice_coefficient() {
-  local s1="$1"
-  local s2="$2"
-  
-  # Normalize both strings
-  s1=$(normalize_comment_for_comparison "$s1")
-  s2=$(normalize_comment_for_comparison "$s2")
-  
-  # Handle edge cases
-  if [ -z "$s1" ] || [ -z "$s2" ]; then
-    echo "0.00"
-    return 0
-  fi
-  
-  if [ "$s1" = "$s2" ]; then
-    echo "1.00"
-    return 0
-  fi
-  
-  # Get bigrams
-  local bigrams1 bigrams2
-  bigrams1=$(get_bigrams "$s1")
-  bigrams2=$(get_bigrams "$s2")
-  
-  local count1 count2 intersection
-  count1=$(printf "%s" "$bigrams1" | grep -c '^' || echo "0")
-  count2=$(printf "%s" "$bigrams2" | grep -c '^' || echo "0")
-  
-  # Count intersection using process substitution
-  intersection=$(comm -12 <(printf "%s" "$bigrams1" | sort) <(printf "%s" "$bigrams2" | sort) | grep -c '^' || echo "0")
-  
-  # Calculate Dice coefficient: 2 * |intersection| / (|A| + |B|)
-  if [ "$((count1 + count2))" -eq 0 ]; then
-    echo "0.00"
-  else
-    # Use awk for floating point math (more portable than bc)
-    awk -v i="$intersection" -v c1="$count1" -v c2="$count2" 'BEGIN { printf "%.2f", (2 * i) / (c1 + c2) }'
-  fi
-}
-export -f dice_coefficient
-
-# Get length-aware similarity threshold
-# Shorter strings need higher threshold (more random overlap risk)
-get_dice_threshold() {
-  local len=$1
-  if [ "$len" -lt 20 ]; then
-    echo "${DICE_THRESHOLD_SHORT:-0.90}"
-  elif [ "$len" -lt 100 ]; then
-    echo "${DICE_THRESHOLD_MEDIUM:-0.85}"
-  else
-    echo "${DICE_THRESHOLD_LONG:-0.80}"
-  fi
-}
-export -f get_dice_threshold
-
 # Check if a comment is a semantic duplicate of any in the cache
-# Usage: check_semantic_duplicate "comment body" "cache_file"
+# Uses single-process awk for O(n) comparison instead of O(n) subprocess spawns
 # Returns: "DUPLICATE:similarity:original_id" or "UNIQUE"
 check_semantic_duplicate() {
   local new_body="$1"
   local cache_file="$2"
   
   [ ! -f "$cache_file" ] && { echo "UNIQUE"; return 0; }
+  [ ! -s "$cache_file" ] && { echo "UNIQUE"; return 0; }
   
-  local normalized
-  normalized=$(normalize_comment_for_comparison "$new_body")
-  local len=${#normalized}
-  local threshold
-  threshold=$(get_dice_threshold "$len")
+  # Escape newlines for awk -v (awk doesn't accept literal newlines in -v values)
+  local escaped_body
+  escaped_body=$(printf '%s' "$new_body" | tr '\n' '\x1E')
   
-  while IFS=$'\t' read -r cached_id cached_body; do
-    [ -z "$cached_id" ] && continue
+  awk -v new_body="$escaped_body" -v RS='\x1E' '
+  function normalize(s) {
+    gsub(/!\[(high|medium|low)\]/, "", s)
+    gsub(/\*\*[^*]+\*\*/, "", s)
+    gsub(/`[^`]+`/, "", s)
+    gsub(/(consider|should|please|i suggest|you might|could you)/i, "", s)
+    gsub(/[[:punct:]]/, "", s)
+    gsub(/[[:space:]]+/, " ", s)
+    gsub(/^[[:space:]]+|[[:space:]]+$/, "", s)
+    return tolower(s)
+  }
+  
+  function get_bigrams(s, bigrams,    i, len, bg) {
+    delete bigrams
+    len = length(s)
+    for (i = 1; i < len; i++) {
+      bg = substr(s, i, 2)
+      bigrams[bg] = 1
+    }
+  }
+  
+  function count_arr(arr,    k, n) {
+    n = 0
+    for (k in arr) n++
+    return n
+  }
+  
+  function dice_with_cache(cached_body,    b2, c1, c2, inter, k, norm_cached) {
+    norm_cached = normalize(cached_body)
+    if (norm_new == "" || norm_cached == "") return 0.0
+    if (norm_new == norm_cached) return 1.0
     
-    local similarity
-    similarity=$(dice_coefficient "$new_body" "$cached_body")
+    get_bigrams(norm_cached, b2)
+    c1 = count_arr(new_bigrams)
+    c2 = count_arr(b2)
     
-    # Compare using awk (portable float comparison)
-    if awk -v sim="$similarity" -v thresh="$threshold" 'BEGIN { exit !(sim >= thresh) }'; then
-      echo "DUPLICATE:${similarity}:${cached_id}"
-      return 0
-    fi
-  done < "$cache_file"
+    inter = 0
+    for (k in new_bigrams) if (k in b2) inter++
+    
+    return (c1 + c2) == 0 ? 0.0 : (2.0 * inter) / (c1 + c2)
+  }
   
-  echo "UNIQUE"
-  return 0
+  BEGIN {
+    FS = "\t"
+    norm_new = normalize(new_body)
+    get_bigrams(norm_new, new_bigrams)
+    
+    len = length(norm_new)
+    if (len < 20) threshold = 0.90
+    else if (len < 100) threshold = 0.85
+    else threshold = 0.80
+    
+    found = 0
+  }
+  
+  {
+    cached_id = $1
+    cached_body = $2
+    if (cached_id == "") next
+    
+    sim = dice_with_cache(cached_body)
+    if (sim >= threshold) {
+      printf "DUPLICATE:%.2f:%s\n", sim, cached_id
+      found = 1
+      exit 0
+    }
+  }
+  
+  END {
+    if (!found) print "UNIQUE"
+  }
+  ' "$cache_file"
 }
 export -f check_semantic_duplicate
 
-# Add comment to semantic cache
-# Usage: add_to_semantic_cache "comment_id" "comment_body" "cache_file"
 add_to_semantic_cache() {
   local comment_id="$1"
   local body="$2"
