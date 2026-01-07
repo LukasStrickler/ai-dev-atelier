@@ -53,7 +53,6 @@ ensure_pr_resolver_dir
 PR_DIR=$(get_pr_dir "$PR_NUMBER")
 mkdir -p "$PR_DIR"
 OUTPUT_FILE=$(get_pr_data_path "$PR_NUMBER")
-MAX_PER_CLUSTER="${MAX_COMMENTS_PER_CLUSTER:-5}"
 
 # ============================================================================
 # PHASE 1: Fetch comments from GitHub
@@ -134,7 +133,7 @@ REVIEW_COMMENTS_WITH_STATUS=$(echo "$REVIEW_COMMENTS" | jq -c --argjson resolved
 log_info "Categorizing and clustering comments..."
 
 TMP_DIR=$(mktemp -d)
-trap "rm -rf $TMP_DIR" EXIT
+trap 'rm -rf "$TMP_DIR"' EXIT
 
 UNIQUE_FILE="$TMP_DIR/unique.jsonl"
 DUPLICATES_FILE="$TMP_DIR/duplicates.jsonl"
@@ -266,7 +265,7 @@ else
 fi
 
 # Cluster ALL comments, with resolved/unresolved counts per cluster
-CLUSTERS_JSON=$(echo "$UNIQUE_ARRAY" | jq -c --argjson max "$MAX_PER_CLUSTER" '
+CLUSTERS_JSON=$(echo "$UNIQUE_ARRAY" | jq -c '
   def slugify($value): $value | gsub("[^A-Za-z0-9]+"; "-") | gsub("(^-|-$)"; "") | ascii_downcase;
   
   if length == 0 then [] else
@@ -462,12 +461,10 @@ generate_cluster_markdown() {
   } > "$output_file"
 }
 
-GENERATED_MD_COUNT=0
 echo "$CLUSTERS_JSON" | jq -c '.[]' | while IFS= read -r cluster; do
   cluster_id=$(echo "$cluster" | jq -r '.cluster_id')
   md_file="${CLUSTERS_DIR}/${cluster_id}.md"
   generate_cluster_markdown "$cluster" "$md_file"
-  GENERATED_MD_COUNT=$((GENERATED_MD_COUNT + 1))
 done
 
 log_success "Generated cluster markdown files in ${CLUSTERS_DIR}/"
