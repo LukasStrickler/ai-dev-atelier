@@ -49,6 +49,8 @@ Tasteful UI animation with proper timing, accessibility, and performance.
 2. Apply timing from Step 2
 3. Wrap unmounting elements in `AnimatePresence`
 
+Use `ui_to_artifact` when starting from a design screenshot or mockup. Use `ui_diff_check` to compare expected vs implemented UI.
+
 ### Step 4: Accessibility (Required)
 
 1. Check `prefers-reduced-motion` with `useReducedMotion()` or `motion-safe:`

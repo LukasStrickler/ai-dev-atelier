@@ -38,8 +38,47 @@
       "_note": "Includes Google Scholar + Sci-Hub integration. Check Terms of Service and legal considerations.",
       "command": "npx",
       "args": ["-y", "paper-search-mcp-nodejs"]
+    },
+    "zai-zread": {
+      "_description": "Z.AI Zread MCP - GitHub repo semantic search (issues, PRs, docs). Optional for 'search' and 'research' skills.",
+      "_quota": "1,000 calls/month shared pool (Pro plan). Only search_doc is unique.",
+      "_skills": ["search", "research"],
+      "_enabledTools": {
+        "search_doc": "Semantic search across repo issues, PRs, docs - UNIQUE capability"
+      },
+      "_disabledTools": {
+        "_comment": "Disable in agent config to save quota - use free alternatives",
+        "read_file": "Use webfetch on https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{path}",
+        "get_repo_structure": "Use gh api repos/{owner}/{repo}/git/trees/{branch}?recursive=1"
+      },
+      "url": "https://api.z.ai/api/mcp/zread/mcp",
+      "headers": {
+        "Authorization": "Bearer Z_AI_API_KEY"
+      }
+    },
+    "zai-vision": {
+      "_description": "Z.AI Vision MCP - Image/video analysis, UI code gen, diagram understanding. Optional for 'ui-animation', 'code-review', 'docs-write' skills.",
+      "_quota": "Uses 5-hour prompt pool (not MCP call quota). Requires GLM Coding Plan.",
+      "_skills": ["ui-animation", "code-review", "docs-write", "research"],
+      "_enabledTools": {
+        "ui_to_artifact": "Generate code from UI screenshots - UNIQUE capability",
+        "ui_diff_check": "Compare two UI screenshots - UNIQUE multi-image",
+        "video_analysis": "Video file analysis - UNIQUE capability",
+        "analyze_data_visualization": "Specialized chart/graph analysis",
+        "understand_technical_diagram": "Specialized diagram interpretation",
+        "diagnose_error_screenshot": "Specialized error analysis"
+      },
+      "_disabledTools": {
+        "_comment": "Disable in agent config - overlap with look_at tool",
+        "image_analysis": "Use look_at tool instead (native capability)",
+        "extract_text_from_screenshot": "Use look_at tool instead (can do OCR)"
+      },
+      "command": "npx",
+      "args": ["-y", "@z_ai/mcp-server"],
+      "env": {
+        "Z_AI_API_KEY": "Z_AI_API_KEY",
+        "Z_AI_MODE": "ZAI"
+      }
     }
   }
 }
-
-

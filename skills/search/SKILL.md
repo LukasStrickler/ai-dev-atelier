@@ -45,6 +45,14 @@ Search web, library docs, and GitHub code using progressive escalation.
 - ✅ Good: `useState(`, `getServerSession`, `(?s)try {.*await`
 - ❌ Bad: `react tutorial`, `how to authenticate`
 
+#### Semantic docs/issues/PRs (Zread)
+Use Z.AI Zread `search_doc` for semantic issues/PRs/docs when keyword/code search fails; quota-bound (requires `Z_AI_API_KEY`).
+
+#### Free additional tools for GitHub:
+- Get repository structure - `gh api "repos/{owner}/{repo}/git/trees/{branch}?recursive=1"`
+- Search issues - `gh api -X GET search/issues -f q="repo:{owner}/{repo} is:issue <keywords>"`
+- Read file - `webfetch https://raw.githubusercontent.com/{owner}/{repo}/{path}`
+
 ## Progressive Escalation Levels
 
 ### Level 1: Simple Search (Default)
@@ -65,6 +73,7 @@ Search web, library docs, and GitHub code using progressive escalation.
 3. **Filter domains:** `include_domains: ["stackoverflow.com", "github.com"]`
 4. **Time filter:** `time_range: "year"` for recent info
 5. **Two-step extraction:** Search → Filter by score (>0.5) → Extract top URLs
+6. **Discussions/docs gap:** Use `search_doc` or `gh api search/issues` when keyword/code search misses context
 
 **Sufficient? → Done. Insufficient? → Level 3**
 

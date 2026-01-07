@@ -75,6 +75,30 @@ Respects `$XDG_CONFIG_HOME` if set.
 | `openalex-research` | Academic papers | `OPENALEX_EMAIL` |
 | `pdf-reader` | PDF extraction | None |
 | `paper-search` | Multi-platform papers | Optional |
+| `zai-zread` | GitHub repo semantic search (issues, PRs, docs) | `Z_AI_API_KEY` |
+| `zai-vision` | Image/video analysis, UI code gen, diagrams | `Z_AI_API_KEY` |
+
+### Z.AI MCP Tool Filtering (OpenCode)
+
+Some Z.AI MCP tools should be disabled to save quota or avoid redundancy.
+Add to your `~/.opencode/opencode.json` under `"tools"`:
+
+```json
+{
+  "tools": {
+    "zai-zread_read_file": false,
+    "zai-zread_get_repo_structure": false,
+    "zai-vision_image_analysis": false,
+    "zai-vision_extract_text_from_screenshot": false
+  }
+}
+```
+
+**Why disable these:**
+- `zai-zread_read_file`: Use `webfetch("https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{path}")` instead (free)
+- `zai-zread_get_repo_structure`: Use `gh api repos/{owner}/{repo}/git/trees/{branch}` instead (free)
+- `zai-vision_image_analysis`: Use native `look_at` tool instead
+- `zai-vision_extract_text_from_screenshot`: Use native `look_at` tool for OCR
 
 Set keys in `.env` before `install.sh`, or update MCP config after.
 

@@ -104,6 +104,9 @@ After 5+ cards, before report:
 | Paper-search `search_arxiv` | Preprints | Recent work |
 | PDF `read_pdf` | Extract content | Reading papers |
 | Tavily (search skill) | Non-academic | Parallel discovery |
+| zai-zread `search_doc` | Semantic issues/PRs/docs | Real-world implementations |
+| `webfetch` | Direct URL reads | Lightweight docs/files |
+| `look_at` | Interpret diagrams/images | PDFs/screenshots |
 
 ## Research Management Commands
 

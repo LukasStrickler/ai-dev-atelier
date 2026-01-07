@@ -42,6 +42,8 @@ description: "Write or update documentation (tutorial, how-to, reference, explan
    - Use Mermaid for inline diagrams (ER diagrams, sequence diagrams)
    - Use PlantUML (.puml files) for diagrams referenced from multiple docs
    - See examples in the guide for exact syntax - do not guess
+   - Use `look_at` to interpret screenshots or diagrams before documenting
+   - Use `ui_to_artifact` for a starter code snippet from a mockup
 
 6. **For API documentation**: Read `references/documentation-guide.md` section "API Documentation"
    - Document authentication, request/response formats, error codes

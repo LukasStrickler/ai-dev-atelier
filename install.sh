@@ -482,6 +482,12 @@ convert_mcp_to_toml() {
       echo "}"
     fi
     
+    # Add disabled_tools if _disabledTools metadata exists (excludes _comment key)
+    local disabled_tools=$(echo "$server_config" | jq -c '._disabledTools // {} | keys | map(select(startswith("_") | not))')
+    if [ "$disabled_tools" != "[]" ] && [ "$disabled_tools" != "null" ]; then
+      echo "disabled_tools = $disabled_tools"
+    fi
+    
     return 0
   fi
   
@@ -509,6 +515,11 @@ convert_mcp_to_toml() {
       echo "env = {"
       echo "$env" | jq -r 'to_entries[] | "  \"\(.key)\" = \"\(.value)\","' | sed '$ s/,$//'
       echo "}"
+    fi
+    
+    local disabled_tools=$(echo "$server_config" | jq -c '._disabledTools // {} | keys | map(select(startswith("_") | not))')
+    if [ "$disabled_tools" != "[]" ] && [ "$disabled_tools" != "null" ]; then
+      echo "disabled_tools = $disabled_tools"
     fi
     
     return 0
@@ -763,6 +774,20 @@ substitute_api_keys() {
     if [ -n "${CONTEXT7_API_KEY:-}" ] && [ "$CONTEXT7_API_KEY" != "your_context7_api_key_here" ]; then
       result=$(echo "$result" | jq --arg key "$CONTEXT7_API_KEY" \
         '.headers.CONTEXT7_API_KEY = $key')
+    fi
+  fi
+
+  if echo "$result" | jq -e '.headers.Authorization | strings | test("Z_AI_API_KEY")' > /dev/null 2>&1; then
+    if [ -n "${Z_AI_API_KEY:-}" ] && [ "$Z_AI_API_KEY" != "your_zai_api_key_here" ]; then
+      result=$(echo "$result" | jq --arg key "$Z_AI_API_KEY" \
+        '.headers.Authorization |= gsub("Z_AI_API_KEY"; $key)')
+    fi
+  fi
+
+  if echo "$result" | jq -e '.env.Z_AI_API_KEY' > /dev/null 2>&1; then
+    if [ -n "${Z_AI_API_KEY:-}" ] && [ "$Z_AI_API_KEY" != "your_zai_api_key_here" ]; then
+      result=$(echo "$result" | jq --arg key "$Z_AI_API_KEY" \
+        '.env.Z_AI_API_KEY = $key')
     fi
   fi
   
@@ -1060,6 +1085,47 @@ configure_mcp_opencode() {
     # Count servers added
     local server_count=$(jq '.mcp | length' "$OPENCODE_CONFIG")
     log_info "Configured ${server_count} MCP server(s)"
+  fi
+  
+  # Configure tool filtering from _disabledTools metadata in mcp.json
+  configure_opencode_tool_filtering
+}
+
+# ----------------------------------------------------------------------------
+# Configure OpenCode Tool Filtering
+# ----------------------------------------------------------------------------
+# Reads _disabledTools from mcp.json and adds them to the tools section
+# of opencode.json. Format: "server-name_tool-name": false
+#
+# OpenCode uses a top-level tools section for filtering, not per-server.
+configure_opencode_tool_filtering() {
+  local tools_config='{}'
+  
+  while IFS= read -r server_name; do
+    local server_config=$(jq -c ".mcpServers.\"${server_name}\"" "$MCP_CONFIG")
+    if [ -z "$server_config" ] || [ "$server_config" = "null" ]; then
+      continue
+    fi
+    
+    local disabled_tools=$(echo "$server_config" | jq -r '._disabledTools // {} | keys[] | select(startswith("_") | not)')
+    if [ -n "$disabled_tools" ]; then
+      while IFS= read -r tool_name; do
+        local full_tool_name="${server_name}_${tool_name}"
+        tools_config=$(echo "$tools_config" | jq --arg name "$full_tool_name" '.[$name] = false')
+      done <<< "$disabled_tools"
+    fi
+  done <<< "$(jq -r '.mcpServers | keys[]' "$MCP_CONFIG")"
+  
+  if [ "$tools_config" != "{}" ]; then
+    if jq -e '.tools' "$OPENCODE_CONFIG" > /dev/null 2>&1; then
+      jq --argjson new_tools "$tools_config" '.tools = (.tools + $new_tools)' "$OPENCODE_CONFIG" > "${OPENCODE_CONFIG}.tmp" && \
+        mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"
+    else
+      jq --argjson new_tools "$tools_config" '.tools = $new_tools' "$OPENCODE_CONFIG" > "${OPENCODE_CONFIG}.tmp" && \
+        mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"
+    fi
+    local disabled_count=$(echo "$tools_config" | jq 'length')
+    log_info "Configured ${disabled_count} disabled tool(s) in OpenCode"
   fi
 }
 
