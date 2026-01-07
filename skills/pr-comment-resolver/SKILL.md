@@ -7,6 +7,31 @@ description: "Batch-resolve bot review comments (CodeRabbit, Copilot, Gemini) on
 
 Multi-agent system for fetching, clustering, and resolving PR review comments at scale.
 
+---
+
+## ⛔ CRITICAL: DO NOT FETCH PR DATA MANUALLY
+
+**BEFORE doing ANYTHING else, run the script:**
+
+```bash
+bash skills/pr-comment-resolver/scripts/pr-resolver.sh <PR_NUMBER>
+```
+
+**FORBIDDEN COMMANDS** (these bloat context with 10-50x more data than needed):
+- ❌ `gh pr view <N> --json ...`
+- ❌ `gh api repos/.../pulls/<N>/comments`
+- ❌ `gh api repos/.../pulls/<N>/reviews`
+- ❌ Any manual GitHub API calls for PR comment data
+
+**WHY**: The script fetches ALL data, clusters it, and outputs token-efficient JSON. Manual fetches duplicate this work and waste context tokens on raw unprocessed data.
+
+**CORRECT WORKFLOW**:
+1. Run `pr-resolver.sh <PR>` FIRST
+2. Read `.ada/data/pr-resolver/pr-<N>/actionable.json`
+3. Spawn subagents per cluster
+
+---
+
 ## Architecture Overview
 
 ```
@@ -28,7 +53,7 @@ Orchestrator (You)
 ## Quick Start
 
 ```bash
-# 1. Fetch and cluster all comments
+# 1. Fetch and cluster all comments (script does ALL the API work)
 bash skills/pr-comment-resolver/scripts/pr-resolver.sh 7
 
 # Output: .ada/data/pr-resolver/pr-7/
@@ -194,10 +219,10 @@ Parse each deferred item's reason and classify investigability:
 | **Low confidence (50-69)** | YES | Investigate with more context |
 | **Conflicting evidence** | YES | Gather more evidence, break tie |
 | **Complex refactor** | MAYBE | Assess scope first |
-| **Unclear requirement** | NO | Escalate to human |
-| **Security concern** | **NEVER** | Escalate immediately |
+| **Security concern** | **YES - Research First** | Research vulnerability type, check if it applies, look up mitigations. Only escalate if fix is unclear after thorough research |
+| **Unclear requirement** | YES | Search codebase for patterns, check docs, understand intent |
 
-**Security Rule (ABSOLUTE)**: Never self-investigate security concerns. Always escalate.
+**Autonomy Principle**: Exhaust all research options before escalating. You have tools - use them.
 
 #### Self-Investigation Workflow
 
@@ -312,34 +337,56 @@ Comments are auto-categorized by content:
 
 | Category | Trigger Keywords | Auto-Fix Risk |
 |----------|------------------|---------------|
-| `security` | security, vulnerability, injection, xss, csrf | **NEVER** - Always defer |
+| `security` | security, vulnerability, injection, xss, csrf | **Research deeply** - understand the vulnerability, verify it applies, fix if confident |
 | `issue` | bug, error, fail, incorrect, broken | Careful |
 | `import-fix` | import, export, require, module | Safe |
 | `markdown-lint` | markdown, md0XX, fenced, code block | Safe |
 | `doc-fix` | doc link, documentation, readme | Careful |
 | `suggestion` | consider, should, might, could, suggest | Careful |
-| `uncategorized` | Everything else | **DEFER** |
+| `uncategorized` | Everything else | Research first, then decide |
 
 ## When to Escalate to Human
 
 | Scenario | Escalation Required |
 |----------|---------------------|
-| Any security-related comment | YES - Always |
+| Security concern **after thorough research** still unclear | YES |
 | Breaking API changes | YES |
-| Performance implications unclear | YES |
+| Performance implications unclear after benchmarking/analysis | YES |
 | Multiple valid interpretations | YES (ask for preference) |
 | Subagent failed 2+ times on same item | YES |
 
+**Key Principle**: Research first, escalate only when truly uncertain after exhausting your tools.
+
 ## Anti-Patterns
+
+### ⛔ FORBIDDEN (Context Bloat)
+
+These commands are **NEVER** allowed when using this skill:
+
+```bash
+# ❌ FORBIDDEN - bloats context with raw unprocessed data
+gh pr view <N> --json ...
+gh api repos/.../pulls/<N>/comments
+gh api repos/.../pulls/<N>/reviews
+gh api graphql -f query='...' # for PR comments
+
+# ✅ CORRECT - run this instead
+bash skills/pr-comment-resolver/scripts/pr-resolver.sh <PR_NUMBER>
+```
+
+### Other Anti-Patterns
 
 | Don't | Do Instead |
 |-------|------------|
 | Process clusters without reading actionable.json first | Start with actionable.json to understand scope |
 | Skip deferred items | Handle each deferred item explicitly |
-| Resolve security comments automatically | Always escalate security to human |
+| Defer without researching first | Research thoroughly (docs, codebase, web), then decide |
 | Ignore subagent verification failures | Investigate why verification failed |
 | Run multiple subagents on same file simultaneously | Serialize per-file to avoid conflicts |
 | Mark complete without refreshing | Always run pr-resolver.sh again to verify |
+| Ask humans for things you can look up | Use your tools - search, read, grep before escalating |
+
+**Context Efficiency Rule**: The script produces `actionable.json` specifically to minimize token usage. Raw `gh api` output is ~10-50x larger than the processed output. Never fetch what the script already fetches.
 
 ## Integration with Other Skills
 
