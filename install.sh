@@ -652,8 +652,8 @@ configure_mcp() {
     fi
     
     # Warn about API keys that need to be set (check for placeholder values in TOML)
-    if grep -q "TAVILY_API_KEY" "$CODEX_MCP_CONFIG" 2>/dev/null || grep -q "X-Tavily-Api-Key.*TAVILY_API_KEY" "$CODEX_MCP_CONFIG" 2>/dev/null; then
-      log_warning "⚠️  Tavily MCP requires TAVILY_API_KEY - update in ${CODEX_MCP_CONFIG} (set as X-Tavily-Api-Key header)"
+    if grep -q "TAVILY_API_KEY" "$CODEX_MCP_CONFIG" 2>/dev/null || grep -q 'http_headers.*Authorization.*TAVILY_API_KEY' "$CODEX_MCP_CONFIG" 2>/dev/null; then
+      log_warning "⚠️  Tavily MCP requires TAVILY_API_KEY - update in ${CODEX_MCP_CONFIG} (set as Authorization header)"
     fi
     if grep -q "CONTEXT7_API_KEY.*CONTEXT7_API_KEY" "$CODEX_MCP_CONFIG" 2>/dev/null; then
       log_warning "⚠️  Context7 MCP requires CONTEXT7_API_KEY - update in ${CODEX_MCP_CONFIG} (optional)"
@@ -702,7 +702,7 @@ configure_mcp() {
     # Warn about API keys that need to be updated
     log_warning "⚠️  Remember to update API keys in ${CODEX_MCP_CONFIG}:"
     if grep -q "tavily-remote-mcp" "$CODEX_MCP_CONFIG" 2>/dev/null; then
-      log_info "  - TAVILY_API_KEY for Tavily MCP (set as X-Tavily-Api-Key header)"
+      log_info "  - TAVILY_API_KEY for Tavily MCP (set as Authorization header)"
     fi
     if grep -q "\[mcp_servers\.context7\]" "$CODEX_MCP_CONFIG" 2>/dev/null; then
       log_info "  - CONTEXT7_API_KEY for Context7 MCP (optional)"
@@ -756,17 +756,15 @@ substitute_api_keys() {
   local server_config="$1"
   local server_name="$2"
   local result="$server_config"
-  
+
   # Load .env if available
   load_env_file
-  
-  # Replace TAVILY_API_KEY in headers
-  if echo "$result" | jq -e '.headers."X-Tavily-Api-Key" // .headers.TAVILY_API_KEY' > /dev/null 2>&1; then
-    if [ -n "${TAVILY_API_KEY:-}" ] && [ "$TAVILY_API_KEY" != "your_tavily_api_key_here" ]; then
-      result=$(echo "$result" | jq --arg key "$TAVILY_API_KEY" \
-        'if .headers."X-Tavily-Api-Key" then .headers."X-Tavily-Api-Key" = $key
-         elif .headers.TAVILY_API_KEY then .headers.TAVILY_API_KEY = $key
-         else . end')
+
+  if echo "$result" | jq -e '.headers.Authorization' > /dev/null 2>&1; then
+    local auth_value=$(echo "$result" | jq -r '.headers.Authorization')
+    if [[ "$auth_value" == *"TAVILY_API_KEY"* ]] && [ -n "${TAVILY_API_KEY:-}" ] && [ "$TAVILY_API_KEY" != "your_tavily_api_key_here" ]; then
+      local new_auth="Bearer ${TAVILY_API_KEY}"
+      result=$(echo "$result" | jq --arg new_auth "$new_auth" '.headers.Authorization = $new_auth')
     fi
   fi
   
@@ -1171,8 +1169,28 @@ configure_opencode_agents() {
     # Check if prompt uses {file:path} syntax
     if [[ "$prompt_value" =~ ^\{file:(.+)\}$ ]]; then
       local file_path="${BASH_REMATCH[1]}"
+
+      # Security: Prevent path traversal attacks
+      # 1. Block paths containing '..' or starting with '/'
+      # 2. Resolve the full path and verify it's under ATELIER_DIR
+      if [[ "$file_path" == *".."* ]] || [[ "$file_path" == /* ]]; then
+        log_error "  ${agent_name}: invalid path (contains '..' or is absolute): ${file_path}"
+        continue
+      fi
+
       local full_path="${ATELIER_DIR}/${file_path}"
-      
+
+      # Resolve to absolute path to normalize any symlinks and verify containment
+      local resolved_path
+      resolved_path=$(cd "$(dirname "$full_path")" 2>/dev/null && pwd -P)
+      resolved_path="${resolved_path}/$(basename "$full_path")"
+
+      # Verify the resolved path is still under ATELIER_DIR
+      if [[ ! "$resolved_path" == "${ATELIER_DIR}"* ]]; then
+        log_error "  ${agent_name}: path traversal detected: ${file_path} resolves outside ATELIER_DIR"
+        continue
+      fi
+
       if [ -f "$full_path" ]; then
         # Read file content and escape for JSON
         local file_content
