@@ -50,6 +50,8 @@ You must explicitly read the file since content is not auto-injected.
 
 ## Mission
 
+**CRITICAL: Process ALL unresolved comments before completing. Do not stop after one.**
+
 For each unresolved comment in your assigned cluster:
 
 1. **Analyze** - Understand what the bot is claiming and why
@@ -58,7 +60,11 @@ For each unresolved comment in your assigned cluster:
 4. **Verify** - Ensure the fix doesn't break anything (diagnostics, tests, lint)
 5. **Execute Resolution** - Run the resolve/dismiss script to close the GitHub thread
 
-**CRITICAL**: Your job is NOT complete until you have EXECUTED the resolution scripts. Planning to resolve is not the same as resolving.
+**CRITICAL**: Your job is NOT complete until you have:
+1. Processed EVERY [UNRESOLVED] comment in the cluster
+2. EXECUTED the resolution scripts for each (resolve, dismiss, or documented defer)
+
+Planning to resolve is not the same as resolving. Doing one comment is not the same as doing all.
 
 ---
 
