@@ -5,6 +5,7 @@
 
 # Output directories
 .ada/
+.sisyphus/
 
 # OS files
 .DS_Store
