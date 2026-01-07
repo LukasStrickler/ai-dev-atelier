@@ -42,6 +42,7 @@ ATELIER_DIR="$SCRIPT_DIR"
 SOURCE_SKILLS_DIR="${ATELIER_DIR}/skills"
 SKILLS_CONFIG="${ATELIER_DIR}/skills-config.json"
 MCP_CONFIG="${ATELIER_DIR}/mcp.json"
+AGENTS_CONFIG="${ATELIER_DIR}/agents.json"
 ENV_FILE="${ATELIER_DIR}/.env"
 ENV_EXAMPLE="${ATELIER_DIR}/.env.example"
 
@@ -1129,6 +1130,81 @@ configure_opencode_tool_filtering() {
   fi
 }
 
+# ----------------------------------------------------------------------------
+# Configure OpenCode Custom Agents
+# ----------------------------------------------------------------------------
+# Reads agents.json and injects agent definitions into opencode.json.
+# Agents are merged into the "agent" section of the config.
+#
+# OpenCode agent format: https://opencode.ai/docs/agents/
+configure_opencode_agents() {
+  if [ ! -f "$AGENTS_CONFIG" ]; then
+    log_info "No agents.json found, skipping agent configuration"
+    return 0
+  fi
+  
+  if [ ! -f "$OPENCODE_CONFIG" ]; then
+    log_warning "OpenCode config not found, skipping agent configuration"
+    return 0
+  fi
+  
+  log_info "Configuring custom agents from agents.json..."
+  
+  # Read agents from agents.json
+  local agents_data
+  agents_data=$(jq -c '.agents // {}' "$AGENTS_CONFIG" 2>/dev/null)
+  
+  if [ -z "$agents_data" ] || [ "$agents_data" = "{}" ] || [ "$agents_data" = "null" ]; then
+    log_info "No agents defined in agents.json"
+    return 0
+  fi
+  
+  # Resolve {file:path} syntax in agent prompts
+  # This reads the file content and replaces the placeholder
+  local agent_names
+  agent_names=$(echo "$agents_data" | jq -r 'keys[]')
+  
+  while IFS= read -r agent_name; do
+    local prompt_value
+    prompt_value=$(echo "$agents_data" | jq -r ".\"$agent_name\".prompt // empty")
+    
+    # Check if prompt uses {file:path} syntax
+    if [[ "$prompt_value" =~ ^\{file:(.+)\}$ ]]; then
+      local file_path="${BASH_REMATCH[1]}"
+      local full_path="${ATELIER_DIR}/${file_path}"
+      
+      if [ -f "$full_path" ]; then
+        # Read file content and escape for JSON
+        local file_content
+        file_content=$(cat "$full_path")
+        
+        # Update the agent's prompt with file content using jq
+        agents_data=$(echo "$agents_data" | jq --arg name "$agent_name" --arg content "$file_content" \
+          '.[$name].prompt = $content')
+        
+        log_info "  ${agent_name}: resolved prompt from ${file_path}"
+      else
+        log_warning "  ${agent_name}: file not found: ${full_path}"
+      fi
+    fi
+  done <<< "$agent_names"
+  
+  # Merge agents into opencode.json
+  if jq -e '.agent' "$OPENCODE_CONFIG" > /dev/null 2>&1; then
+    # Merge with existing agents
+    jq --argjson new_agents "$agents_data" '.agent = (.agent + $new_agents)' "$OPENCODE_CONFIG" > "${OPENCODE_CONFIG}.tmp" && \
+      mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"
+  else
+    # Create agent section
+    jq --argjson new_agents "$agents_data" '.agent = $new_agents' "$OPENCODE_CONFIG" > "${OPENCODE_CONFIG}.tmp" && \
+      mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"
+  fi
+  
+  local agent_count
+  agent_count=$(echo "$agents_data" | jq 'length')
+  log_success "Configured ${agent_count} custom agent(s) in OpenCode"
+}
+
 # ============================================================================
 # SKILL FILTERING & INSTALLATION
 # ============================================================================
@@ -1469,6 +1545,10 @@ main() {
   if [ $? -ne 0 ]; then
     log_warning "OpenCode MCP configuration had issues (check errors above)"
   fi
+  echo ""
+  
+  log_info "━━━ OpenCode Custom Agents ━━━"
+  configure_opencode_agents
   echo ""
   
   # Install skills to both agents
