@@ -89,7 +89,7 @@ fetch_review_comments() {
 fetch_resolved_map() {
   local query_template all_threads
   query_template=$(get_review_threads_query_template)
-  all_threads=$(fetch_graphql_paginated "$query_template" "$OWNER" "$REPO" "$PR_NUMBER" 100 "false" \
+  all_threads=$(fetch_graphql_paginated "$query_template" "$OWNER" "$REPO" "$PR_NUMBER" 100 \
     ".data.repository.pullRequest.reviewThreads.pageInfo" \
     ".data.repository.pullRequest.reviewThreads.nodes")
   

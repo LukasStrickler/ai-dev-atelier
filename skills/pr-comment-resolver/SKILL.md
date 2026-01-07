@@ -63,9 +63,10 @@ bash skills/pr-comment-resolver/scripts/pr-resolver.sh 7
 ```
 
 ```typescript
-// 2. Spawn subagents for each actionable cluster (parallel)
-task({ subagent_type: "pr-comment-reviewer", prompt: "Process cluster. Read: .ada/data/pr-resolver/pr-7/clusters/agents-md-suggestion.md", description: "PR #7: agents-md" })
-task({ subagent_type: "pr-comment-reviewer", prompt: "Process cluster. Read: .ada/data/pr-resolver/pr-7/clusters/install-sh-issue.md", description: "PR #7: install-sh" })
+// 2. Fire subagents for each actionable cluster (non-blocking, returns immediately)
+background_task({ agent: "pr-comment-reviewer", prompt: "Process cluster. Read: .ada/data/pr-resolver/pr-7/clusters/agents-md-suggestion.md", description: "PR #7: agents-md" })
+background_task({ agent: "pr-comment-reviewer", prompt: "Process cluster. Read: .ada/data/pr-resolver/pr-7/clusters/install-sh-issue.md", description: "PR #7: install-sh" })
+// ... spawn all clusters immediately, then collect results as they complete with background_output(task_id)
 ```
 
 ```bash
@@ -127,39 +128,41 @@ Read `actionable.json` to understand workload:
 
 ### Phase 2: Spawn Subagents
 
-For each cluster in `actionable.json`, spawn a subagent using the task tool.
+⛔ **DO NOT use `task()` in this skill** - it blocks until ALL calls complete, one slow subagent blocks everything.
 
-**Parallel Execution**: Spawn multiple subagents concurrently for different clusters. They operate on separate files.
+Use `background_task` for async execution. Fire all, collect as they complete.
 
-**Serial Execution**: If multiple clusters affect the same file, process them sequentially to avoid conflicts.
+**Parallel Execution**: Fire all subagents immediately. They operate on separate files.
 
-**CRITICAL**: The `subagent_type` MUST be exactly `"pr-comment-reviewer"`. No variations.
+**Serial Execution**: If multiple clusters affect the same file, wait for earlier task to complete before spawning next.
+
+**CRITICAL**: The agent name MUST be exactly `"pr-comment-reviewer"`. No variations.
 
 ```typescript
-// Single cluster
-task({
-  subagent_type: "pr-comment-reviewer",
-  prompt: "Process PR comment cluster. Read the cluster file at: .ada/data/pr-resolver/pr-7/clusters/agents-md-suggestion.md",
-  description: "PR #7: agents-md-suggestion"
-})
+// Fire ALL clusters immediately (non-blocking, returns task_id)
+background_task({ agent: "pr-comment-reviewer", prompt: "Process cluster. Read: .ada/.../cluster-1.md", description: "Cluster 1" })
+background_task({ agent: "pr-comment-reviewer", prompt: "Process cluster. Read: .ada/.../cluster-2.md", description: "Cluster 2" })
+background_task({ agent: "pr-comment-reviewer", prompt: "Process cluster. Read: .ada/.../cluster-3.md", description: "Cluster 3" })
+// ... all return task_ids immediately
 
-// Multiple clusters - parallel execution (call multiple task() in same response)
-task({ subagent_type: "pr-comment-reviewer", prompt: "Process cluster. Read: .ada/.../cluster-1.md", description: "Cluster 1" })
-task({ subagent_type: "pr-comment-reviewer", prompt: "Process cluster. Read: .ada/.../cluster-2.md", description: "Cluster 2" })
-task({ subagent_type: "pr-comment-reviewer", prompt: "Process cluster. Read: .ada/.../cluster-3.md", description: "Cluster 3" })
+// Collect results as they complete (system notifies on completion)
+background_output({ task_id: "..." })  // Get result for specific task
 ```
 
 **Characteristics:**
-- Runs in background, returns result when complete
+- Returns task_id immediately (non-blocking)
 - Subagent runs in isolated sub-session
-- Enables parallel execution (multiple task() calls in one response)
+- Collect results with `background_output(task_id)`
+- System notifies when each task completes
 - Must explicitly tell subagent to read the file (no auto-injection)
+
+**Smart Scheduling**: When a task completes, check if any blocked tasks can now start (e.g., same-file clusters waiting for earlier cluster to finish). Start unblocked tasks immediately rather than waiting for all results.
 
 **Common Errors:**
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| Agent not found | Typo in subagent_type | Use exactly `"pr-comment-reviewer"` |
+| Agent not found | Typo in agent name | Use exactly `"pr-comment-reviewer"` |
 | Empty result | Subagent didn't read file | Include "Read the cluster file at: {path}" in prompt |
 
 ### Phase 3: Collect Results
@@ -359,6 +362,16 @@ Comments are auto-categorized by content:
 
 ## Anti-Patterns
 
+### ⛔ FORBIDDEN (Blocking Subagents)
+
+```typescript
+// ❌ FORBIDDEN - task() blocks until ALL complete, one slow subagent blocks everything
+task({ subagent_type: "pr-comment-reviewer", ... })
+
+// ✅ CORRECT - background_task returns immediately, collect results as they complete
+background_task({ agent: "pr-comment-reviewer", ... })
+```
+
 ### ⛔ FORBIDDEN (Context Bloat)
 
 These commands are **NEVER** allowed when using this skill:
@@ -378,6 +391,7 @@ bash skills/pr-comment-resolver/scripts/pr-resolver.sh <PR_NUMBER>
 
 | Don't | Do Instead |
 |-------|------------|
+| Use `task()` to spawn subagents | Use `background_task()` for non-blocking execution |
 | Process clusters without reading actionable.json first | Start with actionable.json to understand scope |
 | Skip deferred items | Handle each deferred item explicitly |
 | Defer without researching first | Research thoroughly (docs, codebase, web), then decide |

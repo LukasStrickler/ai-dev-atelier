@@ -73,10 +73,11 @@ fi
 DISMISSAL_MESSAGE="Dismissed: ${REASON}"
 log_info "Adding dismissal comment..."
 
-if add_reply_comment "$OWNER" "$REPO" "$PR_NUMBER" "$COMMENT_ID" "$DISMISSAL_MESSAGE"; then
+if retry_with_backoff 3 1 add_reply_comment "$OWNER" "$REPO" "$PR_NUMBER" "$COMMENT_ID" "$DISMISSAL_MESSAGE"; then
   log_success "Added dismissal comment"
 else
-  log_warning "Failed to add dismissal comment (continuing anyway)"
+  log_error "Failed to add dismissal comment after retries. Dismissal reason: $REASON"
+  exit 1
 fi
 
 # Resolve the thread

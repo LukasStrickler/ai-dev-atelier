@@ -195,8 +195,8 @@ Watch for these failures:
 | Resolving security comments | Security concerns should always DEFER |
 | Continuing after verification failure | Should revert and DEFER |
 | **Script not executed** | `script_executed` must not be null for resolved/dismissed |
-| **Planning vs doing** | Check actual bash output, not just stated intent |
-| **Missing script log** | "SCRIPTS EXECUTED" section must list actual commands run |
+| **Planning vs doing** | Check actual `bash` output, not just stated intent |
+| **Missing script log** | `SCRIPTS EXECUTED` section must list actual commands run |
 
 ---
 
@@ -223,6 +223,6 @@ The subagent passes validation if:
 - [ ] All security items deferred
 - [ ] JSON output parseable by jq
 - [ ] Statistics match actual actions
-- [ ] **Every resolved/dismissed thread has corresponding script execution**
-- [ ] **`scripts_executed` array in JSON matches actual bash commands run**
+- [ ] **Every resolved/dismissed thread has corresponding `script execution`**
+- [ ] **`scripts_executed` array in JSON matches actual `bash` commands run**
 - [ ] **"SCRIPTS EXECUTED" log shows actual output, not just planned commands**

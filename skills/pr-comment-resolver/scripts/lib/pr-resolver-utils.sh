@@ -10,7 +10,6 @@ set -euo pipefail
 # ============================================================================
 
 PR_RESOLVER_DATA_DIR="${PR_RESOLVER_DATA_DIR:-.ada/data/pr-resolver}"
-MAX_COMMENTS_PER_CLUSTER="${MAX_COMMENTS_PER_CLUSTER:-5}"
 DICE_THRESHOLD_SHORT="${DICE_THRESHOLD_SHORT:-0.90}"
 DICE_THRESHOLD_MEDIUM="${DICE_THRESHOLD_MEDIUM:-0.85}"
 DICE_THRESHOLD_LONG="${DICE_THRESHOLD_LONG:-0.80}"
@@ -23,6 +22,33 @@ log_error() { echo "Error: $1" >&2; }
 log_success() { echo "$1"; }
 log_info() { echo "$1" >&2; }
 log_warning() { echo "Warning: $1" >&2; }
+
+retry_with_backoff() {
+  local max_attempts="$1"
+  local initial_delay="$2"
+  shift 2
+  local command=("$@")
+  local attempt=1
+  local delay="$initial_delay"
+
+  while [ "$attempt" -le "$max_attempts" ]; do
+    if "${command[@]}"; then
+      return 0
+    fi
+
+    if [ "$attempt" -lt "$max_attempts" ]; then
+      log_warning "Attempt $attempt/$max_attempts failed, retrying in ${delay}s..."
+      sleep "$delay"
+      delay=$((delay * 2))
+      [ "$delay" -gt 30 ] && delay=30
+    fi
+
+    attempt=$((attempt + 1))
+  done
+
+  log_error "Failed after $max_attempts attempts"
+  return 1
+}
 
 # ============================================================================
 # Prerequisites
@@ -112,7 +138,7 @@ detect_pr_number() {
   # Method 1: Most recent PR data folder
   if [ -d "$PR_RESOLVER_DATA_DIR" ]; then
     local latest_file
-    latest_file=$(find "$PR_RESOLVER_DATA_DIR" -name "data.json" -type f 2>/dev/null | sort -r | head -1)
+    latest_file=$(ls -t "$PR_RESOLVER_DATA_DIR"/*/data.json 2>/dev/null | head -1)
     if [ -n "$latest_file" ] && [ -f "$latest_file" ]; then
       pr_number=$(jq -r '.pr_number // empty' "$latest_file" 2>/dev/null || echo "")
       if [ -n "$pr_number" ] && [ "$pr_number" != "null" ]; then
@@ -230,7 +256,7 @@ query($owner: String!, $repo: String!, $pr_number: Int!, $page_size: Int!, $curs
         nodes {
           id
           isResolved
-          comments(first: 100) {
+          comments(first: 250) {
             nodes {
               databaseId
             }
@@ -249,9 +275,8 @@ fetch_graphql_paginated() {
   local repo="$3"
   local pr_number="$4"
   local page_size="${5:-100}"
-  local verbose="${6:-false}"
-  local page_info_path="${7:-.data.repository.pullRequest.reviewThreads.pageInfo}"
-  local nodes_path="${8:-.data.repository.pullRequest.reviewThreads.nodes}"
+  local page_info_path="${6:-.data.repository.pullRequest.reviewThreads.pageInfo}"
+  local nodes_path="${7:-.data.repository.pullRequest.reviewThreads.nodes}"
   
   local all_nodes="[]"
   local cursor=""
@@ -391,10 +416,8 @@ add_reply_comment() {
 
 normalize_comment_for_category() {
   local body="$1"
-  printf "%s" "$body" | \
-    sed -E '/<details>/,/<\/details>/d' | \
-    sed -E '/```/,/```/d' | \
-    sed -E '/<!--/,/-->/d'
+  # Use perl for true multi-line matching (handles single-line tags)
+  printf "%s" "$body" | perl -0777 -pe 's/<details>.*?<\/details>//gs; s/```.*?```//gs; s/<!--.*?-->//gs'
 }
 export -f normalize_comment_for_category
 
@@ -419,7 +442,7 @@ export -f extract_comment_summary
 
 categorize_comment_text() {
   local text="$1"
-  if [[ "$text" =~ (security|vulnerability|injection|xss|csrf|auth[^o]|secret|credential|password) ]]; then
+  if [[ "$text" =~ (security|vulnerability|injection|xss|csrf|authentication|authorization|authenticate|authorize|authorized|(^|[^[:alnum:]_])auth([^[:alnum:]_]|$)|secret|credential|password) ]]; then
     echo "security"
     return 0
   fi
@@ -530,11 +553,11 @@ extract_severity() {
   local body_lower
   body_lower=$(printf "%s" "$1" | tr '[:upper:]' '[:lower:]')
   
-  if echo "$body_lower" | grep -qE '!\[(high)\]'; then
+  if echo "$body_lower" | grep -qE '!\[high\]'; then
     echo "high"
-  elif echo "$body_lower" | grep -qE '!\[(medium)\]'; then
+  elif echo "$body_lower" | grep -qE '!\[medium\]'; then
     echo "medium"
-  elif echo "$body_lower" | grep -qE '!\[(low)\]'; then
+  elif echo "$body_lower" | grep -qE '!\[low\]'; then
     echo "low"
   else
     echo ""
@@ -652,6 +675,9 @@ add_to_semantic_cache() {
   local body="$2"
   local cache_file="$3"
   
-  printf "%s\t%s\n" "$comment_id" "$body" >> "$cache_file"
+  # Sanitize body: replace tabs/newlines with spaces for TSV compatibility
+  local sanitized_body
+  sanitized_body=$(printf "%s" "$body" | tr '\t\n' '  ')
+  printf "%s\t%s\n" "$comment_id" "$sanitized_body" >> "$cache_file"
 }
 export -f add_to_semantic_cache

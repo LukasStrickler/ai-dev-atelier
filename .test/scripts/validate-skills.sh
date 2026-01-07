@@ -294,7 +294,7 @@ else
   for skill_dir in "${SKILL_DIRS[@]}"; do
     # Skip non-skill directories
     skill_name=$(basename "$skill_dir")
-    if [[ "$skill_name" = "scripts" || "$skill_name" == ".backups-"* ]]; then
+    if [[ "$skill_name" == "scripts" || "$skill_name" == .backups-* ]]; then
       continue
     fi
     

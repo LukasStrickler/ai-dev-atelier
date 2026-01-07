@@ -1182,11 +1182,15 @@ configure_opencode_agents() {
 
       # Resolve to absolute path to normalize any symlinks and verify containment
       local resolved_path
-      resolved_path=$(cd "$(dirname "$full_path")" 2>/dev/null && pwd -P)
-      resolved_path="${resolved_path}/$(basename "$full_path")"
+      if ! resolved_path_dir=$(cd "$(dirname "$full_path")" 2>/dev/null && pwd -P); then
+        log_error "  ${agent_name}: directory for prompt file not found or is invalid: $(dirname "$full_path")"
+        continue
+      fi
+      resolved_path="${resolved_path_dir}/$(basename "$full_path")"
 
       # Verify the resolved path is still under ATELIER_DIR
-      if [[ ! "$resolved_path" == "${ATELIER_DIR}"* ]]; then
+      # Use trailing slash to prevent sibling directory attacks (e.g., /home/user/repo-malicious)
+      if [[ ! "$resolved_path/" == "${ATELIER_DIR}/"* ]]; then
         log_error "  ${agent_name}: path traversal detected: ${file_path} resolves outside ATELIER_DIR"
         continue
       fi

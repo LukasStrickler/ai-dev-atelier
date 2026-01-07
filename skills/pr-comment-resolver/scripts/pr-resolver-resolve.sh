@@ -52,20 +52,21 @@ RESOLVED_COUNT=0
 FAILED_COUNT=0
 ALREADY_RESOLVED=0
 
+QUERY_TEMPLATE=$(get_review_threads_query_template)
+ALL_THREADS=$(fetch_graphql_paginated "$QUERY_TEMPLATE" "$OWNER" "$REPO" "$PR_NUMBER" 100)
+
 for COMMENT_ID in "${COMMENT_IDS[@]}"; do
   log_info "Finding thread for comment $COMMENT_ID..."
-  
+
   THREAD_ID=$(find_thread_for_comment "$OWNER" "$REPO" "$PR_NUMBER" "$COMMENT_ID")
-  
+
   if [ -z "$THREAD_ID" ]; then
     log_warning "Could not find thread for comment $COMMENT_ID"
     FAILED_COUNT=$((FAILED_COUNT + 1))
     continue
   fi
-  
+
   # Check if already resolved
-  QUERY_TEMPLATE=$(get_review_threads_query_template)
-  ALL_THREADS=$(fetch_graphql_paginated "$QUERY_TEMPLATE" "$OWNER" "$REPO" "$PR_NUMBER" 100)
   IS_RESOLVED=$(echo "$ALL_THREADS" | jq -r --arg tid "$THREAD_ID" '.[] | select(.id == $tid) | .isResolved' 2>/dev/null || echo "false")
   
   if [ "$IS_RESOLVED" = "true" ]; then

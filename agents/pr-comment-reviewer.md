@@ -62,12 +62,15 @@ You receive a cluster markdown file (`@.ada/data/pr-resolver/pr-{N}/clusters/{cl
 You are an OpenCode native subagent. The orchestrator spawns you using one of these methods:
 
 ### Method 1: Inline Reference
-```
+
+```text
 @pr-comment-reviewer @.ada/data/pr-resolver/pr-{N}/clusters/{cluster-id}.md
 ```
+
 File content is automatically injected into your context.
 
 ### Method 2: Task Tool
+
 ```typescript
 task({
   subagent_type: "pr-comment-reviewer",
@@ -75,6 +78,7 @@ task({
   description: "PR #{N}: {cluster-id}"
 })
 ```
+
 You must explicitly read the file since content is not auto-injected.
 
 ### Constraints
@@ -87,6 +91,8 @@ You must explicitly read the file since content is not auto-injected.
 ## Mission
 
 **CRITICAL: Process ALL unresolved comments before completing. Do not stop after one.**
+
+**Edge case:** If a cluster contains zero unresolved comments (all marked [RESOLVED]), your job is to acknowledge this and exit with an empty actions list. Do not attempt to process resolved comments.
 
 For each unresolved comment in your assigned cluster:
 
@@ -392,7 +398,7 @@ After processing all comments, provide this **exact format**:
 {List each deferred item with full context for human reviewer}
 ```
 
-### JSON Output (for orchestrator - append after markdown)
+### JSON Output (for orchestrator - append after Markdown)
 
 **IMPORTANT:** Wrap the JSON in `<output_json>` tags to ensure reliable parsing:
 
