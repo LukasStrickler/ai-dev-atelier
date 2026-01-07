@@ -15,7 +15,7 @@ Skills are organized directories containing `SKILL.md` files that follow the [An
 | [`docs-write`](./docs-write/SKILL.md) | Write or update documentation with clear style, structure, visuals, API/ADR/runbook patterns | N/A (workflow skill) |
 | [`git-commit`](./git-commit/SKILL.md) | Write clear git commits with Conventional Commits format, detect project conventions | N/A (workflow skill) |
 | [`code-review`](./code-review/SKILL.md) | Review code changes using CodeRabbit - uncommitted files (task mode) or all PR files vs main (pr mode) | `scripts/review-*.sh` |
-| [`pr-review`](./pr-review/SKILL.md) | Manage GitHub PR comments - fetch, resolve, dismiss, and interact with review comments | `scripts/pr-comments-*.sh` |
+| [`pr-comment-resolver`](./pr-comment-resolver/SKILL.md) | Multi-agent PR comment resolution for bot reviews (CodeRabbit, Copilot, Gemini) | `scripts/pr-resolver*.sh` |
 | [`search`](./search/SKILL.md) | Search the web and library documentation using Tavily and Context7 MCPs | N/A (MCP-based skill) |
 | [`research`](./research/SKILL.md) | Conduct academic research using OpenAlex, PDF extraction, and paper search MCPs with evidence cards | `scripts/research-*.sh` |
 | [`agent-orchestration`](./agent-orchestration/SKILL.md) | Spawn and manage hierarchical AI sub-agents with role-aware wrappers and verification templates | `scripts/agent-*.sh`, `scripts/orchestrator-*.sh` |
@@ -51,10 +51,11 @@ Skills are organized directories containing `SKILL.md` files that follow the [An
 - **How agents use it**: Agents read `SKILL.md` and execute `scripts/review-run.sh` with `task` or `pr` mode
 - **Scripts**: Embedded in `skills/code-review/scripts/review-*.sh`
 
-### PR Review
-- **When to use**: When working on PRs with comments, need to resolve/dismiss feedback
-- **How agents use it**: Agents read `SKILL.md` and execute scripts in `scripts/pr-comments-*.sh`
-- **Scripts**: Embedded in `skills/pr-review/scripts/pr-comments-*.sh`
+### PR Comment Resolver
+- **When to use**: When PRs have bot review comments to triage, need batch resolution, want to see what's fixed vs pending
+- **How agents use it**: Agents read `SKILL.md` and execute `scripts/pr-resolver.sh` to fetch/cluster comments, then spawn subagents per cluster
+- **Scripts**: Embedded in `skills/pr-comment-resolver/scripts/pr-resolver*.sh`
+- **Subagent**: `@pr-comment-reviewer` processes individual clusters with 6-phase workflow
 
 ### Search
 - **When to use**: Looking up documentation, code examples, API references, troubleshooting guides, best practices
@@ -133,7 +134,7 @@ The body contains detailed instructions, workflows, examples, and references.
 ## Output Locations
 
 - Code reviews: `.ada/data/reviews/`
-- PR comments: `.ada/data/pr-comments/`
+- PR comment resolver: `.ada/data/pr-resolver/`
 - Research evidence cards: `.ada/data/research/{topic}/`
 - Research PDFs (temporary): `.ada/temp/research/downloads/`
 

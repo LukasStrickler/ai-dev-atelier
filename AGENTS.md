@@ -39,7 +39,7 @@ ai-dev-atelier/
 | `docs-write` | Write/update docs with standards | Workflow (no script) |
 | `git-commit` | Write clear commits with Conventional Commits | Workflow (no script) |
 | `code-review` | CodeRabbit reviews (task/pr modes) | `scripts/review-run.sh` |
-| `pr-review` | Fetch/resolve/dismiss PR comments | `scripts/pr-comments-*.sh` |
+| `pr-comment-resolver` | Multi-agent PR comment resolution | `scripts/pr-resolver*.sh` |
 | `search` | Web + library docs + GitHub code search | MCP-based |
 | `research` | Academic research with evidence cards | `scripts/research-*.sh` |
 | `agent-orchestration` | Spawn/manage hierarchical subagents | `scripts/agent-*.sh` |
@@ -106,7 +106,7 @@ Set keys in `.env` before `install.sh`, or update MCP config after.
 
 All runtime data under `.ada/` (gitignored):
 - `.ada/data/reviews/` - Code review results
-- `.ada/data/pr-comments/` - PR comment snapshots
+- `.ada/data/pr-resolver/` - PR comment resolution data
 - `.ada/data/research/{topic}/` - Evidence cards, reports
 - `.ada/data/agents/runs/` - Agent orchestration runs
 - `.ada/data/agents/worktrees/` - Agent git worktrees
@@ -128,8 +128,9 @@ All runtime data under `.ada/` (gitignored):
 - No lateral communication between specialists - report only to parent
 - Stay within scope - do not change unrelated files
 
-**PR review:**
-- Never use detected PR number without validation - check workspace state first
+**PR comment resolver:**
+- Never auto-fix security issues - always defer to orchestrator
+- Validate bot comments with evidence before dismissing
 
 ## Skill Format
 
