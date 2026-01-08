@@ -6,238 +6,171 @@ description: "Manage stacked PRs with Graphite CLI. Auto-detects Graphite repos 
 # Use Graphite - Stacked PRs
 
 Graphite enables stacked PRs - chains of dependent PRs that build on each other.
-This is essential for large AI-generated changes that would be overwhelming as single PRs.
-
-## CRITICAL: First Check If Graphite Is Active
-
-**Before using ANY gt commands, verify Graphite is enabled:**
-
-```bash
-bash skills/use-graphite/scripts/graphite-detect.sh
-```
-
-**If `enabled: false` or the script fails**: This is NOT a Graphite repo. Use standard git/gh commands instead. Do not attempt gt commands.
-
-**If `enabled: true`**: Proceed with Graphite workflow below.
-
-## Fallback: When Graphite Fails
-
-**IMPORTANT**: If Graphite commands fail, you MUST save your work using standard git. Never lose uncommitted changes.
-
-### Emergency Fallback Procedure
-
-If `gt` commands fail (auth expired, network issues, Graphite service down):
-
-```bash
-git add .
-git commit -m "wip: saving progress before troubleshooting gt"  # BYPASS_GRAPHITE: emergency save
-
-git push origin HEAD  # BYPASS_GRAPHITE: gt submit failed, pushing directly
-```
-
-### Common Failures and Solutions
-
-| Symptom | Cause | Solution |
-|---------|-------|----------|
-| `gt: command not found` | CLI not installed | `npm install -g @withgraphite/graphite-cli` or use git |
-| `Not authenticated` | Auth expired | `gt auth login` or use git with BYPASS |
-| `gt submit` hangs | Network/service issue | Wait, retry, or use `git push # BYPASS_GRAPHITE: service issue` |
-| `Branch not tracked` | Created with git, not gt | `gt track` to add to stack, or continue with git |
-| `Repo not initialized` | Missing .graphite_repo_config | `gt init` or use standard git workflow |
-
-### When to Abandon Graphite Temporarily
-
-Use BYPASS and standard git when:
-- Graphite service is down
-- Auth keeps failing after re-login
-- Urgent hotfix that can't wait
-- Pushing to a fork (Graphite tracks main repo only)
-
-**Always document why**: `# BYPASS_GRAPHITE: <reason>`
+Essential for large changes that would be overwhelming as single PRs.
 
 ## Quick Start
 
-**Before any branch/PR operation, check if Graphite is active:**
+**First, check if Graphite is active:**
 
 ```bash
 bash skills/use-graphite/scripts/graphite-detect.sh
 ```
 
-- If `enabled: true` → use `gt` commands instead of `git`/`gh` for branch and PR operations
-- If `enabled: false` → use standard `git`/`gh` commands, this skill does not apply
-
-## What is Stacking?
-
-Traditional GitHub flow: Independent PRs, each based on main.
-
-```text
-main ─────┬───────┬───────┐
-          │       │       │
-          └─ PR1  └─ PR2  └─ PR3  (independent)
-```
-
-Graphite stacking: Dependent PRs that build on each other.
-
-```text
-main ─── PR1 ─── PR2 ─── PR3  (stacked chain)
-          │       │       │
-          └───────┴───────┘  (each builds on previous)
-```
-
-Why stacking matters for AI-generated code:
-- AI tends to produce large diffs
-- Large diffs are hard to review
-- Stacking breaks changes into reviewable chunks
-- Each PR can be reviewed and merged independently
-
-## Command Translation
-
-| Instead of this (Git/GitHub) | Use this (Graphite)      |
-|-----------------------------|--------------------------|
-| `git checkout -b feature`   | `gt create feature`      |
-| `git push`                  | `gt submit`              |
-| `git push --force`          | `gt submit`              |
-| `gh pr create`              | `gt submit`              |
-| `git pull --rebase`         | `gt sync`                |
-| `git rebase main`           | `gt restack`             |
-| `git commit --amend`        | `gt modify -c`           |
-
-These commands are **blocked** when Graphite is active. The hook will suggest
-the correct `gt` equivalent.
-
-## What Graphite Does NOT Replace
-
-Keep using these git commands normally:
-- `git add`, `git commit` - staging and committing
-- `git status`, `git log`, `git diff` - inspection
-- `git stash`, `git cherry-pick` - advanced operations
-- `git checkout <existing-branch>` - switching branches (without -b)
+- `enabled: true` → Use `gt` commands for branch/PR operations
+- `enabled: false` → Use standard `git`/`gh`, this skill does not apply
 
 ## Core Workflow
 
-### Single PR (Simple Case)
+### Single PR
 
 ```bash
-gt create my-feature      # Create branch
-# make changes
+gt create my-feature           # Create branch
+# make changes, run tests
 git add . && git commit -m "feat: add feature"
-gt submit                  # Push and create PR
+gt submit                       # Push and create PR (CI runs here)
 ```
 
 ### Stacked PRs (Large Changes)
 
 ```bash
 gt create step-1-schema
-# make schema changes
-git add . && git commit -m "feat(db): add user preferences schema"
+# make schema changes, TEST LOCALLY
+git add . && git commit -m "feat(db): add schema"
 
-gt create step-2-api       # Creates branch ON TOP of step-1
-# make API changes
-git add . && git commit -m "feat(api): add preferences endpoints"
+gt create step-2-api            # Branch ON TOP of step-1
+# make API changes, TEST LOCALLY
+git add . && git commit -m "feat(api): add endpoints"
 
-gt create step-3-ui        # Creates branch ON TOP of step-2
-# make UI changes
-git add . && git commit -m "feat(ui): add preferences panel"
+gt create step-3-ui             # Branch ON TOP of step-2
+# make UI changes, TEST LOCALLY
+git add . && git commit -m "feat(ui): add panel"
 
-gt submit --stack          # Submit entire stack as linked PRs
+gt submit --stack               # Submit entire stack
 ```
 
-Result: 3 linked PRs, each reviewable independently.
+## CRITICAL: CI Must Pass
 
-### Updating a Stack
+**Before running `gt submit`:**
 
-After making changes to an earlier PR in the stack:
+1. Run tests locally: `npm test` / `pnpm test` / `cargo test`
+2. Run type checks: `npm run typecheck` / `tsc --noEmit`
+3. Run linting: `npm run lint`
+4. Ensure build passes: `npm run build`
 
-```bash
-gt checkout step-1-schema
-# make changes, commit
-gt submit                  # Push changes
-gt restack                 # Update all dependent branches
-gt submit --stack          # Push entire stack
+```text
+WRONG workflow:
+1. gt create feature
+2. Make changes
+3. gt submit → CI fails
+4. Fix → gt submit → CI fails again
+5. Repeat 5 times...
+Result: 5 failed CI runs, wasted time
+
+CORRECT workflow:
+1. gt create feature
+2. Make changes
+3. Run tests/lint/build LOCALLY
+4. Fix issues until green
+5. gt submit → CI passes
+Result: 1 clean submission
 ```
 
-### Syncing with Main
-
-```bash
-gt sync                    # Fetch and rebase onto latest main
-gt restack                 # Update stack if needed
-```
+**Rule:** If local tests fail, you're not ready to submit. Fix first.
 
 ## When to Stack
 
-| Scenario                        | Recommendation          |
-|---------------------------------|-------------------------|
-| Small bug fix (< 100 lines)     | Single PR               |
-| Feature 200-500 lines           | Consider 2-3 stacked    |
-| Large feature (500+ lines)      | Always stack            |
-| AI-generated code               | Always stack            |
-| Refactor + feature              | Stack: refactor first   |
-| DB migration + code             | Stack: migration first  |
+| Scenario | Recommendation |
+|----------|----------------|
+| Bug fix (< 100 lines) | Single PR |
+| Feature (200-500 lines) | 2-3 stacked PRs |
+| Large feature (500+ lines) | Always stack |
+| Refactor + feature | Stack: refactor first |
+| DB migration + code | Stack: migration first |
 
-## Stack Best Practices
+## DO: Best Practices
 
-1. **Each PR independently reviewable** - don't split mid-function
-2. **Stack by logical dependency** - schema → API → UI, not by file count
-3. **Keep stacks shallow** - 3-5 PRs max, split into separate features if larger
-4. **Sync frequently** - `gt sync` daily to avoid conflicts
-5. **Use gt modify** - not `git commit --amend` in tracked branches
+| Practice | Why |
+|----------|-----|
+| **Test before submit** | CI failures waste everyone's time |
+| **1 logical change per PR** | Easy to review, easy to revert |
+| **Stack by dependency** | schema → API → UI, not random splits |
+| **Keep stacks shallow (3-5 PRs)** | Deep stacks are hard to manage |
+| **Sync daily** (`gt sync`) | Avoid painful merge conflicts |
+| **Use `gt modify -c`** | Not `git commit --amend` in tracked branches |
 
-## Detection Details
+## DON'T: Common Mistakes
 
-Graphite is active when ALL conditions are true:
-1. `gt` CLI installed (`command -v gt`)
-2. User authenticated (`~/.config/graphite/user_config` has authToken)
-3. Repo initialized (`.graphite_repo_config` in git directory)
+| Mistake | Problem | Fix |
+|---------|---------|-----|
+| **Submit without testing** | CI fails, blocks review | Always run tests locally first |
+| **Split randomly** | PRs don't make sense alone | Split by logical dependency |
+| **10-PR stacks** | Unmergeable, conflicts pile up | Max 3-5 PRs, start new stack |
+| **Never sync** | Conflicts grow over time | `gt sync` daily |
+| **Use git rebase** | Breaks Graphite tracking | Use `gt restack` instead |
+| **Use git push** | Bypasses stack management | Use `gt submit` |
+| **Tiny PRs for simple features** | Overhead without benefit | Single PR for <100 lines |
 
-The detection script handles worktrees correctly.
+## Command Translation
 
-## Bypass (Emergency Only)
+| Instead of (blocked) | Use (Graphite) |
+|---------------------|----------------|
+| `git checkout -b feature` | `gt create feature` |
+| `git push` | `gt submit` |
+| `gh pr create` | `gt submit` |
+| `git rebase main` | `gt restack` |
+| `git commit --amend` | `gt modify -c` |
 
-If you must use git directly (e.g., pushing to a fork):
+## What Graphite Does NOT Replace
+
+Keep using these normally:
+- `git add`, `git commit` - staging and committing
+- `git status`, `git log`, `git diff` - inspection
+- `git stash`, `git checkout <branch>` - switching, stashing
+
+## Updating a Stack
+
+After review feedback on an earlier PR:
 
 ```bash
-git push origin fork-remote  # BYPASS_GRAPHITE: pushing to personal fork
+gt checkout step-1-schema
+# make changes, TEST LOCALLY
+git add . && git commit -m "fix: address review feedback"
+gt restack                      # Update dependent branches
+gt submit --stack               # Push entire stack
 ```
 
-The `# BYPASS_GRAPHITE: <reason>` comment is required. Without it, the command
-is blocked.
+## Emergency Fallback
 
-## MCP Tools
+If `gt` commands fail (auth expired, service down), save your work:
 
-When the Graphite MCP is available, prefer MCP tools over CLI:
-
-```javascript
-// MCP (preferred)
-mcp.graphite.create({ branch: 'feature', message: 'Add feature' })
-mcp.graphite.submit({ stack: true })
-
-// CLI (fallback)
-bash('gt create feature -m "Add feature"')
-bash('gt submit --stack')
+```bash
+git add .
+git commit -m "wip: saving progress"
+git push origin HEAD  # BYPASS_GRAPHITE: gt service unavailable
 ```
 
-## Integration
-
-| When                    | Related Skill    | Action                        |
-|-------------------------|------------------|-------------------------------|
-| Before branching        | use-graphite     | Check detection, use gt       |
-| After committing        | git-commit       | Use gt modify if amending     |
-| Before PR creation      | use-graphite     | Use gt submit, not gh pr      |
-| Large code generation   | use-graphite     | Plan stack structure first    |
+The `# BYPASS_GRAPHITE: <reason>` comment is required to bypass the hook.
 
 ## Scripts
 
-| Script                   | Purpose                              |
-|--------------------------|--------------------------------------|
-| `graphite-detect.sh`     | Check if Graphite is active          |
-| `graphite-block-hook.sh` | PreToolUse hook (internal)           |
+| Script | Purpose |
+|--------|---------|
+| `graphite-detect.sh` | Check if Graphite is active |
+| `graphite-block-hook.sh` | PreToolUse hook (blocks conflicting commands) |
+
+## Integration
+
+| When | Related Skill | Action |
+|------|---------------|--------|
+| Before submit | `code-quality` | Run checks, ensure CI will pass |
+| After changes | `git-commit` | Commit with proper message |
+| Before PR | `code-review` | Review your changes |
 
 ## References
 
-- `references/graphite-workflow.md` - Detailed workflow examples
-- [Graphite Documentation](https://graphite.dev/docs/cli-overview)
-- [GT MCP Documentation](https://graphite.dev/docs/gt-mcp)
+- `references/graphite-workflow.md` - Detailed examples
+- [Graphite Docs](https://graphite.dev/docs/cli-overview)
 
 ## Output
 
-Branches and PRs managed via Graphite CLI. Stack state visible via `gt log short`.
+Branches and PRs managed via Graphite CLI. View stack: `gt log short`.
