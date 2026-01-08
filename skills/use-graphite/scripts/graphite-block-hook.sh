@@ -53,8 +53,12 @@ check_blocked() {
       [[ "$cmd" =~ ^git\ rebase\ (-i|--interactive) ]] && return 1
       echo "git rebase:gt restack"
       return 0 ;;
-    "git branch "*|"git switch -c "*)
-      echo "git branch/switch -c:gt create <branch>"
+    "git switch -c "*)
+      echo "git switch -c:gt create <branch>"
+      return 0 ;;
+    "git branch "*)
+      [[ "$cmd" =~ ^git\ branch\ (-d|-D|--delete|--list|-l|-a|--all|-r|--remotes|-v|--verbose) ]] && return 1
+      echo "git branch <name>:gt create <branch>"
       return 0 ;;
   esac
   return 1

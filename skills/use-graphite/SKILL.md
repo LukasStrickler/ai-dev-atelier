@@ -8,6 +8,53 @@ description: "Manage stacked PRs with Graphite CLI. Auto-detects Graphite repos 
 Graphite enables stacked PRs - chains of dependent PRs that build on each other.
 This is essential for large AI-generated changes that would be overwhelming as single PRs.
 
+## CRITICAL: First Check If Graphite Is Active
+
+**Before using ANY gt commands, verify Graphite is enabled:**
+
+```bash
+bash skills/use-graphite/scripts/graphite-detect.sh
+```
+
+**If `enabled: false` or the script fails**: This is NOT a Graphite repo. Use standard git/gh commands instead. Do not attempt gt commands.
+
+**If `enabled: true`**: Proceed with Graphite workflow below.
+
+## Fallback: When Graphite Fails
+
+**IMPORTANT**: If Graphite commands fail, you MUST save your work using standard git. Never lose uncommitted changes.
+
+### Emergency Fallback Procedure
+
+If `gt` commands fail (auth expired, network issues, Graphite service down):
+
+```bash
+git add .
+git commit -m "wip: saving progress before troubleshooting gt"  # BYPASS_GRAPHITE: emergency save
+
+git push origin HEAD  # BYPASS_GRAPHITE: gt submit failed, pushing directly
+```
+
+### Common Failures and Solutions
+
+| Symptom | Cause | Solution |
+|---------|-------|----------|
+| `gt: command not found` | CLI not installed | `npm install -g @withgraphite/graphite-cli` or use git |
+| `Not authenticated` | Auth expired | `gt auth login` or use git with BYPASS |
+| `gt submit` hangs | Network/service issue | Wait, retry, or use `git push # BYPASS_GRAPHITE: service issue` |
+| `Branch not tracked` | Created with git, not gt | `gt track` to add to stack, or continue with git |
+| `Repo not initialized` | Missing .graphite_repo_config | `gt init` or use standard git workflow |
+
+### When to Abandon Graphite Temporarily
+
+Use BYPASS and standard git when:
+- Graphite service is down
+- Auth keeps failing after re-login
+- Urgent hotfix that can't wait
+- Pushing to a fork (Graphite tracks main repo only)
+
+**Always document why**: `# BYPASS_GRAPHITE: <reason>`
+
 ## Quick Start
 
 **Before any branch/PR operation, check if Graphite is active:**
@@ -16,7 +63,8 @@ This is essential for large AI-generated changes that would be overwhelming as s
 bash skills/use-graphite/scripts/graphite-detect.sh
 ```
 
-If `enabled: true`, use `gt` commands instead of `git`/`gh` for branch and PR operations.
+- If `enabled: true` → use `gt` commands instead of `git`/`gh` for branch and PR operations
+- If `enabled: false` → use standard `git`/`gh` commands, this skill does not apply
 
 ## What is Stacking?
 
