@@ -1273,6 +1273,7 @@ cleanup_deprecated_skills() {
     
     if [ -d "$old_skill_path" ]; then
       log_warning "Found deprecated skill '${old_name}' (renamed to '${new_name}')"
+      log_info "The new skill '${new_name}' will be installed next."
       
       if [ "$SKIP_CONFIRM" = true ]; then
         # Auto-remove in --yes mode
