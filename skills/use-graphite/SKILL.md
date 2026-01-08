@@ -50,33 +50,47 @@ bash skills/use-graphite/scripts/graphite-detect.sh
 ### Single PR
 
 ```bash
-gt create my-feature           # Create branch
-# make changes, run tests
+# 1. Develop and test FIRST (on current branch or main)
+# make changes
+npm test && npm run typecheck && npm run lint  # verify locally
+
+# 2. THEN create branch and commit verified code
+gt create my-feature
 git add . && git commit -m "feat: add feature"
-gt submit                       # Push and create PR (CI runs here)
+gt submit                       # CI should pass (you verified locally)
 ```
 
 ### Stacked PRs (Large Changes)
 
 ```bash
+# Step 1: Develop and verify schema changes
+# make schema changes
+npm test && npm run typecheck   # verify locally FIRST
 gt create step-1-schema
-# make schema changes, TEST LOCALLY
 git add . && git commit -m "feat(db): add schema"
 
-gt create step-2-api            # Branch ON TOP of step-1
-# make API changes, TEST LOCALLY
+# Step 2: Develop and verify API changes (on top of step-1)
+# make API changes
+npm test && npm run typecheck   # verify locally FIRST
+gt create step-2-api
 git add . && git commit -m "feat(api): add endpoints"
 
-gt create step-3-ui             # Branch ON TOP of step-2
-# make UI changes, TEST LOCALLY
+# Step 3: Develop and verify UI changes (on top of step-2)
+# make UI changes
+npm test && npm run typecheck   # verify locally FIRST
+gt create step-3-ui
 git add . && git commit -m "feat(ui): add panel"
 
-gt submit --stack               # Submit entire stack
+# Submit entire stack (all layers verified)
+gt submit --stack
 ```
+
+**Key pattern:** Each layer follows develop → test → verify → `gt create` → commit.
+Only submit when ALL layers are verified locally.
 
 ## CRITICAL: CI Must Pass
 
-**Before running `gt submit`:**
+**Verify BEFORE creating branches and committing:**
 
 1. Run tests locally: `npm test` / `pnpm test` / `cargo test`
 2. Run type checks: `npm run typecheck` / `tsc --noEmit`
@@ -84,24 +98,25 @@ gt submit --stack               # Submit entire stack
 4. Ensure build passes: `npm run build`
 
 ```text
-WRONG workflow:
+WRONG workflow (commit-and-pray):
 1. gt create feature
 2. Make changes
-3. gt submit → CI fails
+3. Commit and gt submit → CI fails
 4. Fix → gt submit → CI fails again
 5. Repeat 5 times...
-Result: 5 failed CI runs, wasted time
+Result: 5 failed CI runs, broken commit history
 
-CORRECT workflow:
-1. gt create feature
-2. Make changes
-3. Run tests/lint/build LOCALLY
-4. Fix issues until green
-5. gt submit → CI passes
+CORRECT workflow (verify-then-commit):
+1. Make changes
+2. Run tests/lint/build LOCALLY
+3. Fix issues until green
+4. gt create feature
+5. Commit verified code
+6. gt submit → CI passes
 Result: 1 clean submission
 ```
 
-**Rule:** If local tests fail, you're not ready to submit. Fix first.
+**Rule:** If local tests fail, you're not ready to commit. Fix first, verify, then create branch and commit.
 
 ## When to Stack
 
