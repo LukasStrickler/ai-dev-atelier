@@ -7,7 +7,6 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STDIN_DATA=$(cat)
 
 get_command() {
@@ -20,7 +19,7 @@ get_command() {
 }
 
 is_graphite_repo() {
-  local git_dir main_git_dir repo_config
+  local git_dir main_git_dir
   
   command -v gt &>/dev/null || return 1
   

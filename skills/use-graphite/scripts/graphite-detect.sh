@@ -25,12 +25,8 @@ GIT_DIR=$(git rev-parse --git-dir 2>/dev/null) || {
   exit 1
 }
 
-if [ -f "$GIT_DIR/commondir" ]; then
-  MAIN_GIT_DIR=$(cat "$GIT_DIR/commondir")
-  [[ "$MAIN_GIT_DIR" != /* ]] && MAIN_GIT_DIR="$GIT_DIR/$MAIN_GIT_DIR"
-else
-  MAIN_GIT_DIR="$GIT_DIR"
-fi
+# Use --git-common-dir for worktree support (available since Git 2.5)
+MAIN_GIT_DIR=$(git rev-parse --git-common-dir 2>/dev/null) || MAIN_GIT_DIR="$GIT_DIR"
 
 REPO_CONFIG="$MAIN_GIT_DIR/.graphite_repo_config"
 if [ ! -f "$REPO_CONFIG" ]; then
