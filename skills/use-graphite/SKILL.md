@@ -8,6 +8,32 @@ description: "Manage stacked PRs with Graphite CLI (gt) instead of git push/gh p
 Graphite enables stacked PRs - chains of dependent PRs that build on each other.
 Essential for large changes that would be overwhelming as single PRs.
 
+## Assess Current State First
+
+**Always run these commands to understand where you are:**
+
+```bash
+bash skills/use-graphite/scripts/graphite-detect.sh   # Is Graphite active?
+gt log short                                           # Current stack structure
+git status                                             # Uncommitted changes?
+```
+
+**Interpret the output:**
+
+| `gt log short` shows | You are | Next action |
+|---------------------|---------|-------------|
+| `main` only (no branches) | Not in a stack | `gt create <branch>` to start |
+| Branch with `←` marker | On that branch in stack | Continue work, then `gt submit` |
+| Multiple branches in tree | Mid-stack | Check which branch, continue or `gt checkout` |
+| `(merged)` on parent | Parent merged | `gt sync` to update |
+| `(changes requested)` | Review feedback pending | Address feedback, commit, `gt submit` |
+
+**If you have uncommitted changes:**
+1. Commit them first: `git add . && git commit -m "..."`
+2. Then submit: `gt submit` or `gt submit --stack`
+
+**If unsure which branch you're on:** `git branch --show-current`
+
 ## Quick Start
 
 **First, check if Graphite is active:**
@@ -138,6 +164,28 @@ git add . && git commit -m "fix: address review feedback"
 gt restack                      # Update dependent branches
 gt submit --stack               # Push entire stack
 ```
+
+## Resuming Work (After Context Loss)
+
+If you're continuing work and unsure of the state:
+
+```bash
+# 1. Check current state
+gt log short                    # See full stack structure
+git status                      # Any uncommitted changes?
+git log --oneline -3            # Recent commits
+
+# 2. Common scenarios:
+```
+
+| Situation | What to do |
+|-----------|------------|
+| Stack exists, on correct branch | Continue work, commit, `gt submit` |
+| Stack exists, wrong branch | `gt checkout <branch-name>` |
+| Changes not pushed | `gt submit` (single) or `gt submit --stack` (all) |
+| Need to add to existing stack | `gt create <new-branch>` (adds on top of current) |
+| Stack has merge conflicts | `gt sync` then resolve conflicts |
+| PRs exist but out of date | `gt sync && gt restack && gt submit --stack` |
 
 ## Emergency Fallback
 
