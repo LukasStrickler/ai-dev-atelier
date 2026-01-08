@@ -50,7 +50,7 @@ check_blocked() {
       echo "gh pr create:gt submit"
       return 0 ;;
     "git rebase "*|"git rebase")
-      [[ "$cmd" =~ ^git\ rebase\ (-i|--interactive) ]] && return 1
+      [[ "$cmd" =~ (^|[[:space:]])(-i|--interactive)([[:space:]]|$|=) ]] && return 1
       echo "git rebase:gt restack"
       return 0 ;;
     "git switch -c "*)
