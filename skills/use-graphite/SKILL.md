@@ -204,7 +204,7 @@ After every `gt submit`, immediately run:
 
 ```bash
 # Get the PR number from gt submit output, then:
-gh pr view <PR_NUMBER> --json body,title --jq '.body'
+gh pr view <PR_NUMBER> --json body --jq '.body'
 ```
 
 **If the body is empty or just contains template placeholders:**
@@ -229,7 +229,7 @@ gh pr edit <PR_NUMBER> --title "feat: meaningful title" --body-file /path/to/pr-
 
 ```bash
 gt submit                           # Creates draft PR
-gh pr view <N> --json body          # Check if body is populated
+gh pr view <N> --json body --jq '.body'  # Check if body is populated
 # If empty/template:
 gh pr edit <N> --title "..." --body "..."  # Fill it properly
 ```
