@@ -13,6 +13,7 @@ Search web, library docs, and GitHub code using progressive escalation.
 - **Library/framework docs?** → Context7 `get-library-docs`
 - **Code examples/patterns?** → GitHub Grep `grep_searchGitHub`
 - **Web info/tutorials?** → Tavily `tavily_search`
+- **Error screenshot/diagram?** → Z.AI Vision `diagnose_error_screenshot` / `understand_technical_diagram`
 - **Multiple sources needed?** → Run tools in parallel
 
 **Default Workflow:**
@@ -20,38 +21,131 @@ Search web, library docs, and GitHub code using progressive escalation.
 2. If insufficient: Escalate to Level 2 (expand query, increase results)
 3. If repeated problem: Escalate to Level 3 (parallel queries, extraction, crawling)
 
+## Agent Roles
+
+**If you are the main agent (orchestrator):**
+- **External questions** → Fire 3-5 `librarian` agents in parallel with different angles
+- **Local codebase patterns** → Fire `explore` in background
+- **Quick web lookups** → Do Tavily yourself (faster than delegation overhead)
+- **Build confidence** → Fire multiple librarians: 2 for docs, 2 for real-world examples, 2 to find edge cases/gotchas
+- Collect results with `background_output`, synthesize, cross-validate
+
+**If you are the librarian (subagent):**
+- **You are the WORKHORSE** - do NOT be lazy or return minimal results
+- **Fire 3-5 parallel tool calls** depending on request complexity (see TYPE A/B/C/D in your system prompt)
+- **Vary your queries** - different angles, not the same pattern repeated
+- **Always cite with permalinks** - every claim needs `[Source](url#L10-L20)` format
+- **Rate your confidence** - end with: `CONFIDENCE: HIGH/MEDIUM/LOW` and why
+
+### Subagent Calling Example
+
+```typescript
+// GOOD: Fire multiple librarians with different angles for comprehensive coverage
+background_task({
+  agent: "librarian",
+  prompt: `Find OFFICIAL documentation for Next.js 15 App Router authentication.
+
+FIRST: MUST load and read 'search' skill before starting
+LEVEL: 3 (deep research - parallel queries, thorough extraction)
+FOCUS: Official Next.js and next-auth docs only
+TOOLS: Context7 for Next.js, next-auth docs
+FORMAT: Use markdown tables for comparisons, code blocks for snippets
+OUTPUT: Official recommended approach with doc permalinks
+END WITH: CONFIDENCE rating (HIGH/MEDIUM/LOW) and reasoning`
+})
+
+background_task({
+  agent: "librarian", 
+  prompt: `Find REAL-WORLD implementations of Next.js 15 authentication.
+
+FIRST: MUST load and read 'search' skill before starting
+LEVEL: 3 (deep research - multiple pattern variations, cross-repo)
+FOCUS: Production codebases on GitHub
+TOOLS: grep_searchGitHub with queries: "getServerSession(", "auth(", language: TypeScript
+FORMAT: For each example: repo name, permalink, architecture notes
+OUTPUT: 3-5 code examples with GitHub permalinks, note patterns/variations
+END WITH: CONFIDENCE rating (HIGH/MEDIUM/LOW) and reasoning`
+})
+
+background_task({
+  agent: "librarian",
+  prompt: `Find EDGE CASES and GOTCHAS for Next.js 15 authentication.
+
+FIRST: MUST load and read 'search' skill before starting
+LEVEL: 3 (deep research - cross-reference multiple sources)
+FOCUS: Issues, discussions, Stack Overflow
+TOOLS: zai-zread_search_doc for repo issues/discussions (thorough), tavily_search for blog posts/SO
+FORMAT: Problem → Evidence → Solution table
+OUTPUT: Common pitfalls, breaking changes, migration issues
+END WITH: CONFIDENCE rating (HIGH/MEDIUM/LOW) and reasoning`
+})
+
+// Then collect and cross-validate:
+// - Do real-world examples match official docs?
+// - Are there gotchas the docs don't mention?
+// - Synthesize into recommendation with overall confidence
+
+// BAD: No skill loading, no structure
+background_task({
+  agent: "librarian", 
+  prompt: "How does Next.js auth work?"  // Missing FIRST step, no level, no format = lazy results
+})
+```
+
 ## Tools Overview
 
 ### Tavily (Web Search)
-| Tool | Purpose | Key Params |
-|------|---------|------------|
-| `tavily_search` | Web search | `search_depth`, `topic`, `time_range`, `include_domains` |
-| `tavily_extract` | Extract from URLs | `extract_depth`, `query` (for reranking) |
-| `tavily_crawl` | Multi-page crawl | `max_depth`, `select_paths`, `instructions` |
-| `tavily_map` | Discover site structure | `max_depth`, `limit` |
+| Tool | When to Use | Key Params |
+|------|-------------|------------|
+| `tavily_search` | General web search, tutorials, blog posts, news | `search_depth`: "basic"/"advanced", `max_results`: 5-20, `time_range`: "day"/"week"/"month"/"year", `include_domains`: filter to specific sites |
+| `tavily_extract` | Get full content from specific URLs (after search) | `extract_depth`: "basic"/"advanced", `query`: rerank chunks by relevance |
+| `tavily_crawl` | Crawl multiple pages from a docs site | `max_depth`: 1-3, `limit`: max pages, `select_paths`: regex to include, `instructions`: natural language filter |
+| `tavily_map` | Discover site structure before crawling | `max_depth`: 1-3, `limit`: max URLs to return |
+| `websearch_web_search_exa` | Alternative web search (Exa AI) | `numResults`: 5-20, `type`: "auto"/"fast"/"deep" |
 
 ### Context7 (Library Docs)
-| Tool | Purpose | Key Params |
-|------|---------|------------|
-| `resolve-library-id` | Get library ID | `libraryName` |
-| `get-library-docs` | Fetch docs | `mode: "code"/"info"`, `topic`, `page` |
+| Tool | When to Use | Key Params |
+|------|-------------|------------|
+| `resolve-library-id` | Get library ID (required first) | `libraryName`: package name |
+| `get-library-docs` | Fetch official docs | `mode`: "code" for API/params, "info" for concepts; `topic`: specific area |
 
 ### GitHub Grep (Code Search)
-| Tool | Purpose | Key Params |
-|------|---------|------------|
-| `grep_searchGitHub` | Search code patterns | `query`, `language`, `repo`, `path`, `useRegexp` |
+| Tool | When to Use | Key Params |
+|------|-------------|------------|
+| `grep_searchGitHub` | Find real code patterns across GitHub | `query`: literal code pattern, `language`: ["TypeScript"], `repo`: "owner/repo", `path`: "/api/", `useRegexp`: true for regex |
 
 **Critical:** GitHub Grep searches **literal code patterns**, not keywords!
 - ✅ Good: `useState(`, `getServerSession`, `(?s)try {.*await`
 - ❌ Bad: `react tutorial`, `how to authenticate`
 
-#### Semantic docs/issues/PRs (Zread)
-Use Z.AI Zread `search_doc` for semantic issues/PRs/docs when keyword/code search fails; quota-bound (requires `Z_AI_API_KEY`).
+### Z.AI Zread (Semantic GitHub Search)
+| Tool | When to Use | Key Params |
+|------|-------------|------------|
+| `zai-zread_search_doc` | Semantic search for issues/PRs/docs when keyword search fails | `repo_name`: "owner/repo", `query`: natural language question, `language`: "en"/"zh" |
 
-#### Free additional tools for GitHub:
-- Get repository structure - `gh api "repos/{owner}/{repo}/git/trees/{branch}?recursive=1"`
-- Search issues - `gh api -X GET search/issues -f q="repo:{owner}/{repo} is:issue <keywords>"`
-- Read file - `webfetch https://raw.githubusercontent.com/{owner}/{repo}/{path}`
+**Use when:** Code/keyword search misses context, need discussion threads, searching for "why" not "what". 
+
+### Z.AI Vision (Visual Content)
+| Tool | When to Use | Key Params |
+|------|-------------|------------|
+| `zai-vision_diagnose_error_screenshot` | Analyze error screenshots, stack traces | `image_source`: file path or URL, `prompt`: describe what help you need, `context`: when error occurred |
+| `zai-vision_understand_technical_diagram` | Interpret architecture/flow/UML/ER diagrams | `image_source`: file path or URL, `prompt`: what to extract, `diagram_type`: "architecture"/"flowchart"/"uml"/"er-diagram" (optional) |
+| `zai-vision_analyze_data_visualization` | Understand charts/graphs/dashboards | `image_source`: file path or URL, `prompt`: what insights needed, `analysis_focus`: "trends"/"anomalies"/"comparisons" |
+| `zai-vision_ui_to_artifact` | Generate code from UI screenshots | `image_source`: file path or URL, `output_type`: "code"/"prompt"/"spec"/"description", `prompt`: specific requirements |
+
+**Use when:** User provides screenshot, error image, architecture diagram, or UI mockup. 
+
+### GitHub CLI (Repo Search)
+```bash
+# Repository structure
+gh api "repos/{owner}/{repo}/git/trees/{branch}?recursive=1"
+
+# Search issues
+gh api -X GET search/issues -f q="repo:{owner}/{repo} is:issue {keywords}"
+
+# Read file directly
+webfetch("https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{path}")
+```
 
 ## Progressive Escalation Levels
 
