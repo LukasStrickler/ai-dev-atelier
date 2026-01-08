@@ -55,6 +55,10 @@ bash skills/<skill>/scripts/<script>.sh    # Run skill script
 
 > **Tip**: You can also use `make setup`, `make install`, `make validate` for shorter commands.
 
+## This Repository
+
+**This repository uses Graphite.** Use `gt` commands instead of `git push`/`gh pr create`. See the `use-graphite` skill.
+
 ## Install Locations
 
 | Agent | Skills Path | MCP Config |

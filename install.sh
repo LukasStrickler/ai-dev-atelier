@@ -956,7 +956,7 @@ configure_opencode_agents() {
 }
 
 # ============================================================================
-# CLAUDE CODE HOOKS CONFIGURATION (oh-my-opencode)
+# CLAUDE HOOKS CONFIGURATION
 # ============================================================================
 #
 # oh-my-opencode provides Claude Code compatibility, including hooks.
@@ -965,119 +965,155 @@ configure_opencode_agents() {
 #   2. ./.claude/settings.json (project-level)
 #   3. ./.claude/settings.local.json (local override)
 #
+# Hook definitions are read from hooks.json for extensibility.
+#
 # Source: https://github.com/code-yeongyu/oh-my-opencode
 #         src/hooks/claude-code-hooks/config.ts
 
 CLAUDE_CONFIG_DIR="${HOME}/.claude"
 CLAUDE_CONFIG="${CLAUDE_CONFIG_DIR}/settings.json"
+HOOKS_CONFIG="${ATELIER_DIR}/hooks.json"
+
+add_or_update_hook() {
+  local hook_script="$1"
+  local hook_type="$2"     # e.g., PreToolUse
+  local tool_matcher="$3"  # e.g., Bash
+  local hook_filename
+  hook_filename=$(basename "$hook_script")
+  
+  local hook_exists
+  hook_exists=$(jq -r ".hooks.${hook_type}[] | select(.matcher == \"${tool_matcher}\") | .hooks[]?.command // empty" "$CLAUDE_CONFIG" 2>/dev/null | grep -c "$hook_filename" || true)
+  
+  if [ "$hook_exists" -gt 0 ]; then
+    jq --arg hook_script "bash ${hook_script}" \
+      --arg hook_filename "$hook_filename" \
+      --arg hook_type "$hook_type" \
+      --arg tool_matcher "$tool_matcher" \
+      '(.hooks[$hook_type][] | select(.matcher == $tool_matcher) | .hooks[] | select(.command | test($hook_filename))).command = $hook_script' \
+      "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" && \
+      mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG"
+    return 1
+  else
+    local matcher_exists
+    matcher_exists=$(jq -r ".hooks.${hook_type}[] | select(.matcher == \"${tool_matcher}\") | .matcher" "$CLAUDE_CONFIG" 2>/dev/null || true)
+    
+    if [ -n "$matcher_exists" ]; then
+      jq --arg hook_script "bash ${hook_script}" \
+        --arg hook_type "$hook_type" \
+        --arg tool_matcher "$tool_matcher" \
+        '(.hooks[$hook_type][] | select(.matcher == $tool_matcher)).hooks += [{ type: "command", command: $hook_script }]' \
+        "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" && \
+        mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG"
+    else
+      local new_hook
+      new_hook=$(jq -n --arg hook_script "bash ${hook_script}" --arg tool_matcher "$tool_matcher" '{
+        matcher: $tool_matcher,
+        hooks: [{ type: "command", command: $hook_script }]
+      }')
+      jq --argjson new_hook "$new_hook" --arg hook_type "$hook_type" \
+        '.hooks[$hook_type] += [$new_hook]' \
+        "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" && \
+        mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG"
+    fi
+    return 0
+  fi
+}
+
+ensure_hook_array() {
+  local hook_type="$1"
+  
+  if ! jq -e ".hooks.${hook_type}" "$CLAUDE_CONFIG" > /dev/null 2>&1; then
+    if jq -e '.hooks' "$CLAUDE_CONFIG" > /dev/null 2>&1; then
+      jq --arg hook_type "$hook_type" '.hooks[$hook_type] = []' "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" && \
+        mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG"
+    else
+      jq --arg hook_type "$hook_type" '.hooks = { ($hook_type): [] }' "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" && \
+        mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG"
+    fi
+  fi
+}
 
 configure_claude_hooks() {
   log_info "Configuring oh-my-opencode hooks (Claude Code compatible)..."
   
-  # Check if jq is available (required for JSON manipulation)
   if ! command -v jq &> /dev/null; then
     log_warning "jq not found. Skipping Claude hooks configuration."
     return 0
   fi
   
-  # Check if use-graphite skill was installed and has the hook script
-  local graphite_hook_script="${OPENCODE_SKILLS_DIR}/use-graphite/scripts/graphite-block-hook.sh"
-  if [ ! -f "$graphite_hook_script" ]; then
-    log_info "use-graphite skill not installed or hook script not found, skipping Claude hooks"
+  if [ ! -f "$HOOKS_CONFIG" ]; then
+    log_info "No hooks.json found, skipping Claude hooks configuration"
     return 0
   fi
   
-  # Ensure Claude config directory exists
+  if ! jq empty "$HOOKS_CONFIG" 2>/dev/null; then
+    log_error "hooks.json is not valid JSON. Skipping hook configuration."
+    return 1
+  fi
+  
   mkdir -p "$CLAUDE_CONFIG_DIR"
   
-  # Build the hooks configuration with absolute path
-  local hooks_config
-  hooks_config=$(jq -n \
-    --arg hook_script "bash ${graphite_hook_script}" \
-    '{
-      hooks: {
-        PreToolUse: [
-          {
-            matcher: "Bash",
-            hooks: [
-              {
-                type: "command",
-                command: $hook_script
-              }
-            ]
-          }
-        ]
-      }
-    }')
-  
   if [ -f "$CLAUDE_CONFIG" ]; then
-    # Config exists, merge hooks
-    log_info "Updating existing Claude configuration..."
-    
-    # Validate existing config is valid JSON
     if ! jq empty "$CLAUDE_CONFIG" 2>/dev/null; then
       log_error "Existing Claude config is not valid JSON. Creating backup and starting fresh..."
       mv "$CLAUDE_CONFIG" "${CLAUDE_CONFIG}.invalid.$(date +%s).backup"
-      echo "$hooks_config" > "$CLAUDE_CONFIG"
-      log_success "Created Claude hooks configuration at ${CLAUDE_CONFIG}"
-      return 0
-    fi
-    
-    # Create backup before modification
-    cp "$CLAUDE_CONFIG" "${CLAUDE_CONFIG}.backup"
-    log_info "Backup created: ${CLAUDE_CONFIG}.backup"
-    
-    # Check if PreToolUse hooks already exist
-    if jq -e '.hooks.PreToolUse' "$CLAUDE_CONFIG" > /dev/null 2>&1; then
-      # Check if our Graphite hook is already present (by checking for graphite-block-hook.sh in any hook command)
-      local graphite_hook_exists
-      graphite_hook_exists=$(jq -r '.hooks.PreToolUse[].hooks[]?.command // empty' "$CLAUDE_CONFIG" 2>/dev/null | grep -c "graphite-block-hook.sh" || true)
-      
-      if [ "$graphite_hook_exists" -gt 0 ]; then
-        # Update existing Graphite hook with new path
-        log_info "Updating existing Graphite hook with installed path..."
-        jq --arg hook_script "bash ${graphite_hook_script}" \
-          '(.hooks.PreToolUse[].hooks[] | select(.command | test("graphite-block-hook.sh"))).command = $hook_script' \
-          "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" && \
-          mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG"
-        log_success "Updated Graphite hook path in ${CLAUDE_CONFIG}"
-      else
-        # Add our hook to existing PreToolUse array
-        log_info "Adding Graphite hook to existing PreToolUse hooks..."
-        local new_hook
-        new_hook=$(echo "$hooks_config" | jq '.hooks.PreToolUse[0]')
-        jq --argjson new_hook "$new_hook" \
-          '.hooks.PreToolUse += [$new_hook]' \
-          "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" && \
-          mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG"
-        log_success "Added Graphite hook to ${CLAUDE_CONFIG}"
-      fi
+      echo '{}' > "$CLAUDE_CONFIG"
     else
-      # No PreToolUse hooks exist, add the hooks section
-      log_info "Adding hooks section to Claude config..."
-      if jq -e '.hooks' "$CLAUDE_CONFIG" > /dev/null 2>&1; then
-        # hooks section exists but no PreToolUse
-        jq --argjson pretooluse "$(echo "$hooks_config" | jq '.hooks.PreToolUse')" \
-          '.hooks.PreToolUse = $pretooluse' \
-          "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" && \
-          mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG"
-      else
-        # No hooks section at all, merge it in
-        jq --argjson hooks_section "$(echo "$hooks_config" | jq '.hooks')" \
-          '.hooks = $hooks_section' \
-          "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" && \
-          mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG"
-      fi
-      log_success "Added Claude hooks to ${CLAUDE_CONFIG}"
+      cp "$CLAUDE_CONFIG" "${CLAUDE_CONFIG}.backup"
+      log_info "Backup created: ${CLAUDE_CONFIG}.backup"
     fi
   else
-    # Config doesn't exist, create new one
-    log_info "Creating new Claude configuration with hooks..."
-    echo "$hooks_config" > "$CLAUDE_CONFIG"
-    log_success "Created Claude hooks configuration at ${CLAUDE_CONFIG}"
+    echo '{}' > "$CLAUDE_CONFIG"
   fi
   
-  log_info "Graphite PreToolUse hook configured to block git push/checkout -b/gh pr create in Graphite repos"
+  local added=0
+  local updated=0
+  local skipped=0
+  
+  local hook_types
+  hook_types=$(jq -r '.hooks | keys[]' "$HOOKS_CONFIG" 2>/dev/null)
+  
+  for hook_type in $hook_types; do
+    ensure_hook_array "$hook_type"
+    
+    local hook_count
+    hook_count=$(jq -r ".hooks.${hook_type} | length" "$HOOKS_CONFIG")
+    
+    for ((i=0; i<hook_count; i++)); do
+      local hook_id hook_desc hook_matcher hook_script hook_enabled
+      hook_id=$(jq -r ".hooks.${hook_type}[$i].id" "$HOOKS_CONFIG")
+      hook_desc=$(jq -r ".hooks.${hook_type}[$i].description" "$HOOKS_CONFIG")
+      hook_matcher=$(jq -r ".hooks.${hook_type}[$i].matcher" "$HOOKS_CONFIG")
+      hook_script=$(jq -r ".hooks.${hook_type}[$i].script" "$HOOKS_CONFIG")
+      hook_enabled=$(jq -r ".hooks.${hook_type}[$i].enabled" "$HOOKS_CONFIG")
+      
+      if [ "$hook_enabled" != "true" ]; then
+        log_info "Skipped disabled hook: ${hook_id}"
+        skipped=$((skipped + 1))
+        continue
+      fi
+      
+      local full_path="${OPENCODE_SKILLS_DIR}/${hook_script}"
+      
+      if [ ! -f "$full_path" ]; then
+        log_warning "Hook script not found: ${hook_script}"
+        skipped=$((skipped + 1))
+        continue
+      fi
+      
+      if add_or_update_hook "$full_path" "$hook_type" "$hook_matcher"; then
+        log_success "Added hook: ${hook_desc}"
+        added=$((added + 1))
+      else
+        log_info "Updated hook: ${hook_desc}"
+        updated=$((updated + 1))
+      fi
+    done
+  done
+  
+  if [ $added -gt 0 ] || [ $updated -gt 0 ]; then
+    log_success "Claude hooks configured: ${added} added, ${updated} updated, ${skipped} skipped"
+  fi
 }
 
 # ============================================================================
