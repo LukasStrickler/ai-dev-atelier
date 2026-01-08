@@ -104,7 +104,9 @@ check_blocked() {
     current_repo=${current_repo:-$(get_current_repo)} || return 1
     local owner="${current_repo%%/*}"
     local repo="${current_repo##*/}"
-    if [[ "$cmd" == *"$current_repo"* ]] || [[ "$cmd" == *"\"$owner\""* && "$cmd" == *"\"$repo\""* ]]; then
+    if [[ "$cmd" == *"$current_repo"* ]] || \
+       [[ "$cmd" =~ owner:\ *\"$owner\".*name:\ *\"$repo\" ]] || \
+       [[ "$cmd" =~ name:\ *\"$repo\".*owner:\ *\"$owner\" ]]; then
       blocked_pattern="gh api graphql (pullRequest)"
       is_current_repo=true
     fi

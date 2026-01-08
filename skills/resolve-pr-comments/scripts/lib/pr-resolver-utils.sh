@@ -599,13 +599,14 @@ check_semantic_duplicate() {
   [ ! -s "$cache_file" ] && { echo "UNIQUE"; return 0; }
   
   # Escape newlines for awk -v (awk doesn't accept literal newlines in -v values)
+  # Use ASCII RS (record separator, octal 036) as placeholder
   local escaped_body
-  escaped_body=$(printf '%s' "$new_body" | tr '\n' '\x1E')
+  escaped_body=$(printf '%s' "$new_body" | tr '\n' '\036')
   
   awk -v new_body="$escaped_body" '
   function normalize(s) {
-    # Convert \x1E placeholder back to spaces to match cache sanitization
-    gsub(/\x1E/, " ", s)
+    # Convert octal 036 (RS) placeholder back to spaces to match cache sanitization
+    gsub(/\036/, " ", s)
     gsub(/!\[(high|medium|low)\]/, "", s)
     gsub(/\*\*[^*]+\*\*/, "", s)
     gsub(/`[^`]+`/, "", s)
@@ -675,7 +676,7 @@ check_semantic_duplicate() {
   END {
     if (!found) print "UNIQUE"
   }
-  ' "$cache_file"
+  ' "$cache_file" 2>/dev/null
 }
 export -f check_semantic_duplicate
 

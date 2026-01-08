@@ -978,27 +978,19 @@ add_or_update_hook() {
   local hook_script="$1"
   local hook_type="$2"     # e.g., PreToolUse
   local tool_matcher="$3"  # e.g., Bash
-  local hook_filename
-  hook_filename=$(basename "$hook_script")
+  local full_command="bash ${hook_script}"
   
   local hook_exists
-  hook_exists=$(jq -r ".hooks.${hook_type}[] | select(.matcher == \"${tool_matcher}\") | .hooks[]?.command // empty" "$CLAUDE_CONFIG" 2>/dev/null | grep -cF "$hook_filename" || true)
+  hook_exists=$(jq -r --arg cmd "$full_command" ".hooks.${hook_type}[] | select(.matcher == \"${tool_matcher}\") | .hooks[]? | select(.command == \$cmd) | .command" "$CLAUDE_CONFIG" 2>/dev/null | wc -l || echo "0")
   
   if [ "$hook_exists" -gt 0 ]; then
-    jq --arg hook_script "bash ${hook_script}" \
-      --arg hook_filename "$hook_filename" \
-      --arg hook_type "$hook_type" \
-      --arg tool_matcher "$tool_matcher" \
-      '(.hooks[$hook_type][] | select(.matcher == $tool_matcher) | .hooks[] | select(.command | contains($hook_filename))).command = $hook_script' \
-      "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" && \
-      mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG"
     return 1
   else
     local matcher_exists
     matcher_exists=$(jq -r ".hooks.${hook_type}[] | select(.matcher == \"${tool_matcher}\") | .matcher" "$CLAUDE_CONFIG" 2>/dev/null || true)
     
     if [ -n "$matcher_exists" ]; then
-      jq --arg hook_script "bash ${hook_script}" \
+      jq --arg hook_script "$full_command" \
         --arg hook_type "$hook_type" \
         --arg tool_matcher "$tool_matcher" \
         '(.hooks[$hook_type][] | select(.matcher == $tool_matcher)).hooks += [{ type: "command", command: $hook_script }]' \
@@ -1006,7 +998,7 @@ add_or_update_hook() {
         mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG"
     else
       local new_hook
-      new_hook=$(jq -n --arg hook_script "bash ${hook_script}" --arg tool_matcher "$tool_matcher" '{
+      new_hook=$(jq -n --arg hook_script "$full_command" --arg tool_matcher "$tool_matcher" '{
         matcher: $tool_matcher,
         hooks: [{ type: "command", command: $hook_script }]
       }')
