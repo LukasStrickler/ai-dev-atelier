@@ -53,7 +53,7 @@ Verify in your agent:
 | `docs-write` | Write/update docs using standards | Workflow skill (no script) |
 | `git-commit` | Write clear commits with Conventional Commits format | Workflow skill (no script) |
 | `code-review` | CodeRabbit reviews (task/pr modes) | `skills/code-review/scripts/review-run.sh` |
-| `pr-review` | Fetch/resolve/dismiss PR comments | `skills/pr-review/scripts/pr-comments-*.sh` |
+| `pr-comment-resolver` | Multi-agent PR comment resolution for bot reviews | `skills/pr-comment-resolver/scripts/pr-resolver*.sh` |
 | `search` | Web and library documentation search | MCP-based (no script) |
 | `research` | Academic research with evidence cards | `skills/research/scripts/research-*.sh` |
 | `agent-orchestration` | Spawn and manage sub-agents | `skills/agent-orchestration/scripts/agent-*.sh` |
@@ -75,7 +75,7 @@ Verify in your agent:
 | Output Type | Location |
 | --- | --- |
 | Code reviews | `.ada/data/reviews/` |
-| PR comments | `.ada/data/pr-comments/` |
+| PR comment resolver | `.ada/data/pr-resolver/` |
 | Research evidence cards | `.ada/data/research/{topic}/` |
 | Research downloads (temp) | `.ada/temp/research/downloads/` |
 

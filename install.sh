@@ -42,6 +42,7 @@ ATELIER_DIR="$SCRIPT_DIR"
 SOURCE_SKILLS_DIR="${ATELIER_DIR}/skills"
 SKILLS_CONFIG="${ATELIER_DIR}/skills-config.json"
 MCP_CONFIG="${ATELIER_DIR}/mcp.json"
+AGENTS_CONFIG="${ATELIER_DIR}/agents.json"
 ENV_FILE="${ATELIER_DIR}/.env"
 ENV_EXAMPLE="${ATELIER_DIR}/.env.example"
 
@@ -651,8 +652,8 @@ configure_mcp() {
     fi
     
     # Warn about API keys that need to be set (check for placeholder values in TOML)
-    if grep -q "TAVILY_API_KEY" "$CODEX_MCP_CONFIG" 2>/dev/null || grep -q "X-Tavily-Api-Key.*TAVILY_API_KEY" "$CODEX_MCP_CONFIG" 2>/dev/null; then
-      log_warning "⚠️  Tavily MCP requires TAVILY_API_KEY - update in ${CODEX_MCP_CONFIG} (set as X-Tavily-Api-Key header)"
+    if grep -q "TAVILY_API_KEY" "$CODEX_MCP_CONFIG" 2>/dev/null || grep -q 'http_headers.*Authorization.*TAVILY_API_KEY' "$CODEX_MCP_CONFIG" 2>/dev/null; then
+      log_warning "⚠️  Tavily MCP requires TAVILY_API_KEY - update in ${CODEX_MCP_CONFIG} (set as Authorization header)"
     fi
     if grep -q "CONTEXT7_API_KEY.*CONTEXT7_API_KEY" "$CODEX_MCP_CONFIG" 2>/dev/null; then
       log_warning "⚠️  Context7 MCP requires CONTEXT7_API_KEY - update in ${CODEX_MCP_CONFIG} (optional)"
@@ -701,7 +702,7 @@ configure_mcp() {
     # Warn about API keys that need to be updated
     log_warning "⚠️  Remember to update API keys in ${CODEX_MCP_CONFIG}:"
     if grep -q "tavily-remote-mcp" "$CODEX_MCP_CONFIG" 2>/dev/null; then
-      log_info "  - TAVILY_API_KEY for Tavily MCP (set as X-Tavily-Api-Key header)"
+      log_info "  - TAVILY_API_KEY for Tavily MCP (set as Authorization header)"
     fi
     if grep -q "\[mcp_servers\.context7\]" "$CODEX_MCP_CONFIG" 2>/dev/null; then
       log_info "  - CONTEXT7_API_KEY for Context7 MCP (optional)"
@@ -755,17 +756,15 @@ substitute_api_keys() {
   local server_config="$1"
   local server_name="$2"
   local result="$server_config"
-  
+
   # Load .env if available
   load_env_file
-  
-  # Replace TAVILY_API_KEY in headers
-  if echo "$result" | jq -e '.headers."X-Tavily-Api-Key" // .headers.TAVILY_API_KEY' > /dev/null 2>&1; then
-    if [ -n "${TAVILY_API_KEY:-}" ] && [ "$TAVILY_API_KEY" != "your_tavily_api_key_here" ]; then
-      result=$(echo "$result" | jq --arg key "$TAVILY_API_KEY" \
-        'if .headers."X-Tavily-Api-Key" then .headers."X-Tavily-Api-Key" = $key
-         elif .headers.TAVILY_API_KEY then .headers.TAVILY_API_KEY = $key
-         else . end')
+
+  if echo "$result" | jq -e '.headers.Authorization' > /dev/null 2>&1; then
+    local auth_value=$(echo "$result" | jq -r '.headers.Authorization')
+    if [[ "$auth_value" == *"TAVILY_API_KEY"* ]] && [ -n "${TAVILY_API_KEY:-}" ] && [ "$TAVILY_API_KEY" != "your_tavily_api_key_here" ]; then
+      local new_auth="Bearer ${TAVILY_API_KEY}"
+      result=$(echo "$result" | jq --arg new_auth "$new_auth" '.headers.Authorization = $new_auth')
     fi
   fi
   
@@ -1129,6 +1128,115 @@ configure_opencode_tool_filtering() {
   fi
 }
 
+# ----------------------------------------------------------------------------
+# Configure OpenCode Custom Agents
+# ----------------------------------------------------------------------------
+# Reads agents.json and injects agent definitions into opencode.json.
+# Agents are merged into the "agent" section of the config.
+#
+# OpenCode agent format: https://opencode.ai/docs/agents/
+configure_opencode_agents() {
+  if [ ! -f "$AGENTS_CONFIG" ]; then
+    log_info "No agents.json found, skipping agent configuration"
+    return 0
+  fi
+  
+  if [ ! -f "$OPENCODE_CONFIG" ]; then
+    log_warning "OpenCode config not found, skipping agent configuration"
+    return 0
+  fi
+  
+  log_info "Configuring custom agents from agents.json..."
+  
+  # Read agents from agents.json
+  local agents_data
+  agents_data=$(jq -c '.agents // {}' "$AGENTS_CONFIG" 2>/dev/null)
+  
+  if [ -z "$agents_data" ] || [ "$agents_data" = "{}" ] || [ "$agents_data" = "null" ]; then
+    log_info "No agents defined in agents.json"
+    return 0
+  fi
+  
+  # Resolve {file:path} syntax in agent prompts
+  # This reads the file content and replaces the placeholder
+  local agent_names
+  agent_names=$(echo "$agents_data" | jq -r 'keys[]')
+  
+  while IFS= read -r agent_name; do
+    local prompt_value
+    prompt_value=$(echo "$agents_data" | jq -r ".\"$agent_name\".prompt // empty")
+    
+    # Check if prompt uses {file:path} syntax
+    if [[ "$prompt_value" =~ ^\{file:(.+)\}$ ]]; then
+      local file_path="${BASH_REMATCH[1]}"
+
+      # Security: Prevent path traversal attacks
+      # Get canonical ATELIER_DIR to handle any symlinks
+      local canonical_atelier_dir
+      if command -v realpath >/dev/null 2>&1; then
+        canonical_atelier_dir=$(realpath "$ATELIER_DIR" 2>/dev/null) || canonical_atelier_dir="$ATELIER_DIR"
+      else
+        canonical_atelier_dir="$ATELIER_DIR"
+      fi
+
+      # Build full path and resolve it to canonical form
+      local full_path="${ATELIER_DIR}/${file_path}"
+
+      # Resolve to canonical absolute path to normalize symlinks
+      # Use cd+pwd-P approach for macOS compatibility (realpath -m is GNU-specific)
+      local resolved_path
+      local resolved_dir
+      if ! resolved_dir=$(cd "$(dirname "$full_path")" 2>/dev/null && pwd -P); then
+        log_error "  ${agent_name}: directory for prompt file not found or is invalid: $(dirname "$full_path")"
+        continue
+      fi
+      resolved_path="${resolved_dir}/$(basename "$full_path")"
+
+      # Verify the resolved path is under ATELIER_DIR using canonical paths
+      # This prevents both path traversal (via symlinks) and sibling directory attacks
+      # Use trailing slashes to prevent sibling directory attacks (e.g., /home/user/repo-malicious)
+      case "$resolved_path/" in
+        "${canonical_atelier_dir}/"*)
+          # OK: resolved_path is within ATELIER_DIR
+          ;;
+        *)
+          log_error "  ${agent_name}: path traversal detected: ${file_path} resolves to ${resolved_path} which is outside ${canonical_atelier_dir}"
+          continue
+          ;;
+      esac
+
+      if [ -f "$resolved_path" ]; then
+        # Read file content and escape for JSON
+        local file_content
+        file_content=$(cat "$resolved_path")
+        
+        # Update the agent's prompt with file content using jq
+        agents_data=$(echo "$agents_data" | jq --arg name "$agent_name" --arg content "$file_content" \
+          '.[$name].prompt = $content')
+        
+        log_info "  ${agent_name}: resolved prompt from ${file_path}"
+      else
+        log_warning "  ${agent_name}: file not found: ${full_path}"
+      fi
+    fi
+  done <<< "$agent_names"
+  
+  # Merge agents into opencode.json
+  if jq -e '.agent' "$OPENCODE_CONFIG" > /dev/null 2>&1; then
+    # Merge with existing agents
+    jq --argjson new_agents "$agents_data" '.agent = (.agent + $new_agents)' "$OPENCODE_CONFIG" > "${OPENCODE_CONFIG}.tmp" && \
+      mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"
+  else
+    # Create agent section
+    jq --argjson new_agents "$agents_data" '.agent = $new_agents' "$OPENCODE_CONFIG" > "${OPENCODE_CONFIG}.tmp" && \
+      mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"
+  fi
+  
+  local agent_count
+  agent_count=$(echo "$agents_data" | jq 'length')
+  log_success "Configured ${agent_count} custom agent(s) in OpenCode"
+}
+
 # ============================================================================
 # SKILL FILTERING & INSTALLATION
 # ============================================================================
@@ -1469,6 +1577,10 @@ main() {
   if [ $? -ne 0 ]; then
     log_warning "OpenCode MCP configuration had issues (check errors above)"
   fi
+  echo ""
+  
+  log_info "━━━ OpenCode Custom Agents ━━━"
+  configure_opencode_agents
   echo ""
   
   # Install skills to both agents

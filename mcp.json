@@ -6,7 +6,7 @@
       "_description": "Tavily MCP - Web search and research. Required for 'search' skill.",
       "url": "https://mcp.tavily.com/mcp",
       "headers": {
-        "X-Tavily-Api-Key": "TAVILY_API_KEY"
+        "Authorization": "Bearer TAVILY_API_KEY"
       }
     },
     "context7": {
