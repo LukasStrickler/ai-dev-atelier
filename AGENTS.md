@@ -24,7 +24,8 @@ ai-dev-atelier/
 │   └── <name>/references/     # Guides, templates, examples
 ├── .test/                     # Validation and integration tests
 ├── .ada/                      # Runtime outputs (gitignored)
-├── install.sh                 # Deploy skills + MCPs
+├── hooks.json                 # PreToolUse hook definitions
+├── install.sh                 # Deploy skills + MCPs + hooks
 ├── setup.sh                   # Verify structure
 ├── mcp.json                   # MCP server definitions
 └── skills-config.json         # Per-agent skill filtering
@@ -55,6 +56,10 @@ bash skills/<skill>/scripts/<script>.sh    # Run skill script
 
 > **Tip**: You can also use `make setup`, `make install`, `make validate` for shorter commands.
 
+## This Repository
+
+**This repository uses Graphite.** Use `gt` commands instead of `git push`/`gh pr create`. See the `use-graphite` skill.
+
 ## Install Locations
 
 | Agent | Skills Path | MCP Config |
@@ -62,6 +67,19 @@ bash skills/<skill>/scripts/<script>.sh    # Run skill script
 | OpenCode | `~/.opencode/skill` | `~/.opencode/opencode.json` |
 
 Respects `$XDG_CONFIG_HOME` if set.
+
+## PreToolUse Hooks
+
+Hooks in `hooks.json` enforce workflow guardrails by intercepting tool calls before execution:
+
+| Hook ID | Matcher | Purpose |
+|---------|---------|---------|
+| `graphite-block` | Bash | Blocks `git push`, `git checkout -b`, `gh pr create` in Graphite-enabled repos |
+| `pr-comments-block` | Bash | Blocks `gh api` calls fetching PR comments on current repo's open PRs |
+
+Hooks are installed to `~/.opencode/hook/` by `install.sh`. They help prevent:
+- Accidental git operations that conflict with Graphite stacked PR workflow
+- Wasteful API calls that can be replaced by the `resolve-pr-comments` skill
 
 ## MCP Servers
 

@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "id": "graphite-block",
+        "description": "Blocks git push/checkout -b/gh pr create in Graphite repos",
+        "matcher": "Bash",
+        "script": "use-graphite/scripts/graphite-block-hook.sh",
+        "enabled": true
+      },
+      {
+        "id": "pr-comments-block",
+        "description": "Blocks gh api for PR comments on current repo (use resolve-pr-comments skill)",
+        "matcher": "Bash",
+        "script": "resolve-pr-comments/scripts/pr-comments-block-hook.sh",
+        "enabled": true
+      }
+    ]
+  }
+}

@@ -63,6 +63,8 @@ Verify in your agent:
 | `pdf-reader` | PDF extraction | None |
 | `paper-search` | Multi-platform paper search | Optional keys |
 | `grep` | GitHub code search | None |
+| `zai-zread` | GitHub repo semantic search (issues, PRs, docs) | `Z_AI_API_KEY` |
+| `zai-vision` | Image/video analysis, UI code gen, diagrams | `Z_AI_API_KEY` |
 
 ## Data and Outputs
 
@@ -79,6 +81,7 @@ Verify in your agent:
 - The installer preserves existing OpenCode configurations.
 - Outputs are written to `.ada/` directories; no hidden state.
 - Use `skills-config.json` to disable skills per agent.
+- **PreToolUse hooks** in `hooks.json` enforce workflow guardrails (e.g., blocking `git push` in Graphite repos, blocking wasteful gh CLI calls for PR comments).
 
 ## Docs and Setup
 
