@@ -64,9 +64,18 @@ test_hook "git checkout -bnew-branch" 2 "Blocks: git checkout -b (no space)"
 test_hook "git checkout --branch new-branch" 2 "Blocks: git checkout --branch"
 test_hook "git switch -c new-branch" 2 "Blocks: git switch -c"
 test_hook "git switch -cnew-branch" 2 "Blocks: git switch -c (no space)"
+test_hook "git switch --create new-branch" 2 "Blocks: git switch --create"
 test_hook "git rebase main" 2 "Blocks: git rebase (non-interactive)"
 test_hook "git rebase origin/main" 2 "Blocks: git rebase origin/main"
+test_hook "git rebase" 2 "Blocks: git rebase (no args)"
 test_hook "git branch new-feature" 2 "Blocks: git branch <name> (create)"
+test_hook "git branch -c old new" 2 "Blocks: git branch -c (copy)"
+test_hook "git branch --copy old new" 2 "Blocks: git branch --copy"
+test_hook "git branch -t new origin/main" 2 "Blocks: git branch -t (track)"
+test_hook "git branch --track new origin/main" 2 "Blocks: git branch --track"
+test_hook "git branch --no-track new origin/main" 2 "Blocks: git branch --no-track"
+test_hook "git branch -f existing HEAD~1" 2 "Blocks: git branch -f (force)"
+test_hook "git branch --force existing HEAD" 2 "Blocks: git branch --force"
 
 # Commands that should be ALLOWED (exit 0)
 test_hook "git status" 0 "Allows: git status"
@@ -95,10 +104,93 @@ test_hook "git branch --list" 0 "Allows: git branch --list"
 test_hook "git branch -a" 0 "Allows: git branch -a (all)"
 test_hook "git branch -r" 0 "Allows: git branch -r (remotes)"
 test_hook "git branch -v" 0 "Allows: git branch -v (verbose)"
+test_hook "git branch -m old new" 0 "Allows: git branch -m (rename)"
+test_hook "git branch -M old new" 0 "Allows: git branch -M (force rename)"
+test_hook "git branch --move old new" 0 "Allows: git branch --move"
+test_hook "git branch -av" 0 "Allows: git branch -av (combined flags)"
+test_hook "git branch -vv" 0 "Allows: git branch -vv (very verbose)"
+test_hook "git branch --show-current" 0 "Allows: git branch --show-current"
 
 # Bypass should ALLOW blocked commands
 test_hook "git push # BYPASS_GRAPHITE: testing" 0 "Allows: git push with BYPASS_GRAPHITE"
 test_hook "gh pr create # BYPASS_GRAPHITE: emergency" 0 "Allows: gh pr create with BYPASS_GRAPHITE"
+test_hook "git checkout -b feat # BYPASS_GRAPHITE: reason" 0 "Allows: git checkout -b with BYPASS"
+test_hook "git rebase main # BYPASS_GRAPHITE: needed" 0 "Allows: git rebase with BYPASS"
+
+# Edge cases: git push variations
+test_hook "git push --force" 2 "Blocks: git push --force"
+test_hook "git push -f" 2 "Blocks: git push -f"
+test_hook "git push --force-with-lease" 2 "Blocks: git push --force-with-lease"
+test_hook "git push -u origin HEAD" 2 "Blocks: git push -u origin HEAD"
+test_hook "git push --set-upstream origin feat" 2 "Blocks: git push --set-upstream"
+test_hook "git push origin HEAD:refs/for/main" 2 "Blocks: git push with refspec"
+test_hook "git push --tags" 2 "Blocks: git push --tags"
+test_hook "git push origin --delete branch" 2 "Blocks: git push origin --delete"
+
+# Edge cases: gh pr variations  
+test_hook "gh pr create -t title -b body" 2 "Blocks: gh pr create with short flags"
+test_hook "gh pr create --draft" 2 "Blocks: gh pr create --draft"
+test_hook "gh pr create --web" 2 "Blocks: gh pr create --web"
+test_hook "gh pr view" 0 "Allows: gh pr view"
+test_hook "gh pr list" 0 "Allows: gh pr list"
+test_hook "gh pr merge" 0 "Allows: gh pr merge"
+test_hook "gh pr checkout 123" 0 "Allows: gh pr checkout"
+test_hook "gh pr edit 123" 0 "Allows: gh pr edit"
+
+# Edge cases: git checkout variations
+test_hook "git checkout main" 0 "Allows: git checkout main (switch branch)"
+test_hook "git checkout -" 0 "Allows: git checkout - (previous branch)"
+test_hook "git checkout HEAD~1" 0 "Allows: git checkout HEAD~1"
+test_hook "git checkout -- file.txt" 0 "Allows: git checkout -- file.txt"
+test_hook "git checkout -B existing-branch" 2 "Blocks: git checkout -B (force create)"
+test_hook "git checkout -Bnew-branch" 2 "Blocks: git checkout -B (no space)"
+test_hook "git checkout --orphan new" 0 "Allows: git checkout --orphan"
+test_hook "git checkout -t origin/feat" 0 "Allows: git checkout -t (track)"
+
+# Edge cases: git switch variations
+test_hook "git switch main" 0 "Allows: git switch main"
+test_hook "git switch -" 0 "Allows: git switch -"
+test_hook "git switch --detach HEAD" 0 "Allows: git switch --detach"
+test_hook "git switch -C existing" 2 "Blocks: git switch -C (force create)"
+test_hook "git switch --force-create new" 2 "Blocks: git switch --force-create"
+
+# Edge cases: git rebase variations
+test_hook "git rebase --onto main feat" 2 "Blocks: git rebase --onto"
+test_hook "git rebase --continue" 0 "Allows: git rebase --continue"
+test_hook "git rebase --abort" 0 "Allows: git rebase --abort"
+test_hook "git rebase --skip" 0 "Allows: git rebase --skip"
+test_hook "git rebase --quit" 0 "Allows: git rebase --quit"
+test_hook "git rebase HEAD~3 -i" 0 "Allows: git rebase HEAD~3 -i"
+test_hook "git rebase -i HEAD~5" 0 "Allows: git rebase -i HEAD~5"
+test_hook "git rebase --interactive --autosquash main" 0 "Allows: git rebase --interactive --autosquash"
+
+# Edge cases: git branch variations
+test_hook "git branch" 0 "Allows: git branch (no args, lists)"
+test_hook "git branch --contains abc123" 0 "Allows: git branch --contains"
+test_hook "git branch --merged" 0 "Allows: git branch --merged"
+test_hook "git branch --no-merged" 0 "Allows: git branch --no-merged"
+test_hook "git branch --set-upstream-to=origin/main" 0 "Allows: git branch --set-upstream-to"
+test_hook "git branch -u origin/main" 0 "Allows: git branch -u (set upstream)"
+test_hook "git branch --unset-upstream" 0 "Allows: git branch --unset-upstream"
+test_hook "git branch --edit-description" 0 "Allows: git branch --edit-description"
+test_hook "git branch --sort=-committerdate" 0 "Allows: git branch --sort"
+
+# Edge cases: commands that look similar but shouldn't match
+test_hook "git pushing" 0 "Allows: git pushing (not a real command)"
+test_hook "git pusher" 0 "Allows: git pusher (not a real command)"
+test_hook "git checkout-index" 0 "Allows: git checkout-index"
+test_hook "git branch-filter" 0 "Allows: git branch-filter (not matched)"
+test_hook "echo git push" 0 "Allows: echo git push"
+test_hook "git config push.default" 0 "Allows: git config push.default"
+
+# Edge cases: JSON parsing
+test_hook "git commit -m \"test message\"" 0 "Allows: git commit with quoted message"
+
+# Graphite commands should NEVER be blocked (sanity check)
+test_hook "gt create new-branch" 0 "Allows: gt create (Graphite command)"
+test_hook "gt submit" 0 "Allows: gt submit (Graphite command)"
+test_hook "gt restack" 0 "Allows: gt restack (Graphite command)"
+test_hook "gt sync" 0 "Allows: gt sync (Graphite command)"
 
 # Empty/malformed input should be ALLOWED (fail open)
 if echo "" | bash "$HOOK_SCRIPT" >/dev/null 2>&1; then

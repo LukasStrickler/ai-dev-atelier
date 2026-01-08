@@ -42,23 +42,33 @@ check_blocked() {
     "git push"|"git push "*)
       echo "git push:gt submit"
       return 0 ;;
-    "git checkout -b"*|"git checkout --branch "*)
+    "git checkout -b"*|"git checkout -B"*|"git checkout --branch "*)
       echo "git checkout -b:gt create <branch>"
       return 0 ;;
     "gh pr create"|"gh pr create "*)
       echo "gh pr create:gt submit"
       return 0 ;;
-    "git rebase "*|"git rebase")
-      [[ "$cmd" =~ (^|[[:space:]])(-i|--interactive)([[:space:]]|$|=) ]] && return 1
+    "git rebase "*)
+      [[ "$cmd" =~ (--continue|--abort|--skip|--quit) ]] && return 1
+      [[ "$cmd" =~ (^|[[:space:]])(-i|--interactive)([[:space:]]|$) ]] && return 1
       echo "git rebase:gt restack"
       return 0 ;;
-    "git switch -c"*)
+    "git rebase")
+      echo "git rebase:gt restack"
+      return 0 ;;
+    "git switch -c"*|"git switch -C"*|"git switch --create"*|"git switch --force-create"*)
       echo "git switch -c:gt create <branch>"
       return 0 ;;
     "git branch "*)
-      [[ "$cmd" =~ ^git\ branch\ (-d|-D|--delete|--list|-l|-a|--all|-r|--remotes|-v|--verbose) ]] && return 1
-      echo "git branch <name>:gt create <branch>"
-      return 0 ;;
+      [[ "$cmd" =~ ^git\ branch\ (-c|-C|--copy|-f|--force|-t|--track|--no-track)[[:space:]] ]] && {
+        echo "git branch <name>:gt create <branch>"
+        return 0
+      }
+      [[ "$cmd" =~ ^git\ branch\ [^-] ]] && {
+        echo "git branch <name>:gt create <branch>"
+        return 0
+      }
+      return 1 ;;
   esac
   return 1
 }
