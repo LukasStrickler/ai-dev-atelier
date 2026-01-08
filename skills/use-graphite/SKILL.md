@@ -226,6 +226,7 @@ gh pr edit <PR_NUMBER> --title "feat: meaningful title" --body-file /path/to/pr-
 - Just `## Summary` headers with no content
 
 **Workflow reminder:**
+
 ```bash
 gt submit                           # Creates draft PR
 gh pr view <N> --json body          # Check if body is populated

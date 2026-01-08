@@ -81,7 +81,7 @@
       }
     },
     "graphite": {
-      "_description": "Graphite MCP - Stacked PR management. Required for 'graphite' skill.",
+      "_description": "Graphite MCP - Stacked PR management. Required for 'use-graphite' skill.",
       "_prerequisite": "Graphite CLI v1.6.7+ must be installed (npm install -g @withgraphite/graphite-cli)",
       "_skills": ["use-graphite"],
       "command": "gt",
