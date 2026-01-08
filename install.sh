@@ -1238,6 +1238,70 @@ configure_opencode_agents() {
 }
 
 # ============================================================================
+# DEPRECATED SKILL CLEANUP
+# ============================================================================
+
+# Mapping of old skill names to new names (for migration)
+# Format: "old-name:new-name"
+DEPRECATED_SKILLS=(
+  "pr-comment-resolver:resolve-pr-comments"
+)
+
+# ----------------------------------------------------------------------------
+# Cleanup Deprecated Skills
+# ----------------------------------------------------------------------------
+# Checks for deprecated/renamed skills in agent directories and offers to
+# remove them. In --yes mode, removes automatically.
+#
+# Parameters:
+#   $1 - Agent type (codex, opencode)
+#   $2 - Target skills directory path
+cleanup_deprecated_skills() {
+  local agent_type="$1"
+  local target_skills_dir="$2"
+  
+  if [ ! -d "$target_skills_dir" ]; then
+    return 0
+  fi
+  
+  local cleaned=0
+  
+  for mapping in "${DEPRECATED_SKILLS[@]}"; do
+    local old_name="${mapping%%:*}"
+    local new_name="${mapping##*:}"
+    local old_skill_path="${target_skills_dir}/${old_name}"
+    
+    if [ -d "$old_skill_path" ]; then
+      log_warning "Found deprecated skill '${old_name}' (renamed to '${new_name}')"
+      
+      if [ "$SKIP_CONFIRM" = true ]; then
+        # Auto-remove in --yes mode
+        rm -rf "$old_skill_path"
+        log_success "Removed deprecated skill '${old_name}'"
+        cleaned=$((cleaned + 1))
+      else
+        echo -n "Remove deprecated skill '${old_name}'? [Y/n]: "
+        read -r response
+        case "$response" in
+          [nN][oO]|[nN])
+            log_info "Kept deprecated skill '${old_name}'"
+            ;;
+          *)
+            rm -rf "$old_skill_path"
+            log_success "Removed deprecated skill '${old_name}'"
+            cleaned=$((cleaned + 1))
+            ;;
+        esac
+      fi
+    fi
+  done
+  
+  if [ $cleaned -gt 0 ]; then
+    log_info "Cleaned up ${cleaned} deprecated skill(s) from ${agent_type}"
+  fi
+}
+
+# ============================================================================
 # SKILL FILTERING & INSTALLATION
 # ============================================================================
 
@@ -1586,6 +1650,11 @@ main() {
   # Install skills to both agents
   # Skills use the same format but may be filtered per agent via skills-config.json
   log_info "Installing skills to both agents..."
+  echo ""
+  
+  log_info "━━━ Cleaning Up Deprecated Skills ━━━"
+  cleanup_deprecated_skills "codex" "$CODEX_SKILLS_DIR"
+  cleanup_deprecated_skills "opencode" "$OPENCODE_SKILLS_DIR"
   echo ""
   
   log_info "━━━ Installing Skills to Codex ━━━"

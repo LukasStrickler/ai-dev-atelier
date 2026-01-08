@@ -5,7 +5,7 @@ Test scenarios for validating the `@pr-comment-reviewer` subagent behavior.
 ## Prerequisites
 
 1. A PR with bot review comments (CodeRabbit, Gemini Code Assist, Copilot)
-2. Run `bash skills/pr-comment-resolver/scripts/pr-resolver.sh {PR}` to generate clusters
+2. Run `bash skills/resolve-pr-comments/scripts/pr-resolver.sh {PR}` to generate clusters
 3. Have at least one cluster with `actionable: true` (unresolved comments)
 
 ## How to Test
@@ -203,7 +203,7 @@ Watch for these failures:
 ## Running the Test
 
 1. Find or create a PR with bot comments
-2. Run `bash skills/pr-comment-resolver/scripts/pr-resolver.sh {PR}`
+2. Run `bash skills/resolve-pr-comments/scripts/pr-resolver.sh {PR}`
 3. Identify an actionable cluster
 4. Spawn the subagent:
 
