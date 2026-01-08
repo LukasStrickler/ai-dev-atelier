@@ -57,10 +57,10 @@ For each investigable deferred item:
 
 ```bash
 # After fixing
-bash skills/pr-comment-resolver/scripts/pr-resolver-resolve.sh <PR> <COMMENT_ID>
+bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh <PR> <COMMENT_ID>
 
 # After dismissing with evidence
-bash skills/pr-comment-resolver/scripts/pr-resolver-dismiss.sh <PR> <COMMENT_ID> "reason with evidence"
+bash skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh <PR> <COMMENT_ID> "reason with evidence"
 ```
 
 ## Investigation Examples

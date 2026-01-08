@@ -53,7 +53,7 @@ Verify in your agent:
 | `docs-write` | Write/update docs using standards | Workflow skill (no script) |
 | `git-commit` | Write clear commits with Conventional Commits format | Workflow skill (no script) |
 | `code-review` | CodeRabbit reviews (task/pr modes) | `skills/code-review/scripts/review-run.sh` |
-| `pr-comment-resolver` | Multi-agent PR comment resolution for bot reviews | `skills/pr-comment-resolver/scripts/pr-resolver*.sh` |
+| `resolve-pr-comments` | Multi-agent PR comment resolution for bot reviews | `skills/resolve-pr-comments/scripts/pr-resolver*.sh` |
 | `search` | Web and library documentation search | MCP-based (no script) |
 | `research` | Academic research with evidence cards | `skills/research/scripts/research-*.sh` |
 | `agent-orchestration` | Spawn and manage sub-agents | `skills/agent-orchestration/scripts/agent-*.sh` |

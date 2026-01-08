@@ -199,7 +199,7 @@ For each comment, assign a classification:
 
 ```bash
 # For ALREADY_FIXED - always dismiss to prevent re-processing
-bash skills/pr-comment-resolver/scripts/pr-resolver-dismiss.sh {PR} {COMMENT_ID} "Already fixed: {description of fix} at line {N} / in commit {sha}"
+bash skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh {PR} {COMMENT_ID} "Already fixed: {description of fix} at line {N} / in commit {sha}"
 ```
 
 **Confidence Score** (0-100):
@@ -411,12 +411,12 @@ npm test || true  # ABSOLUTELY FORBIDDEN
 
 **After successful fix AND verification:**
 ```bash
-bash skills/pr-comment-resolver/scripts/pr-resolver-resolve.sh {PR} {COMMENT_ID}
+bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh {PR} {COMMENT_ID}
 ```
 
 **For false positives (with evidence gathered):**
 ```bash
-bash skills/pr-comment-resolver/scripts/pr-resolver-dismiss.sh {PR} {COMMENT_ID} "False positive: {evidence}"
+bash skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh {PR} {COMMENT_ID} "False positive: {evidence}"
 ```
 
 **For deferred items (ONLY after 3+ fix attempts):** Do NOT run any resolve script. Leave thread open.
@@ -554,8 +554,8 @@ After processing all comments, provide this **exact format**:
     }
   ],
   "scripts_executed": [
-    "bash skills/pr-comment-resolver/scripts/pr-resolver-resolve.sh 7 123456 → SUCCESS",
-    "bash skills/pr-comment-resolver/scripts/pr-resolver-dismiss.sh 7 789012 '...' → SUCCESS"
+    "bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh 7 123456 → SUCCESS",
+    "bash skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh 7 789012 '...' → SUCCESS"
   ],
   "verification_summary": {
     "all_diagnostics_pass": true,
@@ -598,8 +598,8 @@ After processing all comments, provide this **exact format**:
 **Resolution Scripts:**
 | Script | Purpose |
 |--------|---------|
-| `bash skills/pr-comment-resolver/scripts/pr-resolver-resolve.sh {PR} {ID}` | Resolve after fix |
-| `bash skills/pr-comment-resolver/scripts/pr-resolver-dismiss.sh {PR} {ID} "reason"` | Dismiss with reason |
+| `bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh {PR} {ID}` | Resolve after fix |
+| `bash skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh {PR} {ID} "reason"` | Dismiss with reason |
 
 **Blocked:** `write` tool (use `edit` only), tools outside your cluster's file scope.
 
@@ -724,7 +724,7 @@ Before completing, ask yourself:
 2. GREP for 'useEffect' usage in file
 3. FIND: useEffect IS used at line 45
 4. CLASSIFY: FALSE_POSITIVE (confidence: 95)
-5. EXECUTE: bash skills/pr-comment-resolver/scripts/pr-resolver-dismiss.sh 7 123456 "False positive: useEffect is used at line 45 in the cleanup effect"
+5. EXECUTE: bash skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh 7 123456 "False positive: useEffect is used at line 45 in the cleanup effect"
 6. VERIFY script output shows success
 ```
 
@@ -741,7 +741,7 @@ Before completing, ask yourself:
 5. EDIT: Change import path
 6. VERIFY: lsp_diagnostics - PASS
 7. VERIFY: Related tests - PASS
-8. EXECUTE: bash skills/pr-comment-resolver/scripts/pr-resolver-resolve.sh 7 789012
+8. EXECUTE: bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh 7 789012
 9. VERIFY script output shows success
 ```
 
@@ -781,7 +781,7 @@ Before completing, ask yourself:
 2. GREP for reassignment patterns
 3. FIND: Variable IS reassigned at line 52
 4. CLASSIFY: FALSE_POSITIVE (confidence: 92)
-5. EXECUTE: bash skills/pr-comment-resolver/scripts/pr-resolver-dismiss.sh 7 345678 "False positive: Variable is reassigned at line 52, 'let' is correct"
+5. EXECUTE: bash skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh 7 345678 "False positive: Variable is reassigned at line 52, 'let' is correct"
 6. VERIFY script output shows success
 ```
 
@@ -795,12 +795,12 @@ Before completing, ask yourself:
 
 1. **For each VALID_FIX comment:**
    - [ ] Code fix applied and verified (diagnostics pass)
-   - [ ] **EXECUTED**: `bash skills/pr-comment-resolver/scripts/pr-resolver-resolve.sh {PR} {COMMENT_ID}`
+   - [ ] **EXECUTED**: `bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh {PR} {COMMENT_ID}`
    - [ ] Confirmed script output shows success
 
 2. **For each FALSE_POSITIVE / ALREADY_FIXED / STYLE_CHOICE comment:**
    - [ ] Evidence gathered and documented
-   - [ ] **EXECUTED**: `bash skills/pr-comment-resolver/scripts/pr-resolver-dismiss.sh {PR} {COMMENT_ID} "{reason}"`
+   - [ ] **EXECUTED**: `bash skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh {PR} {COMMENT_ID} "{reason}"`
    - [ ] Confirmed script output shows success
    - [ ] **ALREADY_FIXED is NOT exempt** - you must still dismiss to close the thread!
 
