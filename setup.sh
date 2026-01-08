@@ -82,7 +82,7 @@ check_skills_dir() {
   fi
   
   # Optional skill directories
-  local optional_skills=("research" "search" "docs-write" "agent-orchestration")
+  local optional_skills=("research" "search" "docs-write")
   for skill in "${optional_skills[@]}"; do
     if [ ! -d "${skills_dir}/${skill}" ]; then
       log_warning "Optional skill '${skill}' not found"
@@ -155,12 +155,12 @@ main() {
   echo ""
   log_info "Next steps:"
   echo ""
-  echo "  1. Install skills to Codex:"
+  echo "  1. Install skills to OpenCode:"
   echo "     bash ${ATELIER_DIR}/install.sh"
   echo ""
-  echo "  2. Verify skills are loaded in Codex:"
-  echo "     - Ask Codex: 'What skills are available?'"
-  echo "     - Should list: code-quality, docs-check, docs-write, code-review, pr-comment-resolver, search, research, agent-orchestration"
+  echo "  2. Verify skills are loaded in OpenCode:"
+  echo "     - Ask OpenCode: 'What skills are available?'"
+  echo "     - Should list: code-quality, docs-check, docs-write, git-commit, code-review, pr-comment-resolver, search, research, ui-animation"
   echo ""
   echo "  3. Read the skills documentation:"
   echo "     cat ${ATELIER_DIR}/skills/README.md"

@@ -11,7 +11,7 @@ help: ## Show this help
 setup: ## Verify repository structure
 	bash setup.sh
 
-install: ## Install skills and MCPs to Codex and OpenCode
+install: ## Install skills and MCPs to OpenCode
 	bash install.sh
 
 validate: ## Validate all skills against Anthropic Agent Skills spec

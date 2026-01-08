@@ -71,11 +71,21 @@ node --version  # Should show v18.0.0 or higher
 bun --version   # Should show latest Bun version
 ```
 
-### 3. Codex
+### 3. OpenCode Agent
 
-AI agent that supports skills installation. Skills are installed to `~/.codex/skills`.
+This skill pack is designed for OpenCode agent. Ensure you have it installed and configured.
 
-**Note:** Only Codex is currently supported for skills installation. Gemini does not support skills.
+**Verify:**
+```bash
+# Verify OpenCode config directory exists
+ls -la ~/.opencode
+```
+
+## Optional Dependencies
+
+### jq (JSON processor)
+
+Required for automatic MCP configuration by `install.sh`.
 
 **Installation:**
 
@@ -97,15 +107,12 @@ choco install jq
 
 **Verify:**
 ```bash
-# Verify Codex is installed and skills directory exists
-ls -la ~/.codex/skills
+jq --version
 ```
-
-## Optional Dependencies
 
 ### GitHub CLI (gh)
 
-Required for PR review tools (used by the `pr-review` skill).
+Required for PR review tools (used by the `pr-comment-resolver` skill).
 
 **Installation:**
 
@@ -264,19 +271,19 @@ bash ~/ai-dev-atelier/setup.sh
 
 The setup script will:
 - ✅ Verify skills directory exists
-- ✅ Check for required skills (code-quality, docs-check, code-review, pr-review)
+- ✅ Check for core skills (code-quality, docs-check, code-review, pr-comment-resolver)
 - ✅ Validate SKILL.md files are present
 - ✅ Report any missing or invalid skills
 
-### 3. Install Skills to Codex
+### 3. Install Skills to OpenCode
 
 ```bash
 bash ~/ai-dev-atelier/install.sh
 ```
 
 The install script will:
-- ✅ Copy skills to `~/.codex/skills`
-- ✅ Preserve existing `.system` directory in Codex
+- ✅ Copy skills to `~/.opencode/skill`
+- ✅ Preserve existing configuration
 - ✅ Show smart diff before overwriting existing skills
 - ✅ Ask for confirmation before overwriting (use `--yes` to skip)
 
@@ -288,10 +295,10 @@ The install script will:
 
 ```bash
 # Check skills are installed
-ls -la ~/.codex/skills
+ls -la ~/.opencode/skill
 
-# Ask Codex: "What skills are available?"
-# Should list: code-quality, docs-check, docs-write, code-review, pr-review, search, research, agent-orchestration
+# Ask OpenCode: "What skills are available?"
+# Should list: code-quality, docs-check, docs-write, git-commit, code-review, pr-comment-resolver, search, research, ui-animation
 ```
 
 > **📖 Next steps:** See [SETUP.md](./SETUP.md) for configuring skills in your AI agent and usage examples.
@@ -307,7 +314,7 @@ ls -la ~/.codex/skills
 - Commands available: `typecheck`, `lint`, `format:check`, `format:write`
 
 **Usage:**
-- Ask Codex: "Run code quality checks" (triggers `code-quality` skill)
+- Ask OpenCode: "Run code quality checks" (triggers `code-quality` skill)
 - The skill will execute scripts embedded in `skills/code-quality/scripts/finalize.sh`
 
 ### Documentation Check
@@ -317,7 +324,7 @@ ls -la ~/.codex/skills
 - Git remote configured (optional, for better branch detection)
 
 **Usage:**
-- Ask Codex: "Check if documentation needs updates" (triggers `docs-check` skill)
+- Ask OpenCode: "Check if documentation needs updates" (triggers `docs-check` skill)
 - The skill will execute scripts embedded in `skills/docs-check/scripts/check-docs.sh`
 
 ### Code Review (CodeRabbit)
@@ -327,7 +334,7 @@ ls -la ~/.codex/skills
 - Git repository initialized
 
 **Usage:**
-- Ask Codex: "Review my code changes" (triggers `code-review` skill)
+- Ask OpenCode: "Review my code changes" (triggers `code-review` skill)
 - The skill will execute scripts embedded in `skills/code-review/scripts/review-run.sh`
 
 ### PR Review Tools
@@ -338,8 +345,8 @@ ls -la ~/.codex/skills
 - jq installed
 
 **Usage:**
-- Ask Codex: "Fetch PR comments" (triggers `pr-review` skill)
-- The skill will execute scripts embedded in `skills/pr-review/scripts/pr-comments-*.sh`
+- Ask OpenCode: "Fetch PR comments" (triggers `pr-comment-resolver` skill)
+- The skill will execute scripts embedded in `skills/pr-comment-resolver/scripts/pr-resolver*.sh`
 
 ### MCP Dependencies (for Search and Research Skills)
 
@@ -359,7 +366,7 @@ ls -la ~/.codex/skills
 - **Grep MCP** - Search across a million public GitHub repositories for code examples and patterns
   - **Installation:** Automatically configured by `install.sh` (no manual installation needed)
   - **API Key Required:** No
-  - **Configuration:** Automatically added to Codex MCP config (`~/.codex/mcp.json` or `$XDG_CONFIG_HOME/codex/mcp.json`)
+  - **Configuration:** Automatically added to OpenCode MCP config
   - **Usage:** Finding real-world code examples, implementation patterns, API usage, error handling patterns
   - **Note:** All MCPs from `mcp.json` are automatically configured by the installer. Update API keys after installation.
 
@@ -385,13 +392,13 @@ ls -la ~/.codex/skills
 
 **Configuration:**
 
-**For Codex (Automatic):**
-- The `install.sh` script automatically configures all MCPs from `mcp.json` for Codex
-- MCP configuration is created/updated at `~/.codex/mcp.json` (or `$XDG_CONFIG_HOME/codex/mcp.json`)
+**For OpenCode (Automatic):**
+- The `install.sh` script automatically configures all MCPs from `mcp.json` for OpenCode
+- MCP configuration is created/updated at `~/.opencode/opencode.json` (or `$XDG_CONFIG_HOME/opencode/opencode.json`)
 - Existing MCP configurations are preserved; only missing MCPs are added
 - All MCPs from the example file are configured: Tavily, Context7, OpenAlex, PDF Reader, Paper-search, and Grep
 - Requires `jq` to be installed for automatic configuration
-- **Important:** After installation, update API keys in the MCP config file (TAVILY_API_KEY, CONTEXT7_API_KEY, OPENALEX_EMAIL)
+- **Important:** After installation, update API keys in the `.env` file or directly in the config.
 
 **For Other Agents (Manual):**
 1. Copy `mcp.json` to your MCP configuration location (typically `~/.config/claude/mcp.json` for Claude Desktop)
@@ -402,28 +409,28 @@ See `mcp.json` for complete configuration format.
 
 ## How Agents Use Skills
 
-**IMPORTANT:** After installing skills, Codex will automatically discover them from `~/.codex/skills`.
+**IMPORTANT:** After installing skills, OpenCode will automatically discover them from `~/.opencode/skill`.
 
 > **📖 Detailed information:** See [SETUP.md](./SETUP.md) for complete setup instructions.
 
 ### How It Works
 
-1. **Skills are installed to `~/.codex/skills`:**
+1. **Skills are installed to `~/.opencode/skill`:**
    - Each skill is a directory with `SKILL.md` and `scripts/` subdirectory
-   - Codex automatically scans this directory for skills
+   - OpenCode automatically scans this directory for skills
 
 2. **Agents discover skills:**
-   - Codex reads `SKILL.md` files which contain YAML frontmatter and instructions
+   - OpenCode reads `SKILL.md` files which contain YAML frontmatter and instructions
    - Skills are triggered based on their descriptions and trigger keywords
 
 3. **Agents execute scripts:**
-   - When a skill is triggered, Codex reads the instructions in `SKILL.md`
+   - When a skill is triggered, OpenCode reads the instructions in `SKILL.md`
    - Scripts are executed via `bash skills/<skill-name>/scripts/<script-name>.sh`
    - Scripts are embedded within skill directories, not in package.json
 
 4. **Verify skills are loaded:**
-   - Ask Codex: "What skills are available?"
-   - Should list: `code-quality`, `docs-check`, `docs-write`, `code-review`, `pr-review`, `search`, `research`, `agent-orchestration`
+   - Ask OpenCode: "What skills are available?"
+   - Should list: `code-quality`, `docs-check`, `docs-write`, `git-commit`, `code-review`, `pr-comment-resolver`, `search`, `research`, `ui-animation`
 
 5. **Test skill triggering:**
    - Try: "Run code quality checks" (should trigger `code-quality` skill)
@@ -439,8 +446,8 @@ See `mcp.json` for complete configuration format.
 | SKILL.md not found | Ensure you're running setup from the AI Dev Atelier root directory |
 | `bash: command not found` | Install Git Bash (Windows) or use WSL |
 | Permission denied | `chmod +x ~/ai-dev-atelier/install.sh` |
-| Skills not appearing in Codex | Verify skills are installed to `~/.codex/skills` and restart Codex |
-| Codex doesn't recognize skills | Restart Codex after installation |
+| Skills not appearing in OpenCode | Verify skills are installed to `~/.opencode/skill` and restart OpenCode |
+| OpenCode doesn't recognize skills | Restart OpenCode after installation |
 | `gh: command not found` | Install GitHub CLI: `brew install gh && gh auth login` |
 | `coderabbit: command not found` | Install CodeRabbit CLI: `npm install -g @coderabbitai/cli && coderabbit auth login` |
 | TypeScript errors | Install TypeScript: `npm install --save-dev typescript` |
@@ -448,7 +455,7 @@ See `mcp.json` for complete configuration format.
 | Prettier errors | Install Prettier: `npm install --save-dev prettier` |
 | `bun: command not found` | Install Bun or use Node.js instead |
 | MCP configuration failed | Install jq: `brew install jq` (macOS) or `sudo apt-get install jq` (Linux) |
-| Grep MCP not working | Verify MCP config exists at `~/.codex/mcp.json` and restart Codex |
+| Grep MCP not working | Verify MCP config exists at `~/.opencode/opencode.json` and restart OpenCode |
 
 ### Verification Checklist
 
@@ -459,8 +466,8 @@ Run these commands to verify your installation:
 git --version
 node --version  # OR bun --version
 
-# Check Codex skills directory
-ls -la ~/.codex/skills
+# Check OpenCode skills directory
+ls -la ~/.opencode/skill
 
 # Check optional tools (if using PR/review features)
 gh --version
@@ -492,4 +499,3 @@ After installation, see [SETUP.md](./SETUP.md) for:
 - **Setup Guide:** [SETUP.md](./SETUP.md) - Quick setup and configuration
 - **Documentation:** `~/ai-dev-atelier/skills/README.md`
 - **Script help:** See individual skill documentation in `skills/*/SKILL.md`
-

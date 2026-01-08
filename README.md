@@ -17,7 +17,7 @@
 ```
 
 
-![License](https://img.shields.io/badge/license-BSL%201.1-blue) ![Agent Skills](https://img.shields.io/badge/Agent%20Skills-Anthropic-orange) ![OpenCode](https://img.shields.io/badge/OpenCode-supported-1f6feb) ![Codex](https://img.shields.io/badge/Codex-supported-6f42c1) ![MCP](https://img.shields.io/badge/MCP-enabled-2ea043)
+![License](https://img.shields.io/badge/license-BSL%201.1-blue) ![Agent Skills](https://img.shields.io/badge/Agent%20Skills-Anthropic-orange) ![OpenCode](https://img.shields.io/badge/OpenCode-supported-1f6feb) ![MCP](https://img.shields.io/badge/MCP-enabled-2ea043)
 
 Production-grade skill pack for AI-assisted development: code quality, documentation, code review, research, and orchestration via Agent Skills and MCP.
 
@@ -33,16 +33,11 @@ bash ~/ai-dev-atelier/setup.sh
 bash ~/ai-dev-atelier/install.sh
 ```
 
-`install.sh` installs skills and MCPs for both Codex and OpenCode, preserves existing configs, and supports agent-specific filtering via `skills-config.json`.
+`install.sh` installs skills and MCPs for OpenCode, preserves existing configs, and supports agent-specific filtering via `skills-config.json`.
 
 Verify in your agent:
 - Ask: "What skills are available?"
-- Or check: `~/.codex/skills` and `~/.opencode/skill`
-
-## Agent Compatibility
-
-- Agent Skills are primarily aimed at raw Codex.
-- OpenCode supports skills, but relies on native subagents for orchestration.
+- Or check: `~/.opencode/skill`
 
 ## What You Get
 
@@ -56,7 +51,6 @@ Verify in your agent:
 | `pr-comment-resolver` | Multi-agent PR comment resolution for bot reviews | `skills/pr-comment-resolver/scripts/pr-resolver*.sh` |
 | `search` | Web and library documentation search | MCP-based (no script) |
 | `research` | Academic research with evidence cards | `skills/research/scripts/research-*.sh` |
-| `agent-orchestration` | Spawn and manage sub-agents | `skills/agent-orchestration/scripts/agent-*.sh` |
 | `ui-animation` | Guide tasteful UI animation implementation | Workflow skill (no script) |
 
 ## MCP Integration
@@ -82,7 +76,7 @@ Verify in your agent:
 ## Safety and Guardrails
 
 - Skills are driven by `SKILL.md` instructions and execute scripts via bash.
-- The installer preserves existing Codex/OpenCode configurations.
+- The installer preserves existing OpenCode configurations.
 - Outputs are written to `.ada/` directories; no hidden state.
 - Use `skills-config.json` to disable skills per agent.
 
