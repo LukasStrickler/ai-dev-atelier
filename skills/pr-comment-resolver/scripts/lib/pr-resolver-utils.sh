@@ -71,6 +71,10 @@ check_prerequisites() {
     log_error "jq not found. Install: https://stedolan.github.io/jq/"
     return 1
   fi
+  if ! command -v python3 &> /dev/null; then
+    log_error "python3 not found. Install: https://www.python.org/downloads/"
+    return 1
+  fi
   return 0
 }
 
@@ -98,6 +102,9 @@ get_pr_data_path() {
 # ============================================================================
 # Git/GitHub Helpers
 # ============================================================================
+
+# WARNING: Callers MUST validate returned PR number against workspace state
+# before performing destructive operations to prevent acting on wrong PR.
 
 get_repo_owner_repo() {
   local remote_url
@@ -152,7 +159,7 @@ detect_pr_number() {
     local current_sha
     current_sha=$(git rev-parse HEAD 2>/dev/null || echo "")
     if [ -n "$current_sha" ]; then
-      pr_number=$(gh pr list --json number,headRefOid --jq --arg sha "$current_sha" '.[] | select(.headRefOid == $sha) | .number' 2>/dev/null | head -1)
+      pr_number=$(gh pr list --json number,headRefOid --jq '.[] | select(.headRefOid == "'"$current_sha"'") | .number' 2>/dev/null | head -1)
       if [ -n "$pr_number" ] && [ "$pr_number" != "null" ]; then
         echo "$pr_number"
         return 0
@@ -292,7 +299,7 @@ fetch_graphql_paginated() {
         -F repo="$repo" \
         -F pr_number="$pr_number" \
         -F page_size="$page_size" \
-        2>/dev/null || echo "")
+        2>/dev/null | fix_json_newlines || echo "")
     else
       response=$(gh api graphql \
         -f query="$query_template" \
@@ -301,7 +308,7 @@ fetch_graphql_paginated() {
         -F pr_number="$pr_number" \
         -F page_size="$page_size" \
         -f cursor="$cursor" \
-        2>/dev/null || echo "")
+        2>/dev/null | fix_json_newlines || echo "")
     fi
     
     if [ -z "$response" ]; then
@@ -595,8 +602,10 @@ check_semantic_duplicate() {
   local escaped_body
   escaped_body=$(printf '%s' "$new_body" | tr '\n' '\x1E')
   
-  awk -v new_body="$escaped_body" -v RS='\x1E' '
+  awk -v new_body="$escaped_body" '
   function normalize(s) {
+    # Convert \x1E placeholder back to spaces to match cache sanitization
+    gsub(/\x1E/, " ", s)
     gsub(/!\[(high|medium|low)\]/, "", s)
     gsub(/\*\*[^*]+\*\*/, "", s)
     gsub(/`[^`]+`/, "", s)

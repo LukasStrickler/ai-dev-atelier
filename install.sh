@@ -1171,34 +1171,44 @@ configure_opencode_agents() {
       local file_path="${BASH_REMATCH[1]}"
 
       # Security: Prevent path traversal attacks
-      # 1. Block paths containing '..' or starting with '/'
-      # 2. Resolve the full path and verify it's under ATELIER_DIR
-      if [[ "$file_path" == *".."* ]] || [[ "$file_path" == /* ]]; then
-        log_error "  ${agent_name}: invalid path (contains '..' or is absolute): ${file_path}"
-        continue
+      # Get canonical ATELIER_DIR to handle any symlinks
+      local canonical_atelier_dir
+      if command -v realpath >/dev/null 2>&1; then
+        canonical_atelier_dir=$(realpath "$ATELIER_DIR" 2>/dev/null) || canonical_atelier_dir="$ATELIER_DIR"
+      else
+        canonical_atelier_dir="$ATELIER_DIR"
       fi
 
+      # Build full path and resolve it to canonical form
       local full_path="${ATELIER_DIR}/${file_path}"
 
-      # Resolve to absolute path to normalize any symlinks and verify containment
+      # Resolve to canonical absolute path to normalize symlinks
+      # Use cd+pwd-P approach for macOS compatibility (realpath -m is GNU-specific)
       local resolved_path
-      if ! resolved_path_dir=$(cd "$(dirname "$full_path")" 2>/dev/null && pwd -P); then
+      local resolved_dir
+      if ! resolved_dir=$(cd "$(dirname "$full_path")" 2>/dev/null && pwd -P); then
         log_error "  ${agent_name}: directory for prompt file not found or is invalid: $(dirname "$full_path")"
         continue
       fi
-      resolved_path="${resolved_path_dir}/$(basename "$full_path")"
+      resolved_path="${resolved_dir}/$(basename "$full_path")"
 
-      # Verify the resolved path is still under ATELIER_DIR
-      # Use trailing slash to prevent sibling directory attacks (e.g., /home/user/repo-malicious)
-      if [[ ! "$resolved_path/" == "${ATELIER_DIR}/"* ]]; then
-        log_error "  ${agent_name}: path traversal detected: ${file_path} resolves outside ATELIER_DIR"
-        continue
-      fi
+      # Verify the resolved path is under ATELIER_DIR using canonical paths
+      # This prevents both path traversal (via symlinks) and sibling directory attacks
+      # Use trailing slashes to prevent sibling directory attacks (e.g., /home/user/repo-malicious)
+      case "$resolved_path/" in
+        "${canonical_atelier_dir}/"*)
+          # OK: resolved_path is within ATELIER_DIR
+          ;;
+        *)
+          log_error "  ${agent_name}: path traversal detected: ${file_path} resolves to ${resolved_path} which is outside ${canonical_atelier_dir}"
+          continue
+          ;;
+      esac
 
-      if [ -f "$full_path" ]; then
+      if [ -f "$resolved_path" ]; then
         # Read file content and escape for JSON
         local file_content
-        file_content=$(cat "$full_path")
+        file_content=$(cat "$resolved_path")
         
         # Update the agent's prompt with file content using jq
         agents_data=$(echo "$agents_data" | jq --arg name "$agent_name" --arg content "$file_content" \

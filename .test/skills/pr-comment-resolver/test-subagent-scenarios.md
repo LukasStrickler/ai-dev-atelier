@@ -206,9 +206,11 @@ Watch for these failures:
 2. Run `bash skills/pr-comment-resolver/scripts/pr-resolver.sh {PR}`
 3. Identify an actionable cluster
 4. Spawn the subagent:
-   ```
+
+   ```bash
    @pr-comment-reviewer @.ada/data/pr-resolver/pr-{N}/clusters/{cluster}.md
    ```
+
 5. Validate against the scenarios above
 6. Check that output matches both Markdown and JSON formats
 

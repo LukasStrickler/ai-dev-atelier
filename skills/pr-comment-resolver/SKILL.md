@@ -1,6 +1,6 @@
 ---
 name: pr-comment-resolver
-description: "Batch-resolve bot review comments (CodeRabbit, Copilot, Gemini) on PRs using AI subagents. Fetches all comments, clusters by file+concern, spawns subagent per cluster to validate/fix/dismiss. Use when: (1) PR has many bot comments to process at once, (2) Want AI to auto-fix valid issues and dismiss false positives, (3) Need to triage CodeRabbit/Copilot/Gemini review comments, (4) Processing PR feedback at scale, (5) Want to see what's already fixed vs still pending. Triggers: resolve bot comments, triage bot review, process CodeRabbit comments, handle Copilot suggestions, batch resolve PR comments, auto-fix review comments, pr comment resolver, resolve all PR comments."
+description: "Resolve bot review comments (CodeRabbit, Copilot, Gemini) on GitHub PRs using subagents. Use when: (1) User asks to 'review PR comments' or 'resolve PR comments', (2) User says 'work through PR N comments' or 'handle bot comments', (3) Need to triage CodeRabbit/Copilot/Gemini review comments, (4) Processing PR feedback at scale, (5) Want to see what's already fixed vs still pending. NOT for: creating PRs, reviewing code yourself, writing new reviews. Triggers: review PR comments, resolve PR comments, work through PR comments, handle bot comments, process CodeRabbit comments, triage PR feedback, fix PR review issues, resolve bot comments, pr comment resolver."
 ---
 
 # PR Comment Resolver
@@ -9,26 +9,37 @@ Multi-agent system for fetching, clustering, and resolving PR review comments at
 
 ---
 
-## ⛔ CRITICAL: DO NOT FETCH PR DATA MANUALLY
+## ⛔⛔⛔ FORBIDDEN: gh cli / gh api for PR comments ⛔⛔⛔
 
-**BEFORE doing ANYTHING else, run the script:**
+**DO NOT USE `gh` commands to fetch PR comment data. EVER.**
+
+```bash
+# ❌ FORBIDDEN - NEVER run these commands
+gh pr view <N> --json ...
+gh api repos/.../pulls/<N>/comments
+gh api repos/.../pulls/<N>/reviews
+gh api graphql -f query='...'  # for PR data
+```
+
+**Why this is forbidden:**
+| Method | Tokens | Quality |
+|--------|--------|---------|
+| `gh api` / `gh pr view` | 10,000-50,000 | Raw, unprocessed, duplicates |
+| `pr-resolver.sh` script | 500-2,000 | Clustered, deduplicated, actionable |
+
+The script already fetches everything. Manual `gh` calls waste 10-50x tokens on garbage data.
+
+---
+
+**✅ CORRECT: Run this script FIRST**
 
 ```bash
 bash skills/pr-comment-resolver/scripts/pr-resolver.sh <PR_NUMBER>
 ```
 
-**FORBIDDEN COMMANDS** (these bloat context with 10-50x more data than needed):
-- ❌ `gh pr view <N> --json ...`
-- ❌ `gh api repos/.../pulls/<N>/comments`
-- ❌ `gh api repos/.../pulls/<N>/reviews`
-- ❌ Any manual GitHub API calls for PR comment data
-
-**WHY**: The script fetches ALL data, clusters it, and outputs token-efficient JSON. Manual fetches duplicate this work and waste context tokens on raw unprocessed data.
-
-**CORRECT WORKFLOW**:
-1. Run `pr-resolver.sh <PR>` FIRST
-2. Read `.ada/data/pr-resolver/pr-<N>/actionable.json`
-3. Spawn subagents per cluster
+**Then:**
+1. Read `.ada/data/pr-resolver/pr-<N>/actionable.json`
+2. Spawn subagents per cluster
 
 ---
 
@@ -62,6 +73,7 @@ bash skills/pr-comment-resolver/scripts/pr-resolver.sh 7
 #   └── clusters/       (markdown files for subagent consumption)
 ```
 
+
 ```typescript
 // 2. Fire subagents for each actionable cluster (non-blocking, returns immediately)
 background_task({ agent: "pr-comment-reviewer", prompt: "Process cluster. Read: .ada/data/pr-resolver/pr-7/clusters/agents-md-suggestion.md", description: "PR #7: agents-md" })
@@ -69,11 +81,13 @@ background_task({ agent: "pr-comment-reviewer", prompt: "Process cluster. Read: 
 // ... spawn all clusters immediately, then collect results as they complete with background_output(task_id)
 ```
 
+
 ```bash
 # 3. After all subagents complete, verify
 bash skills/pr-comment-resolver/scripts/pr-resolver.sh 7
 # Success: actionable_clusters should be 0
 ```
+
 
 ## Output Files
 

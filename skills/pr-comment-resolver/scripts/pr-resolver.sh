@@ -154,10 +154,8 @@ TOTAL_UNRESOLVED=$(echo "$REVIEW_COMMENTS_WITH_STATUS" | jq '[.[] | select(.reso
 
 # Process ALL comments (both resolved and unresolved) for full context
 # Use ASCII unit separator (0x1F) as field delimiter
-# Use Unicode U+240A (Symbol for Line Feed) as newline placeholder in body field
 DELIM=$'\x1f'
-NEWLINE_PLACEHOLDER=$'\xE2\x90\x8A'  # ␊ (U+240A)
-echo "$REVIEW_COMMENTS_WITH_STATUS" | jq -r --arg d "$DELIM" --arg nl "$NEWLINE_PLACEHOLDER" '.[] | [
+echo "$REVIEW_COMMENTS_WITH_STATUS" | jq -r --arg d "$DELIM" '.[] | [
   (.id // ""),
   (.path // "unknown"),
   (.line // .original_line // ""),
@@ -166,14 +164,13 @@ echo "$REVIEW_COMMENTS_WITH_STATUS" | jq -r --arg d "$DELIM" --arg nl "$NEWLINE_
   (.thread_id // ""),
   (.resolved // false),
   (.in_reply_to_id // ""),
-  (.body // "" | gsub("\n"; $nl) | gsub("\r"; ""))
+  (.body // "" | @base64)
 ] | join($d)' | while IFS="$DELIM" read -r COMMENT_ID FILE_PATH LINE_NUMBER AUTHOR COMMENT_URL THREAD_ID RESOLVED IN_REPLY_TO BODY_ESCAPED; do
   [ -z "$COMMENT_ID" ] && continue
-  
-  # Convert placeholder back to actual newlines
-  BODY=$(printf '%s' "$BODY_ESCAPED" | sed "s/$NEWLINE_PLACEHOLDER/\\
-/g")
-  
+
+  # Decode base64-encoded body (safe for all Unicode content including newlines)
+  BODY=$(printf '%s' "$BODY_ESCAPED" | base64 --decode 2>/dev/null || echo "$BODY_ESCAPED")
+
   CATEGORY=""
   if [ -n "$IN_REPLY_TO" ] && [ "$IN_REPLY_TO" != "null" ] && is_reply_comment "$BODY"; then
     CATEGORY=$(awk -F '\t' -v id="$IN_REPLY_TO" '$1==id {print $2; exit}' "$CATEGORY_CACHE")
