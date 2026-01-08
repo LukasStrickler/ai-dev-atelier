@@ -256,7 +256,7 @@ query($owner: String!, $repo: String!, $pr_number: Int!, $page_size: Int!, $curs
         nodes {
           id
           isResolved
-          comments(first: 250) {
+          comments(first: 100) {
             nodes {
               databaseId
             }

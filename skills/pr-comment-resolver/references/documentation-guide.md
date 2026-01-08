@@ -134,7 +134,6 @@ erDiagram
 ````
 
 #### Example: Sequence Diagram (Inline)
-
 ```markdown
 ## User Workflow
 
@@ -149,8 +148,7 @@ sequenceDiagram
     WebApp->>API: createItem()
     API->>DB: INSERT item
 ```
-
-```
+````
 
 ### Separate Files: Use PlantUML
 
@@ -309,7 +307,7 @@ The database is complex and uses an ORM for queries...
 
 ## Docs-as-Code Approach
 
-### Best practices
+#### Best practices:
 
 - ✅ Store documentation in version control (Git)
 - ✅ Update docs in the same PR as code changes
@@ -328,7 +326,7 @@ The database is complex and uses an ORM for queries...
 
 ## Consistency and Style
 
-### Maintain consistency
+#### Maintain consistency:
 
 - ✅ Use consistent terminology across all docs
 - ✅ Follow the same structure for similar documentation types
@@ -336,7 +334,7 @@ The database is complex and uses an ORM for queries...
 
 ## Discoverability and Cross-Referencing
 
-### Make documentation discoverable
+#### Make documentation discoverable:
 
 - ✅ Use clear, descriptive file names
 - ✅ Add cross-references between related documents
