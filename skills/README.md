@@ -18,7 +18,6 @@ Skills are organized directories containing `SKILL.md` files that follow the [An
 | [`resolve-pr-comments`](./resolve-pr-comments/SKILL.md) | Multi-agent PR comment resolution for bot reviews (CodeRabbit, Copilot, Gemini) | `scripts/pr-resolver*.sh` |
 | [`search`](./search/SKILL.md) | Search the web and library documentation using Tavily and Context7 MCPs | N/A (MCP-based skill) |
 | [`research`](./research/SKILL.md) | Conduct academic research using OpenAlex, PDF extraction, and paper search MCPs with evidence cards | `scripts/research-*.sh` |
-| [`agent-orchestration`](./agent-orchestration/SKILL.md) | Spawn and manage hierarchical AI sub-agents with role-aware wrappers and verification templates | `scripts/agent-*.sh`, `scripts/orchestrator-*.sh` |
 | [`ui-animation`](./ui-animation/SKILL.md) | Guide tasteful UI animation implementation with easing, springs, timing, and accessibility | N/A (workflow skill) |
 
 ## Quick Reference
@@ -70,11 +69,6 @@ Skills are organized directories containing `SKILL.md` files that follow the [An
 - **MCPs**: OpenAlex (paper discovery), PDF extractor (text extraction), Paper-search (optional, multi-platform download)
 - **Setup**: Configure MCP servers in `mcp.json`
 
-### Agent Orchestration
-- **When to use**: Delegating work to subagents, parallel research/implementation/testing, hierarchical orchestration
-- **How agents use it**: Agents read `SKILL.md` and execute scripts in `scripts/agent-*.sh` and `scripts/orchestrator-*.sh`
-- **Scripts**: Embedded in `skills/agent-orchestration/scripts/agent-*.sh`
-
 ### UI Animation
 - **When to use**: Implementing enter/exit animations, choosing easing curves, configuring springs, setting durations, ensuring accessibility
 - **How agents use it**: Agents follow instructions in `SKILL.md` (workflow skill, no scripts)
@@ -84,7 +78,7 @@ Skills are organized directories containing `SKILL.md` files that follow the [An
 
 Skills follow the Anthropic Agent Skills standard:
 
-1. **Discovery**: Agents scan skill directories (like `~/.codex/skills`) for directories containing `SKILL.md` files
+1. **Discovery**: Agents scan skill directories (like `~/.opencode/skill`) for directories containing `SKILL.md` files
 2. **Loading**: Agents read `SKILL.md` files which contain:
    - YAML frontmatter with `name` and `description`
    - Detailed instructions on when and how to use the skill
@@ -120,7 +114,7 @@ bash .test/scripts/validate-skills.sh
 
 ## Skill Format
 
-Each skill follows the Anthropic/Codex standard:
+Each skill follows the Anthropic Agent Skills standard:
 
 ```yaml
 ---

@@ -4,7 +4,7 @@ This file defines how AI agents and contributors should work in this repository.
 
 ## Overview
 
-AI Dev Atelier: Production-grade skill pack for AI-assisted development. 10 skills following Anthropic Agent Skills standard, with MCP integrations for search/research.
+AI Dev Atelier: Production-grade skill pack for AI-assisted development. 9 skills following Anthropic Agent Skills standard, with MCP integrations for search/research.
 
 ## For AI agents
 
@@ -18,7 +18,7 @@ Read these first:
 
 ```text
 ai-dev-atelier/
-├── skills/                    # 10 skill directories
+├── skills/                    # 9 skill directories
 │   ├── <name>/SKILL.md        # YAML frontmatter + instructions
 │   ├── <name>/scripts/        # Executable bash scripts
 │   └── <name>/references/     # Guides, templates, examples
@@ -42,7 +42,6 @@ ai-dev-atelier/
 | `resolve-pr-comments` | Multi-agent PR comment resolution | `scripts/pr-resolver*.sh` |
 | `search` | Web + library docs + GitHub code search | MCP-based |
 | `research` | Academic research with evidence cards | `scripts/research-*.sh` |
-| `agent-orchestration` | Spawn/manage hierarchical subagents | `scripts/agent-*.sh` |
 | `ui-animation` | Tasteful UI animation & accessibility | Workflow (no script) |
 
 ## Commands
@@ -60,7 +59,6 @@ bash skills/<skill>/scripts/<script>.sh    # Run skill script
 
 | Agent | Skills Path | MCP Config |
 |-------|-------------|------------|
-| Codex | `~/.codex/skills` | `~/.codex/config.toml` |
 | OpenCode | `~/.opencode/skill` | `~/.opencode/opencode.json` |
 
 Respects `$XDG_CONFIG_HOME` if set.
@@ -108,8 +106,6 @@ All runtime data under `.ada/` (gitignored):
 - `.ada/data/reviews/` - Code review results
 - `.ada/data/pr-resolver/` - PR comment resolution data
 - `.ada/data/research/{topic}/` - Evidence cards, reports
-- `.ada/data/agents/runs/` - Agent orchestration runs
-- `.ada/data/agents/worktrees/` - Agent git worktrees
 - `.ada/temp/` - Temporary files (downloads, etc.)
 
 ## Anti-Patterns (THIS PROJECT)
@@ -122,11 +118,6 @@ All runtime data under `.ada/` (gitignored):
 - Never skip Step 0 (codebase context) - ALWAYS gather context first
 - Never stop at 1-2 evidence cards - ALWAYS produce 5+ cards
 - Never batch tool calls without writing - write after 1-2 calls
-
-**Agent orchestration:**
-- Helpers (Level 3) must NOT spawn further agents
-- No lateral communication between specialists - report only to parent
-- Stay within scope - do not change unrelated files
 
 **PR comment resolver:**
 - Never auto-fix security issues - always defer to orchestrator
@@ -159,8 +150,6 @@ Body contains: instructions, workflows, examples, script references.
 bash .test/scripts/validate-skills.sh       # Validate skill structure
 bash .test/scripts/validate-skills-tests.sh # Test the validator itself
 ```
-
-Agent orchestration has integration tests in `.test/skills/agent-orchestration/`.
 
 ## For human contributors
 

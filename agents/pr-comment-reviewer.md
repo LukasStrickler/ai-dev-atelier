@@ -415,6 +415,7 @@ bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh {PR} {COMMENT_ID}
 ```
 
 **For false positives (with evidence gathered):**
+
 ```bash
 bash skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh {PR} {COMMENT_ID} "False positive: {evidence}"
 ```

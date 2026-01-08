@@ -38,7 +38,6 @@ The agents are already capable out of the box, but AI Dev Atelier injects skills
 | `pr-review` | Fetches, resolves, and dismisses GitHub PR comments. |
 | `search` | Enhanced web and library doc search via Tavily and Context7. |
 | `research` | Academic paper discovery with evidence cards. |
-| `agent-orchestration` | Hierarchical sub-agent spawning (primarily useful with raw Codex). |
 
 The difference is practical: without skills, an agent writes code. With skills, it writes code that is reviewed, documented, and backed by research when needed.
 
@@ -57,9 +56,9 @@ Vibekanban handles orchestration, cloudflared handles access, oh-my-opencode han
 3. Verify the repository:
    - `bash ~/ai-dev-atelier/setup.sh`
 
-4. Install skills and MCPs (Codex and OpenCode):
+4. Install skills and MCPs (OpenCode):
    - `bash ~/ai-dev-atelier/install.sh`
-   - This installs to `~/.codex/skills` and `~/.opencode/skill` and updates MCP configs.
+   - This installs to `~/.opencode/skill` and updates MCP configs.
 
 5. Restart oh-my-opencode so skills and MCPs reload.
 
