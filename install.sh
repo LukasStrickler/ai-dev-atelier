@@ -1085,7 +1085,7 @@ configure_claude_hooks() {
         continue
       fi
       
-      local full_path="${OPENCODE_SKILLS_DIR}/${hook_script}"
+      local full_path="${SOURCE_SKILLS_DIR}/${hook_script}"
       
       if [ ! -f "$full_path" ]; then
         log_warning "Hook script not found: ${hook_script}"
