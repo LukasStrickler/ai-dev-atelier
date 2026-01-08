@@ -151,6 +151,43 @@ git push origin HEAD  # BYPASS_GRAPHITE: gt service unavailable
 
 The `# BYPASS_GRAPHITE: <reason>` comment is required to bypass the hook.
 
+## Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| `gt: command not found` | `npm install -g @withgraphite/graphite-cli` |
+| `Not authenticated` | `gt auth login` |
+| `Branch not tracked` | `gt track` then `gt submit` |
+| `Stack out of sync` | `gt restack` then `gt submit --stack` |
+| `Merge conflict during sync` | Resolve conflicts, `git add`, `git rebase --continue`, then `gt sync` |
+| Need to set up new repo | `gt auth login && gt repo init --trunk main` |
+
+## Splitting a Large Commit
+
+If you realize a commit should have been stacked:
+
+```bash
+git reset HEAD~1 --soft          # Undo commit, keep changes staged
+gt create step-1-types
+git add src/types/* && git commit -m "feat: add types"
+gt create step-2-impl
+git add src/api/* && git commit -m "feat: implement"
+gt submit --stack
+```
+
+## View Stack Status
+
+```bash
+gt log short
+```
+
+```text
+  main
+  └── feat-schema (#234, approved)
+      └── feat-api (#235, changes requested)
+          └── feat-ui (#236, pending review)
+```
+
 ## Scripts
 
 | Script | Purpose |
@@ -165,11 +202,6 @@ The `# BYPASS_GRAPHITE: <reason>` comment is required to bypass the hook.
 | Before submit | `code-quality` | Run checks, ensure CI will pass |
 | After changes | `git-commit` | Commit with proper message |
 | Before PR | `code-review` | Review your changes |
-
-## References
-
-- `references/graphite-workflow.md` - Detailed examples
-- [Graphite Docs](https://graphite.dev/docs/cli-overview)
 
 ## Output
 
