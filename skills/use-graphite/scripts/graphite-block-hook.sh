@@ -42,7 +42,7 @@ check_blocked() {
     "git push"|"git push "*)
       echo "git push:gt submit"
       return 0 ;;
-    "git checkout -b "*|"git checkout --branch "*)
+    "git checkout -b"*|"git checkout --branch "*)
       echo "git checkout -b:gt create <branch>"
       return 0 ;;
     "gh pr create"|"gh pr create "*)
