@@ -215,10 +215,93 @@ CURRENT_REPO_UPPER=$(echo "$CURRENT_REPO" | tr '[:lower:]' '[:upper:]')
 test_hook "gh api repos/$CURRENT_REPO_UPPER/pulls/99999/comments" 0 "Allows: gh api with uppercase repo (case insensitive)"
 
 echo ""
+echo "--- Blocking tests with mocked gh (simulates OPEN PR) ---"
+echo ""
+
+MOCK_GH_DIR=$(mktemp -d)
+cat > "$MOCK_GH_DIR/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$*" == *"--json state"* ]]; then
+  echo "OPEN"
+  exit 0
+fi
+exit 1
+MOCK_EOF
+chmod +x "$MOCK_GH_DIR/gh"
+
+test_hook_mocked() {
+  local cmd="$1"
+  local expected_exit="$2"
+  local expected_pattern="$3"
+  local description="$4"
+  
+  local actual_exit=0
+  local output
+  output=$(PATH="$MOCK_GH_DIR:$PATH" bash -c "echo '{\"tool_input\":{\"command\":\"$cmd\"}}' | bash '$HOOK_SCRIPT'" 2>&1) || actual_exit=$?
+  
+  if [ "$actual_exit" -eq "$expected_exit" ]; then
+    if [ -n "$expected_pattern" ]; then
+      if echo "$output" | grep -q "$expected_pattern"; then
+        pass "$description"
+      else
+        fail "$description (output missing pattern: $expected_pattern)"
+      fi
+    else
+      pass "$description"
+    fi
+  else
+    fail "$description (expected exit $expected_exit, got $actual_exit)"
+  fi
+}
+
+test_hook_mocked "gh pr view 123 --json comments" 2 "BLOCKED" "Blocks: gh pr view --json comments (mocked OPEN)"
+test_hook_mocked "gh pr view 456 --json reviews" 2 "BLOCKED" "Blocks: gh pr view --json reviews (mocked OPEN)"
+test_hook_mocked "gh pr view 789 --json comments,reviews" 2 "BLOCKED" "Blocks: gh pr view --json comments,reviews (mocked OPEN)"
+test_hook_mocked "gh pr view 123 --json=comments" 2 "BLOCKED" "Blocks: gh pr view --json=comments (equals syntax)"
+test_hook_mocked "gh pr view 123 --json=reviews" 2 "BLOCKED" "Blocks: gh pr view --json=reviews (equals syntax)"
+test_hook_mocked "gh pr view 123 --comments" 2 "BLOCKED" "Blocks: gh pr view --comments (mocked OPEN)"
+test_hook_mocked "gh api repos/$CURRENT_REPO/pulls/123/comments" 2 "BLOCKED" "Blocks: gh api .../pulls/N/comments (mocked OPEN)"
+test_hook_mocked "gh api repos/$CURRENT_REPO/pulls/123/reviews" 2 "BLOCKED" "Blocks: gh api .../pulls/N/reviews (mocked OPEN)"
+test_hook_mocked "gh api pulls/123/comments" 2 "BLOCKED" "Blocks: gh api pulls/N/comments (relative path)"
+test_hook_mocked "gh api pulls/123/reviews" 2 "BLOCKED" "Blocks: gh api pulls/N/reviews (relative path)"
+
+rm -rf "$MOCK_GH_DIR"
+
+echo ""
 echo "--- Error message content verification ---"
 echo ""
 
-test_hook_with_output "gh pr view 1 --json comments" 0 "" "Error message test skipped (PR 1 may not exist)"
+MOCK_GH_DIR2=$(mktemp -d)
+cat > "$MOCK_GH_DIR2/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$*" == *"--json state"* ]]; then
+  echo "OPEN"
+  exit 0
+fi
+exit 1
+MOCK_EOF
+chmod +x "$MOCK_GH_DIR2/gh"
+
+output=$(PATH="$MOCK_GH_DIR2:$PATH" bash -c "echo '{\"tool_input\":{\"command\":\"gh pr view 123 --json comments\"}}' | bash '$HOOK_SCRIPT'" 2>&1) || true
+if echo "$output" | grep -q "resolve-pr-comments"; then
+  pass "Error message mentions resolve-pr-comments skill"
+else
+  fail "Error message should mention resolve-pr-comments skill"
+fi
+
+if echo "$output" | grep -q "pr-resolver.sh"; then
+  pass "Error message mentions pr-resolver.sh script"
+else
+  fail "Error message should mention pr-resolver.sh script"
+fi
+
+if echo "$output" | grep -q "BYPASS_PR_COMMENTS"; then
+  pass "Error message mentions bypass mechanism"
+else
+  fail "Error message should mention bypass mechanism"
+fi
+
+rm -rf "$MOCK_GH_DIR2"
 
 #==============================================================================
 # Summary

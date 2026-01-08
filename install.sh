@@ -982,14 +982,14 @@ add_or_update_hook() {
   hook_filename=$(basename "$hook_script")
   
   local hook_exists
-  hook_exists=$(jq -r ".hooks.${hook_type}[] | select(.matcher == \"${tool_matcher}\") | .hooks[]?.command // empty" "$CLAUDE_CONFIG" 2>/dev/null | grep -c "$hook_filename" || true)
+  hook_exists=$(jq -r ".hooks.${hook_type}[] | select(.matcher == \"${tool_matcher}\") | .hooks[]?.command // empty" "$CLAUDE_CONFIG" 2>/dev/null | grep -cF "$hook_filename" || true)
   
   if [ "$hook_exists" -gt 0 ]; then
     jq --arg hook_script "bash ${hook_script}" \
       --arg hook_filename "$hook_filename" \
       --arg hook_type "$hook_type" \
       --arg tool_matcher "$tool_matcher" \
-      '(.hooks[$hook_type][] | select(.matcher == $tool_matcher) | .hooks[] | select(.command | test($hook_filename))).command = $hook_script' \
+      '(.hooks[$hook_type][] | select(.matcher == $tool_matcher) | .hooks[] | select(.command | contains($hook_filename))).command = $hook_script' \
       "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" && \
       mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG"
     return 1

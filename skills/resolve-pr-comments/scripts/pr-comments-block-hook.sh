@@ -11,29 +11,23 @@
 
 set -euo pipefail
 
+command -v jq &>/dev/null || { echo "jq required" >&2; exit 0; }
+
 STDIN_DATA=$(cat)
 
 get_command() {
   [[ -z "${STDIN_DATA:-}" ]] && return
-  if command -v jq &>/dev/null; then
-    jq -r '.tool_input.command // empty' 2>/dev/null <<< "$STDIN_DATA"
-  else
-    sed -n 's/.*"command"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' <<< "$STDIN_DATA" 2>/dev/null | head -1
-  fi
+  jq -r '.tool_input.command // empty' 2>/dev/null <<< "$STDIN_DATA"
 }
 
-CURRENT_REPO=""
 get_current_repo() {
-  [[ -n "$CURRENT_REPO" ]] && { echo "$CURRENT_REPO"; return 0; }
-  
   local remote_url
   remote_url=$(git config --get remote.origin.url 2>/dev/null) || return 1
   
   if [[ "$remote_url" =~ github\.com[:/]([^/]+)/([^/]+?)(\.git)?$ ]]; then
-    CURRENT_REPO="${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
-    CURRENT_REPO="${CURRENT_REPO%.git}"
-    CURRENT_REPO="${CURRENT_REPO,,}"
-    echo "$CURRENT_REPO"
+    local repo="${BASH_REMATCH[1]}/${BASH_REMATCH[2]}"
+    repo="${repo%.git}"
+    echo "${repo,,}"
     return 0
   fi
   return 1
@@ -55,7 +49,8 @@ check_blocked() {
   
   local current_repo pr_number="" blocked_pattern="" is_current_repo=false
   
-  if [[ "$cmd" =~ ^gh\ pr\ view\ ([0-9]+).*--json\ +([^#]+) ]]; then
+  # Handle both --json fields and --json=fields syntax
+  if [[ "$cmd" =~ ^gh\ pr\ view\ ([0-9]+).*--json[=\ ]+([^#]+) ]]; then
     local pr_num="${BASH_REMATCH[1]}"
     local json_fields="${BASH_REMATCH[2]}"
     
