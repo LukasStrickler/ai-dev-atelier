@@ -258,6 +258,10 @@ gt log short
 | `graphite-detect.sh` | Check if Graphite is active |
 | `graphite-block-hook.sh` | PreToolUse hook (blocks conflicting commands) |
 
+## References
+
+- `references/graphite-workflow.md` - Extended stacking examples, team patterns, CI integration
+
 ## Integration
 
 | When | Related Skill | Action |

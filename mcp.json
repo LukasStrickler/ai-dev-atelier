@@ -79,6 +79,13 @@
         "Z_AI_API_KEY": "Z_AI_API_KEY",
         "Z_AI_MODE": "ZAI"
       }
+    },
+    "graphite": {
+      "_description": "Graphite MCP - Stacked PR management. Required for 'graphite' skill.",
+      "_prerequisite": "Graphite CLI v1.6.7+ must be installed (npm install -g @withgraphite/graphite-cli)",
+      "_skills": ["graphite"],
+      "command": "gt",
+      "args": ["mcp"]
     }
   }
 }
