@@ -52,7 +52,7 @@ check_blocked() {
       [[ "$cmd" =~ (^|[[:space:]])(-i|--interactive)([[:space:]]|$|=) ]] && return 1
       echo "git rebase:gt restack"
       return 0 ;;
-    "git switch -c "*)
+    "git switch -c"*)
       echo "git switch -c:gt create <branch>"
       return 0 ;;
     "git branch "*)
