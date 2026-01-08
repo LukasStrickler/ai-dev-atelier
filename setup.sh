@@ -51,7 +51,33 @@ check_dependencies() {
     log_warning "jq not found. MCP configuration will be skipped during install."
   fi
 
+  # Check for optional skill-specific tools
+  check_optional_tools
+}
 
+# Check optional tools for specific skills
+check_optional_tools() {
+  echo ""
+  log_info "Checking optional skill dependencies..."
+
+  # Graphite CLI (for use-graphite skill)
+  if command -v gt > /dev/null 2>&1; then
+    local gt_version
+    gt_version=$(gt --version 2>/dev/null | head -1 || echo "unknown")
+    log_success "Graphite CLI found: ${gt_version}"
+  else
+    log_warning "Graphite CLI (gt) not found. use-graphite skill will not be functional."
+    echo "         Install with: npm install -g @withgraphite/graphite-cli"
+    echo "         Then run: gt auth login"
+  fi
+
+  # CodeRabbit CLI (for code-review skill)
+  if command -v coderabbit > /dev/null 2>&1; then
+    log_success "CodeRabbit CLI found"
+  else
+    log_warning "CodeRabbit CLI not found. code-review skill will not be functional."
+    echo "         Install with: npm install -g @coderabbitai/cli"
+  fi
 }
 
 # Check if skills directory exists
@@ -82,7 +108,7 @@ check_skills_dir() {
   fi
   
   # Optional skill directories
-  local optional_skills=("research" "search" "docs-write")
+  local optional_skills=("research" "search" "docs-write" "git-commit" "ui-animation" "use-graphite")
   for skill in "${optional_skills[@]}"; do
     if [ ! -d "${skills_dir}/${skill}" ]; then
       log_warning "Optional skill '${skill}' not found"
@@ -158,9 +184,9 @@ main() {
   echo "  1. Install skills to OpenCode:"
   echo "     bash ${ATELIER_DIR}/install.sh"
   echo ""
-echo "  2. Verify skills are loaded in OpenCode:"
+  echo "  2. Verify skills are loaded in OpenCode:"
   echo "     - Ask OpenCode: 'What skills are available?'"
-  echo "     - Should list: code-quality, docs-check, docs-write, git-commit, code-review, resolve-pr-comments, search, research, ui-animation"
+  echo "     - Should list: code-quality, docs-check, docs-write, git-commit, code-review, resolve-pr-comments, search, research, ui-animation, use-graphite"
   echo ""
   echo "  3. Read the skills documentation:"
   echo "     cat ${ATELIER_DIR}/skills/README.md"

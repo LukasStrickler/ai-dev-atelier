@@ -14,6 +14,7 @@ Skills are organized directories containing `SKILL.md` files that follow the [An
 | [`docs-check`](./docs-check/SKILL.md) | Analyze git diff to identify code changes requiring documentation updates | `scripts/check-docs.sh` |
 | [`docs-write`](./docs-write/SKILL.md) | Write or update documentation with clear style, structure, visuals, API/ADR/runbook patterns | N/A (workflow skill) |
 | [`git-commit`](./git-commit/SKILL.md) | Write clear git commits with Conventional Commits format, detect project conventions | N/A (workflow skill) |
+| [`use-graphite`](./use-graphite/SKILL.md) | Manage stacked PRs with Graphite CLI, auto-detect Graphite repos, block conflicting git commands | `scripts/graphite-*.sh` |
 | [`code-review`](./code-review/SKILL.md) | Review code changes using CodeRabbit - uncommitted files (task mode) or all PR files vs main (pr mode) | `scripts/review-*.sh` |
 | [`resolve-pr-comments`](./resolve-pr-comments/SKILL.md) | Multi-agent PR comment resolution for bot reviews (CodeRabbit, Copilot, Gemini) | `scripts/pr-resolver*.sh` |
 | [`search`](./search/SKILL.md) | Search the web and library documentation using Tavily and Context7 MCPs | N/A (MCP-based skill) |
@@ -42,6 +43,13 @@ Skills are organized directories containing `SKILL.md` files that follow the [An
 - **When to use**: After completing working code, before pushing, when code builds and tests pass
 - **How agents use it**: Agents follow instructions in `SKILL.md` (workflow skill, no scripts)
 - **References**: See `git-commit/references/examples.md` for extended commit examples
+
+### Use Graphite
+- **When to use**: Creating branches, pushing changes, or creating PRs in Graphite-enabled repos
+- **How agents use it**: Auto-detection via PreToolUse hook; agents use `gt` commands instead of `git`/`gh`
+- **Scripts**: `scripts/graphite-detect.sh` (detection), `scripts/graphite-block-hook.sh` (hook)
+- **MCP**: Graphite MCP (`gt mcp`) for stacked PR management
+- **References**: See `use-graphite/references/graphite-workflow.md` for detailed examples
 
 ### Code Review
 - **When to use**:
