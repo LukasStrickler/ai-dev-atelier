@@ -1,6 +1,6 @@
 ---
 name: use-graphite
-description: "Manage stacked PRs with Graphite CLI (gt) instead of git push/gh pr create. Auto-detects Graphite repos via .graphite_repo_config and blocks conflicting commands. Use when: (1) About to run git push or gh pr create in a Graphite repo, (2) Creating a new branch for a feature, (3) Submitting code for review, (4) Large changes that should be split into reviewable chunks, (5) Hook blocks your git command and suggests gt equivalent. NOT for: repos without .graphite_repo_config, git add/commit/status/log. Triggers: git push blocked, gh pr create blocked, create branch, submit PR, stacked PRs, split large PR, gt create, gt submit, graphite workflow."
+description: "Manage stacked PRs with Graphite CLI (gt) instead of git push/gh pr create. Auto-detects Graphite repos and blocks conflicting commands with helpful alternatives. Use when: (1) About to run git push or gh pr create in a Graphite repo, (2) Creating a new branch for a feature, (3) Submitting code for review, (4) Large changes that should be split into reviewable chunks, (5) Hook blocks your git command and suggests gt equivalent. NOT for: repos not initialized with Graphite, git add/commit/status/log. Triggers: git push blocked, gh pr create blocked, create branch, submit PR, stacked PRs, split large PR, gt create, gt submit, graphite workflow."
 ---
 
 # Use Graphite - Stacked PRs
