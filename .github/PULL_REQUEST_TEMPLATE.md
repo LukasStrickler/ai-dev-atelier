@@ -25,7 +25,6 @@ Fixes # (issue)
 <!-- Describe the tests you ran. Include commands and verification steps. -->
 
 - [ ] `make test` passes
-- [ ] Tested manually with Codex agent
 - [ ] Tested manually with OpenCode agent
 - [ ] N/A (documentation only)
 

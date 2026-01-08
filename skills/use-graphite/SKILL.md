@@ -196,6 +196,43 @@ git log --oneline -3            # Recent commits
 | Stack has merge conflicts | `gt sync` then resolve conflicts |
 | PRs exist but out of date | `gt sync && gt restack && gt submit --stack` |
 
+## CRITICAL: After Submit - Validate PR Description
+
+**`gt submit` creates PRs in draft mode with empty descriptions.** You MUST fill them.
+
+After every `gt submit`, immediately run:
+
+```bash
+# Get the PR number from gt submit output, then:
+gh pr view <PR_NUMBER> --json body,title --jq '.body'
+```
+
+**If the body is empty or just contains template placeholders:**
+
+```bash
+gh pr edit <PR_NUMBER> --title "feat: meaningful title" --body-file /path/to/pr-body.md
+```
+
+**What a complete PR description needs:**
+- Summary of what the PR does (2-3 sentences)
+- Type of change (bug fix, feature, refactor, etc.)
+- How it was tested
+- Files changed overview (for larger PRs)
+
+**Never leave PRs with:**
+- `Fixes # (issue)` placeholder unfilled
+- Empty checkboxes with no selections
+- Template comments like `<!-- What does this PR do? -->`
+- Just `## Summary` headers with no content
+
+**Workflow reminder:**
+```bash
+gt submit                           # Creates draft PR
+gh pr view <N> --json body          # Check if body is populated
+# If empty/template:
+gh pr edit <N> --title "..." --body "..."  # Fill it properly
+```
+
 ## Emergency Fallback
 
 If `gt` commands fail (auth expired, service down), save your work:
