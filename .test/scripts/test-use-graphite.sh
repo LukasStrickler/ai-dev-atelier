@@ -99,9 +99,21 @@ test_hook "git push # BYPASS_GRAPHITE: testing" 0 "Allows: git push with BYPASS_
 test_hook "gh pr create # BYPASS_GRAPHITE: emergency" 0 "Allows: gh pr create with BYPASS_GRAPHITE"
 
 # Empty/malformed input should be ALLOWED (fail open)
-echo "" | bash "$HOOK_SCRIPT" >/dev/null 2>&1 && pass "Allows: empty stdin" || fail "Allows: empty stdin"
-echo "{}" | bash "$HOOK_SCRIPT" >/dev/null 2>&1 && pass "Allows: empty JSON" || fail "Allows: empty JSON"
-echo "not json" | bash "$HOOK_SCRIPT" >/dev/null 2>&1 && pass "Allows: invalid JSON" || fail "Allows: invalid JSON"
+if echo "" | bash "$HOOK_SCRIPT" >/dev/null 2>&1; then
+  pass "Allows: empty stdin"
+else
+  fail "Allows: empty stdin"
+fi
+if echo "{}" | bash "$HOOK_SCRIPT" >/dev/null 2>&1; then
+  pass "Allows: empty JSON"
+else
+  fail "Allows: empty JSON"
+fi
+if echo "not json" | bash "$HOOK_SCRIPT" >/dev/null 2>&1; then
+  pass "Allows: invalid JSON"
+else
+  fail "Allows: invalid JSON"
+fi
 
 #==============================================================================
 # graphite-detect.sh tests (in current repo - should be Graphite-enabled)
