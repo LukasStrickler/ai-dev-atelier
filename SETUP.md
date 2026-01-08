@@ -1,6 +1,6 @@
 # AI Dev Atelier Setup Guide
 
-Quick setup guide for installing AI Dev Atelier skills into Codex.
+Quick setup guide for installing AI Dev Atelier skills into OpenCode.
 
 > **📦 Need to install dependencies first?** See [INSTALL.md](./INSTALL.md) for complete installation instructions including all required and optional dependencies.
 
@@ -13,14 +13,14 @@ git clone https://github.com/LukasStrickler/ai-dev-atelier.git ~/ai-dev-atelier
 # 2. Verify skill structure
 bash ~/ai-dev-atelier/setup.sh
 
-# 3. Install skills to Codex
+# 3. Install skills to OpenCode
 bash ~/ai-dev-atelier/install.sh
 
-# 4. Verify skills are loaded in Codex
-# Ask Codex: "What skills are available?"
+# 4. Verify skills are loaded in OpenCode
+# Ask OpenCode: "What skills are available?"
 ```
 
-The setup script verifies that all skills are properly structured. The install script copies skills to Codex's skills directory (`~/.codex/skills`).
+The setup script verifies that all skills are properly structured. The install script copies skills to OpenCode's skills directory (`~/.opencode/skill`).
 
 **Important**: Skills follow the [Anthropic Agent Skills](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills) standard. Scripts are embedded within each skill directory and are executed by agents when they use the skill.
 
@@ -30,13 +30,13 @@ Before running the setup and install scripts, ensure you have:
 
 - **Git** - Version control
 - **Bash** - Shell (included on macOS/Linux, Git Bash on Windows)
-- **Codex** - AI agent that supports skills (skills are installed to `~/.codex/skills`)
+- **OpenCode** - AI agent that supports skills (skills are installed to `~/.opencode/skill`)
 
 > **📖 Detailed installation instructions:** See [INSTALL.md](./INSTALL.md) for platform-specific installation commands and optional dependencies (GitHub CLI, CodeRabbit CLI, TypeScript, ESLint, Prettier).
 
 ## What Gets Installed
 
-The install script copies skills from the local repository to `~/.codex/skills`. Each skill includes:
+The install script copies skills from the local repository to `~/.opencode/skill`. Each skill includes:
 
 - **SKILL.md** - Skill definition with YAML frontmatter and instructions
 - **scripts/** - Executable scripts embedded within the skill
@@ -47,11 +47,12 @@ The install script copies skills from the local repository to `~/.codex/skills`.
 - **code-quality** - Code quality checks (typecheck, lint, format, markdown)
 - **docs-check** - Documentation update detection
 - **docs-write** - Documentation writing and updates
+- **git-commit** - Write clear commits with Conventional Commits format
 - **code-review** - CodeRabbit reviews (task and pr modes)
-- **pr-review** - GitHub PR comments management
+- **pr-comment-resolver** - GitHub PR comments management
 - **search** - Web and library documentation search (Tavily, Context7)
 - **research** - Academic research with evidence cards (OpenAlex, PDF extraction)
-- **agent-orchestration** - Spawn and manage hierarchical AI sub-agents
+- **ui-animation** - Guide tasteful UI animation implementation
 
 ## Installation Process
 
@@ -63,19 +64,19 @@ bash ~/ai-dev-atelier/setup.sh
 
 This script:
 - ✅ Verifies skills directory exists
-- ✅ Checks for required skills (code-quality, docs-check, code-review, pr-review)
+- ✅ Checks for core skills (code-quality, docs-check, code-review, pr-comment-resolver)
 - ✅ Validates SKILL.md files are present
 - ✅ Reports any missing or invalid skills
 
-### Step 2: Install Skills to Codex
+### Step 2: Install Skills to OpenCode
 
 ```bash
 bash ~/ai-dev-atelier/install.sh
 ```
 
 This script:
-- ✅ Copies skills to `~/.codex/skills`
-- ✅ Preserves existing `.system` directory in Codex
+- ✅ Copies skills to `~/.opencode/skill`
+- ✅ Preserves existing configuration
 - ✅ Shows smart diff before overwriting existing skills
 - ✅ Asks for confirmation before overwriting (use `--yes` to skip)
 
@@ -85,9 +86,9 @@ This script:
 
 ### Step 3: Verify Installation
 
-Ask Codex: "What skills are available?"
+Ask OpenCode: "What skills are available?"
 
-Codex should list: `code-quality`, `docs-check`, `docs-write`, `code-review`, `pr-review`, `search`, `research`, `agent-orchestration`
+OpenCode should list: `code-quality`, `docs-check`, `docs-write`, `git-commit`, `code-review`, `pr-comment-resolver`, `search`, `research`, `ui-animation`
 
 ## Testing and Validation
 
@@ -101,7 +102,7 @@ bash .test/scripts/validate-skills.sh
 
 Skills follow the Anthropic Agent Skills standard:
 
-1. **Discovery**: Agents scan skill directories (like `~/.codex/skills`) for directories containing `SKILL.md` files
+1. **Discovery**: Agents scan skill directories (like `~/.opencode/skill`) for directories containing `SKILL.md` files
 2. **Loading**: Agents read `SKILL.md` files which contain:
    - YAML frontmatter with `name` and `description`
    - Detailed instructions on when and how to use the skill
@@ -144,15 +145,14 @@ The script will show a diff of changes before overwriting (unless `--yes` is use
 | Skills directory not found | Verify AI Dev Atelier is cloned correctly |
 | SKILL.md not found | Ensure you're running from the AI Dev Atelier root directory |
 | Permission denied | `chmod +x ~/ai-dev-atelier/install.sh` |
-| Skills not appearing in Codex | Verify skills are installed to `~/.codex/skills` |
-| Codex doesn't recognize skills | Restart Codex after installation |
+| Skills not appearing | Verify skills are installed to `~/.opencode/skill` |
 
 > **📖 More troubleshooting:** See [INSTALL.md](./INSTALL.md) for comprehensive troubleshooting guide and verification checklist.
 
 ## Next Steps
 
-1. **Verify skills are loaded in Codex:**
-   - Ask Codex: "What skills are available?"
+1. **Verify skills are loaded in OpenCode:**
+   - Ask OpenCode: "What skills are available?"
    - Should list all installed skills
 
 2. **Read the skills documentation:**
@@ -161,8 +161,8 @@ The script will show a diff of changes before overwriting (unless `--yes` is use
    ```
 
 3. **Test a skill:**
-   - Ask Codex: "Run code quality checks" (triggers `code-quality` skill)
-   - Ask Codex: "Check if documentation needs updates" (triggers `docs-check` skill)
+   - Ask OpenCode: "Run code quality checks" (triggers `code-quality` skill)
+   - Ask OpenCode: "Check if documentation needs updates" (triggers `docs-check` skill)
 
 4. **Learn about individual skills:**
    - Read `skills/<skill-name>/SKILL.md` for detailed instructions

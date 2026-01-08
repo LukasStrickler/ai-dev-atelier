@@ -4,12 +4,12 @@
 # ============================================================================
 #
 # Description:
-#   Installs skills and MCP servers to both Codex and OpenCode agents.
+#   Installs skills and MCP servers to OpenCode agent.
 #   Follows Anthropic Agent Skills standard and OpenCode specifications.
 #
 # Features:
-#   - Installs skills to Codex (~/.codex/skills) and OpenCode (~/.opencode/skill)
-#   - Configures MCPs for both agents with proper format conversion
+#   - Installs skills to OpenCode (~/.opencode/skill)
+#   - Configures MCPs for OpenCode with proper format conversion
 #   - Preserves existing configurations (never overwrites)
 #   - Smart diff-based confirmation for skill updates
 #   - Agent-specific skill filtering via skills-config.json
@@ -49,16 +49,6 @@ ENV_EXAMPLE="${ATELIER_DIR}/.env.example"
 # ============================================================================
 # CONFIGURATION & PATHS
 # ============================================================================
-
-# Codex paths (Anthropic Agent Skills standard)
-# MCP config uses config.toml per OpenAI Codex docs: https://developers.openai.com/codex/mcp/
-if [ -n "${XDG_CONFIG_HOME:-}" ]; then
-  CODEX_SKILLS_DIR="${XDG_CONFIG_HOME}/codex/skills"
-  CODEX_MCP_CONFIG="${XDG_CONFIG_HOME}/codex/config.toml"
-else
-  CODEX_SKILLS_DIR="${HOME}/.codex/skills"
-  CODEX_MCP_CONFIG="${HOME}/.codex/config.toml"
-fi
 
 # OpenCode paths (OpenCode specification)
 # Skills use "skill" (singular) per OpenCode docs: https://opencode.ai/docs/skills/
@@ -139,7 +129,7 @@ load_env_file() {
 # ----------------------------------------------------------------------------
 # Determines the global OpenCode skills directory.
 # Per OpenCode docs: https://opencode.ai/docs/skills/
-# Always uses global config location (like Codex), not project-local.
+# Always uses global config location, not project-local.
 # - Global config: ~/.opencode/skill/<name>/SKILL.md
 #
 # Returns: Path to global OpenCode skills directory
@@ -177,7 +167,7 @@ parse_args() {
 
 show_help() {
   cat << EOF
-Install AI Dev Atelier Skills and MCPs to Codex and OpenCode
+Install AI Dev Atelier Skills and MCPs to OpenCode
 
 Usage: $0 [OPTIONS]
 
@@ -185,9 +175,9 @@ Options:
   -y, --yes    Skip confirmation prompts (auto-overwrite)
   -h, --help   Show this help message
 
-This script installs skills and MCPs to both Codex and OpenCode:
-  - Skills: ${CODEX_SKILLS_DIR} and ${OPENCODE_SKILLS_DIR}
-  - MCPs: ${CODEX_MCP_CONFIG} (TOML format) and ${OPENCODE_CONFIG} (JSON format)
+This script installs skills and MCPs to OpenCode:
+  - Skills: ${OPENCODE_SKILLS_DIR}
+  - MCPs: ${OPENCODE_CONFIG} (JSON format)
 
 Skills are installed following the Anthropic Agent Skills standard.
 Skills can be disabled per agent in skills-config.json.
@@ -321,9 +311,7 @@ preflight_checks() {
   check_dependencies
 
   local failed=0
-  check_write_access "$CODEX_SKILLS_DIR" || failed=$((failed + 1))
   check_write_access "$OPENCODE_SKILLS_DIR" || failed=$((failed + 1))
-  check_write_access "$(dirname "$CODEX_MCP_CONFIG")" || failed=$((failed + 1))
   check_write_access "$(dirname "$OPENCODE_CONFIG")" || failed=$((failed + 1))
 
   if [ "$failed" -gt 0 ]; then
@@ -442,276 +430,6 @@ show_diff_preview() {
 # ============================================================================
 # MCP CONFIGURATION
 # ============================================================================
-
-# ----------------------------------------------------------------------------
-# Convert JSON MCP Config to TOML Format
-# ----------------------------------------------------------------------------
-# Converts a single MCP server from JSON format (mcp.json) to TOML format
-# for Codex config.toml.
-#
-# Parameters:
-#   $1 - Server name
-#   $2 - Server config (JSON string from mcp.json)
-#
-# Returns:
-#   TOML-formatted config block via stdout
-#   Returns 1 on error
-#
-# References:
-#   - Codex MCP docs: https://developers.openai.com/codex/mcp/
-convert_mcp_to_toml() {
-  local server_name="$1"
-  local server_config="$2"
-  
-  # Escape server name for TOML (handle special characters)
-  local toml_name="$server_name"
-  
-  # Check if it's a remote MCP (has "url" field)
-  if echo "$server_config" | jq -e '.url' > /dev/null 2>&1; then
-    local url=$(echo "$server_config" | jq -r '.url')
-    local headers=$(echo "$server_config" | jq -c '.headers // {}')
-    
-    # Build TOML for remote MCP
-    echo "[mcp_servers.${toml_name}]"
-    echo "url = \"${url}\""
-    
-    # Add headers if present
-    local header_count=$(echo "$headers" | jq 'length')
-    if [ "$header_count" -gt 0 ]; then
-      echo "http_headers = {"
-      echo "$headers" | jq -r 'to_entries[] | "  \"\(.key)\" = \"\(.value)\","' | sed '$ s/,$//'
-      echo "}"
-    fi
-    
-    # Add disabled_tools if _disabledTools metadata exists (excludes _comment key)
-    local disabled_tools=$(echo "$server_config" | jq -c '._disabledTools // {} | keys | map(select(startswith("_") | not))')
-    if [ "$disabled_tools" != "[]" ] && [ "$disabled_tools" != "null" ]; then
-      echo "disabled_tools = $disabled_tools"
-    fi
-    
-    return 0
-  fi
-  
-  # Check if it's a local MCP (has "command" field)
-  if echo "$server_config" | jq -e '.command' > /dev/null 2>&1; then
-    local command=$(echo "$server_config" | jq -r '.command')
-    local args=$(echo "$server_config" | jq -c '.args // []')
-    local env=$(echo "$server_config" | jq -c '.env // {}')
-    
-    # Build TOML for local MCP
-    echo "[mcp_servers.${toml_name}]"
-    echo "command = \"${command}\""
-    
-    # Add args if present
-    local args_count=$(echo "$args" | jq 'length')
-    if [ "$args_count" -gt 0 ]; then
-      echo "args = ["
-      echo "$args" | jq -r '.[] | "  \"\(.)\","' | sed '$ s/,$//'
-      echo "]"
-    fi
-    
-    # Add env if present
-    local env_count=$(echo "$env" | jq 'length')
-    if [ "$env_count" -gt 0 ]; then
-      echo "env = {"
-      echo "$env" | jq -r 'to_entries[] | "  \"\(.key)\" = \"\(.value)\","' | sed '$ s/,$//'
-      echo "}"
-    fi
-    
-    local disabled_tools=$(echo "$server_config" | jq -c '._disabledTools // {} | keys | map(select(startswith("_") | not))')
-    if [ "$disabled_tools" != "[]" ] && [ "$disabled_tools" != "null" ]; then
-      echo "disabled_tools = $disabled_tools"
-    fi
-    
-    return 0
-  fi
-  
-  # Unknown format
-  log_error "Unknown MCP server format for ${server_name} (must have 'url' or 'command' field)"
-  return 1
-}
-
-# ----------------------------------------------------------------------------
-# Configure MCP Servers for Codex
-# ----------------------------------------------------------------------------
-# Configures MCP servers for Codex agent using TOML format (config.toml).
-# Reads from mcp.json and adds missing servers to Codex config.
-#
-# IMPORTANT: Preserves existing MCP configurations and only adds missing ones.
-# It will NEVER overwrite an existing MCP server configuration.
-#
-# Format: config.toml with [mcp_servers.server-name] sections
-#   [mcp_servers.server-name]
-#   command = "npx"
-#   args = ["-y", "@package/mcp"]
-#   env = { "VAR" = "VALUE" }
-#
-# References:
-#   - Codex MCP docs: https://developers.openai.com/codex/mcp/
-configure_mcp() {
-  log_info "Checking MCP configuration for Codex..."
-  
-  # Check if jq is available (required for JSON manipulation)
-  if ! command -v jq &> /dev/null; then
-    log_warning "jq not found. Skipping Codex MCP configuration."
-    log_info "Install jq to enable automatic MCP configuration:"
-    log_info "  macOS: brew install jq"
-    log_info "  Linux: sudo apt-get install jq"
-    log_info "  Or manually configure MCPs using mcp.json"
-    return
-  fi
-  
-  # Check if mcp.json exists
-  if [ ! -f "$MCP_CONFIG" ]; then
-    log_warning "mcp.json not found at ${MCP_CONFIG}"
-    log_info "Skipping Codex MCP configuration"
-    return
-  fi
-  
-  # Ensure Codex config directory exists
-  local codex_config_dir=$(dirname "$CODEX_MCP_CONFIG")
-  mkdir -p "$codex_config_dir"
-  
-  # Validate config is valid JSON
-  if ! jq empty "$MCP_CONFIG" 2>/dev/null; then
-    log_error "mcp.json is not valid JSON"
-    return 1
-  fi
-  
-  # Load .env file for API keys
-  load_env_file
-  
-  # Extract MCP servers from config
-  local mcp_servers=$(jq -c '.mcpServers' "$MCP_CONFIG")
-  if [ -z "$mcp_servers" ] || [ "$mcp_servers" = "null" ]; then
-    log_error "No mcpServers found in mcp.json"
-    return 1
-  fi
-  
-  # Get list of server names from config
-  local server_names=$(jq -r '.mcpServers | keys[]' "$MCP_CONFIG")
-  
-  if [ -f "$CODEX_MCP_CONFIG" ]; then
-    # Config exists, check and add missing servers (preserve existing configs)
-    log_info "Updating existing Codex MCP configuration (preserving existing servers)..."
-    
-    # Create backup before any modifications (safety measure)
-    cp "$CODEX_MCP_CONFIG" "${CODEX_MCP_CONFIG}.backup"
-    log_info "Backup created: ${CODEX_MCP_CONFIG}.backup"
-    
-    local added_count=0
-    local skipped_count=0
-    
-    # Process each server from example
-    while IFS= read -r server_name; do
-      # IMPORTANT: Check if server already exists - if so, preserve it and skip
-      # Check for [mcp_servers.server-name] section in TOML
-      if grep -q "^\[mcp_servers\.${server_name}\]" "$CODEX_MCP_CONFIG" 2>/dev/null; then
-        log_info "  ${server_name}: already configured, preserving existing configuration"
-        skipped_count=$((skipped_count + 1))
-        continue
-      fi
-      
-      # Server doesn't exist, safe to add from config
-      # Get server config from mcp.json
-      local server_config=$(jq -c ".mcpServers.\"${server_name}\"" "$MCP_CONFIG")
-      
-      if [ -z "$server_config" ] || [ "$server_config" = "null" ]; then
-        log_warning "  ${server_name}: not found in mcp.json, skipping"
-        continue
-      fi
-      
-      # Substitute API keys from .env
-      server_config=$(substitute_api_keys "$server_config" "$server_name")
-      
-      # Convert to TOML format
-      # Note: API keys are already substituted in JSON before conversion
-      local toml_config=$(convert_mcp_to_toml "$server_name" "$server_config")
-      if [ $? -ne 0 ]; then
-        log_error "  ${server_name}: failed to convert format"
-        continue
-      fi
-      
-      # Append to config file
-      echo "" >> "$CODEX_MCP_CONFIG"
-      echo "# Added by AI Dev Atelier installer" >> "$CODEX_MCP_CONFIG"
-      echo "$toml_config" >> "$CODEX_MCP_CONFIG"
-      
-      log_success "  ${server_name}: added"
-      added_count=$((added_count + 1))
-    done <<< "$server_names"
-    
-    if [ $added_count -gt 0 ]; then
-      log_success "Added ${added_count} MCP server(s) to ${CODEX_MCP_CONFIG}"
-    fi
-    if [ $skipped_count -gt 0 ]; then
-      log_info "Preserved ${skipped_count} already configured server(s) (not overwritten)"
-    fi
-    if [ $added_count -eq 0 ] && [ $skipped_count -eq 0 ]; then
-      log_info "No changes needed - all MCPs from example are already configured"
-    fi
-    
-    # Warn about API keys that need to be set (check for placeholder values in TOML)
-    if grep -q "TAVILY_API_KEY" "$CODEX_MCP_CONFIG" 2>/dev/null || grep -q 'http_headers.*Authorization.*TAVILY_API_KEY' "$CODEX_MCP_CONFIG" 2>/dev/null; then
-      log_warning "⚠️  Tavily MCP requires TAVILY_API_KEY - update in ${CODEX_MCP_CONFIG} (set as Authorization header)"
-    fi
-    if grep -q "CONTEXT7_API_KEY.*CONTEXT7_API_KEY" "$CODEX_MCP_CONFIG" 2>/dev/null; then
-      log_warning "⚠️  Context7 MCP requires CONTEXT7_API_KEY - update in ${CODEX_MCP_CONFIG} (optional)"
-    fi
-    if grep -q "you@example.com" "$CODEX_MCP_CONFIG" 2>/dev/null; then
-      log_warning "⚠️  OpenAlex MCP requires OPENALEX_EMAIL - update in ${CODEX_MCP_CONFIG}"
-    fi
-    
-  else
-    # Config doesn't exist, create new one from mcp.json
-    log_info "Creating new Codex MCP configuration from mcp.json..."
-    
-    # Create TOML config file with header comment
-    {
-      echo "# MCP (Model Context Protocol) Configuration"
-      echo "# Auto-generated by AI Dev Atelier installer from mcp.json"
-      echo "# API keys loaded from .env file if available"
-      echo "#"
-      echo "# Reference: https://developers.openai.com/codex/mcp/"
-      echo ""
-    } > "$CODEX_MCP_CONFIG"
-    
-    local server_count=0
-    
-    # Process each server and convert to TOML
-    while IFS= read -r server_name; do
-      local server_config=$(jq -c ".mcpServers.\"${server_name}\"" "$MCP_CONFIG")
-      if [ -z "$server_config" ] || [ "$server_config" = "null" ]; then
-        continue
-      fi
-      
-      # Substitute API keys from .env
-      server_config=$(substitute_api_keys "$server_config" "$server_name")
-      
-      local toml_config=$(convert_mcp_to_toml "$server_name" "$server_config")
-      if [ $? -eq 0 ]; then
-        echo "$toml_config" >> "$CODEX_MCP_CONFIG"
-        echo "" >> "$CODEX_MCP_CONFIG"
-        server_count=$((server_count + 1))
-      fi
-    done <<< "$server_names"
-    
-    log_success "Created Codex MCP configuration at ${CODEX_MCP_CONFIG}"
-    log_info "Configured ${server_count} MCP server(s)"
-    
-    # Warn about API keys that need to be updated
-    log_warning "⚠️  Remember to update API keys in ${CODEX_MCP_CONFIG}:"
-    if grep -q "tavily-remote-mcp" "$CODEX_MCP_CONFIG" 2>/dev/null; then
-      log_info "  - TAVILY_API_KEY for Tavily MCP (set as Authorization header)"
-    fi
-    if grep -q "\[mcp_servers\.context7\]" "$CODEX_MCP_CONFIG" 2>/dev/null; then
-      log_info "  - CONTEXT7_API_KEY for Context7 MCP (optional)"
-    fi
-    if grep -q "openalex-research" "$CODEX_MCP_CONFIG" 2>/dev/null; then
-      log_info "  - OPENALEX_EMAIL for OpenAlex MCP"
-    fi
-  fi
-}
 
 # ----------------------------------------------------------------------------
 # Get MCP Server Type from Config
@@ -1249,7 +967,7 @@ configure_opencode_agents() {
 #
 # Parameters:
 #   $1 - Skill name
-#   $2 - Agent type (codex, opencode)
+#   $2 - Agent type (opencode)
 #
 # Returns:
 #   0 if should install, 1 if should skip
@@ -1292,7 +1010,7 @@ should_install_skill() {
 #
 # Parameters:
 #   $1 - Skill name
-#   $2 - Agent type (codex, opencode)
+#   $2 - Agent type (opencode)
 #   $3 - Target skills directory path
 #
 # Behavior:
@@ -1396,7 +1114,7 @@ install_skill_to_agent() {
 # Respects skills-config.json for agent-specific filtering.
 #
 # Parameters:
-#   $1 - Agent type (codex, opencode)
+#   $1 - Agent type (opencode)
 #   $2 - Target skills directory path
 #
 # Returns:
@@ -1520,7 +1238,7 @@ post_install_check() {
 # ----------------------------------------------------------------------------
 # Orchestrates the complete installation process:
 #   1. Validates prerequisites and source directory
-#   2. Configures MCPs for both Codex and OpenCode
+#   2. Configures MCPs for OpenCode
 #   3. Installs skills to both agents
 #   4. Reports installation summary
 #
@@ -1552,24 +1270,14 @@ main() {
   
   # Ensure target directories exist
   log_info "Preparing installation directories..."
-  mkdir -p "$CODEX_SKILLS_DIR"
   mkdir -p "$OPENCODE_SKILLS_DIR"
   log_success "Directories ready"
   echo ""
-  log_info "Codex skills: ${CODEX_SKILLS_DIR}"
   log_info "OpenCode skills: ${OPENCODE_SKILLS_DIR} (global, per OpenCode spec: skill/singular)"
   echo ""
   
-  # Configure MCP servers for both agents
-  # MCPs are configured separately because they use different formats
-  log_info "Configuring MCP servers for both agents..."
-  echo ""
-  
-  log_info "━━━ Codex MCP Configuration ━━━"
-  configure_mcp
-  if [ $? -ne 0 ]; then
-    log_warning "Codex MCP configuration had issues (check errors above)"
-  fi
+  # Configure MCP servers for OpenCode
+  log_info "Configuring MCP servers..."
   echo ""
   
   log_info "━━━ OpenCode MCP Configuration ━━━"
@@ -1583,14 +1291,10 @@ main() {
   configure_opencode_agents
   echo ""
   
-  # Install skills to both agents
-  # Skills use the same format but may be filtered per agent via skills-config.json
-  log_info "Installing skills to both agents..."
+  # Install skills to OpenCode
+  # Skills may be filtered per agent via skills-config.json
+  log_info "Installing skills to OpenCode..."
   echo ""
-  
-  log_info "━━━ Installing Skills to Codex ━━━"
-  install_skills_to_agent "codex" "$CODEX_SKILLS_DIR"
-  post_install_check "codex" "$CODEX_SKILLS_DIR"
   
   log_info "━━━ Installing Skills to OpenCode ━━━"
   install_skills_to_agent "opencode" "$OPENCODE_SKILLS_DIR"
@@ -1599,10 +1303,6 @@ main() {
   echo ""
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   log_success "Installation complete!"
-  echo ""
-  echo "Codex:"
-  echo "  Skills: ${CODEX_SKILLS_DIR}"
-  echo "  MCPs: ${CODEX_MCP_CONFIG}"
   echo ""
   echo "OpenCode:"
   echo "  Skills: ${OPENCODE_SKILLS_DIR} (global, per OpenCode spec)"
