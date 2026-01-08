@@ -15,7 +15,7 @@ get_command() {
   if command -v jq &>/dev/null; then
     jq -r '.tool_input.command // empty' 2>/dev/null <<< "$STDIN_DATA"
   else
-    grep -oP '"command"\s*:\s*"\K[^"]+' <<< "$STDIN_DATA" 2>/dev/null | head -1
+    sed -n 's/.*"command"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' <<< "$STDIN_DATA" 2>/dev/null | head -1
   fi
 }
 

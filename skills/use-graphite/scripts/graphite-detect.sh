@@ -38,8 +38,8 @@ if [ ! -f "$REPO_CONFIG" ]; then
   exit 1
 fi
 
-TRUNK=$(grep -o '"trunk"[[:space:]]*:[[:space:]]*"[^"]*"' "$REPO_CONFIG" 2>/dev/null | \
-        sed 's/.*"trunk"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/' || echo "main")
+TRUNK=$(awk -F'"' '/"trunk"/ {print $4}' "$REPO_CONFIG" 2>/dev/null)
+[ -z "$TRUNK" ] && TRUNK="main"
 
 echo "{\"enabled\":true,\"trunk\":\"$TRUNK\",\"config\":\"$REPO_CONFIG\"}"
 exit 0

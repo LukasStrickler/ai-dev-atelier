@@ -1037,7 +1037,7 @@ configure_claude_hooks() {
         # Update existing Graphite hook with new path
         log_info "Updating existing Graphite hook with installed path..."
         jq --arg hook_script "bash ${graphite_hook_script}" \
-          '(.hooks.PreToolUse[].hooks[] | select(.command | test("graphite-block-hook.sh"))) .command = $hook_script' \
+          '(.hooks.PreToolUse[].hooks[] | select(.command | test("graphite-block-hook.sh"))).command = $hook_script' \
           "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" && \
           mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG"
         log_success "Updated Graphite hook path in ${CLAUDE_CONFIG}"
