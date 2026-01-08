@@ -2,26 +2,27 @@
 
 Extended examples for common Graphite stacking scenarios.
 
+## Before You Submit
+
+Before any `gt submit`, verify locally by running your project's test, lint, and build commands. Check `package.json`, `Makefile`, `Cargo.toml`, `pyproject.toml`, CI config, or README for the correct commands.
+
 ## Basic Stacking Patterns
 
 ### Feature with Database Migration
 
 ```bash
 # Step 1: Database migration (must be reviewed/merged first)
-# develop migration, test locally
-npm run db:migrate:dry-run
+# develop migration, verify locally with your project's test commands
 gt create feat-user-preferences-migration
 git add . && git commit -m "feat(db): add user_preferences table"
 
 # Step 2: API endpoints (depends on migration)
-# develop API, test locally
-npm test
+# develop API, verify locally
 gt create feat-user-preferences-api
 git add . && git commit -m "feat(api): add user preferences endpoints"
 
 # Step 3: UI (depends on API)
-# develop UI, test locally
-npm run test:e2e
+# develop UI, verify locally
 gt create feat-user-preferences-ui
 git add . && git commit -m "feat(ui): add preferences settings panel"
 
@@ -34,13 +35,11 @@ gt submit --stack
 ```bash
 # Step 1: Refactor (safe, no behavior change)
 # refactor code, verify tests still pass
-npm test
 gt create refactor-auth-utils
 git add . && git commit -m "refactor(auth): extract token validation to utils"
 
 # Step 2: Feature (uses refactored code)
-# implement feature using new utils
-npm test
+# implement feature, verify locally
 gt create feat-token-refresh
 git add . && git commit -m "feat(auth): add automatic token refresh"
 
@@ -60,8 +59,6 @@ When you need to fix something in an earlier PR:
 gt checkout step-1
 
 # Make your fix, verify locally
-npm test
-
 # Amend OR add new commit (both work)
 git add . && git commit -m "fix: address review feedback"
 
@@ -81,8 +78,7 @@ gt submit --stack
 gt checkout step-1
 gt create step-2  # Creates step-2 on top of step-1
 
-# Make changes for step-2
-npm test
+# Make changes for step-2, verify locally
 git add . && git commit -m "feat: add step 2"
 
 # Rebase step-3 onto step-2
@@ -152,13 +148,10 @@ gt submit --stack    # Push updated stack
 
 ### Pre-Submit Checklist
 
-Before running `gt submit`, always verify locally:
+Before running `gt submit`, verify locally using your project's test/lint/build commands.
 
 ```bash
-# Run full verification suite
-npm run typecheck && npm run lint && npm test && npm run build
-
-# Only submit if all pass
+# Only submit if all checks pass
 gt submit --stack
 ```
 
@@ -170,8 +163,7 @@ gt submit --stack
 # 1. Checkout the failing PR
 gt checkout step-2
 
-# 2. Fix the issue locally
-npm test  # Reproduce and fix
+# 2. Fix the issue locally (reproduce with your test commands)
 
 # 3. Commit the fix
 git add . && git commit -m "fix: resolve CI failure"

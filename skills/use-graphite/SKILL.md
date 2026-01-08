@@ -52,7 +52,7 @@ bash skills/use-graphite/scripts/graphite-detect.sh
 ```bash
 # 1. Develop and test FIRST (on current branch or main)
 # make changes
-npm test && npm run typecheck && npm run lint  # verify locally
+# verify locally (run your project's test/lint/build commands)
 
 # 2. THEN create branch and commit verified code
 gt create my-feature
@@ -64,20 +64,17 @@ gt submit                       # CI should pass (you verified locally)
 
 ```bash
 # Step 1: Develop and verify schema changes
-# make schema changes
-npm test && npm run typecheck   # verify locally FIRST
+# make schema changes, verify locally FIRST
 gt create step-1-schema
 git add . && git commit -m "feat(db): add schema"
 
 # Step 2: Develop and verify API changes (on top of step-1)
-# make API changes
-npm test && npm run typecheck   # verify locally FIRST
+# make API changes, verify locally FIRST
 gt create step-2-api
 git add . && git commit -m "feat(api): add endpoints"
 
 # Step 3: Develop and verify UI changes (on top of step-2)
-# make UI changes
-npm test && npm run typecheck   # verify locally FIRST
+# make UI changes, verify locally FIRST
 gt create step-3-ui
 git add . && git commit -m "feat(ui): add panel"
 
@@ -90,12 +87,9 @@ Only submit when ALL layers are verified locally.
 
 ## CRITICAL: CI Must Pass
 
-**Verify BEFORE creating branches and committing:**
+**Verify BEFORE creating branches and committing.**
 
-1. Run tests locally: `npm test` / `pnpm test` / `cargo test`
-2. Run type checks: `npm run typecheck` / `tsc --noEmit`
-3. Run linting: `npm run lint`
-4. Ensure build passes: `npm run build`
+Check your project for verification commands (look for `package.json` scripts, `Makefile` targets, `Cargo.toml`, `pyproject.toml`, CI config, or README). Run tests, type checks, linting, and build locally before submitting.
 
 ```text
 WRONG workflow (commit-and-pray):
