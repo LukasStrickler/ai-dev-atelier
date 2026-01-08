@@ -15,7 +15,7 @@ Skills are organized directories containing `SKILL.md` files that follow the [An
 | [`docs-write`](./docs-write/SKILL.md) | Write or update documentation with clear style, structure, visuals, API/ADR/runbook patterns | N/A (workflow skill) |
 | [`git-commit`](./git-commit/SKILL.md) | Write clear git commits with Conventional Commits format, detect project conventions | N/A (workflow skill) |
 | [`code-review`](./code-review/SKILL.md) | Review code changes using CodeRabbit - uncommitted files (task mode) or all PR files vs main (pr mode) | `scripts/review-*.sh` |
-| [`pr-comment-resolver`](./pr-comment-resolver/SKILL.md) | Multi-agent PR comment resolution for bot reviews (CodeRabbit, Copilot, Gemini) | `scripts/pr-resolver*.sh` |
+| [`resolve-pr-comments`](./resolve-pr-comments/SKILL.md) | Multi-agent PR comment resolution for bot reviews (CodeRabbit, Copilot, Gemini) | `scripts/pr-resolver*.sh` |
 | [`search`](./search/SKILL.md) | Search the web and library documentation using Tavily and Context7 MCPs | N/A (MCP-based skill) |
 | [`research`](./research/SKILL.md) | Conduct academic research using OpenAlex, PDF extraction, and paper search MCPs with evidence cards | `scripts/research-*.sh` |
 | [`ui-animation`](./ui-animation/SKILL.md) | Guide tasteful UI animation implementation with easing, springs, timing, and accessibility | N/A (workflow skill) |
@@ -53,7 +53,7 @@ Skills are organized directories containing `SKILL.md` files that follow the [An
 ### PR Comment Resolver
 - **When to use**: When PRs have bot review comments to triage, need batch resolution, want to see what's fixed vs pending
 - **How agents use it**: Agents read `SKILL.md` and execute `scripts/pr-resolver.sh` to fetch/cluster comments, then spawn subagents per cluster
-- **Scripts**: Embedded in `skills/pr-comment-resolver/scripts/pr-resolver*.sh`
+- **Scripts**: Embedded in `skills/resolve-pr-comments/scripts/pr-resolver*.sh`
 - **Subagent**: `@pr-comment-reviewer` processes individual clusters with 6-phase workflow
 
 ### Search

@@ -39,7 +39,7 @@ ai-dev-atelier/
 | `docs-write` | Write/update docs with standards | Workflow (no script) |
 | `git-commit` | Write clear commits with Conventional Commits | Workflow (no script) |
 | `code-review` | CodeRabbit reviews (task/pr modes) | `scripts/review-run.sh` |
-| `pr-comment-resolver` | Multi-agent PR comment resolution | `scripts/pr-resolver*.sh` |
+| `resolve-pr-comments` | Multi-agent PR comment resolution | `scripts/pr-resolver*.sh` |
 | `search` | Web + library docs + GitHub code search | MCP-based |
 | `research` | Academic research with evidence cards | `scripts/research-*.sh` |
 | `ui-animation` | Tasteful UI animation & accessibility | Workflow (no script) |

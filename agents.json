@@ -3,7 +3,7 @@
   "_comment": "Agent definitions for OpenCode. Injected into opencode.json by install.sh. Uses blocklist approach: allow by default, block genuinely dangerous commands. Research sources: GTFOBins, Trail of Bits 2025, Backslash Security, CVE-2025-54136 (MCPoison). NOTE: Pattern matching has inherent limitations (space variations, glued pipes, subshells). Pipe patterns catch common cases but are not exhaustive. Security also relies on sandboxing, code review, and agent behavior constraints.",
   "agents": {
     "pr-comment-reviewer": {
-      "description": "Subagent for pr-comment-resolver skill. Validates bot review comments (CodeRabbit, Copilot, Gemini) on a single cluster file. Phase 0: Plans before acting. Phases 1-3: Research, critical analysis, classification (VALID_FIX, FALSE_POSITIVE, VALID_DEFER, etc). Phase 4-5: Apply minimal fixes, run verification suite (diagnostics, tests, lint, typecheck). Phase 6: Execute resolve/dismiss scripts to close GitHub threads. Returns dual output: Markdown summary + JSON with actions, confidence scores, and deferred items for orchestrator.",
+      "description": "Subagent for resolve-pr-comments skill. Validates bot review comments (CodeRabbit, Copilot, Gemini) on a single cluster file. Phase 0: Plans before acting. Phases 1-3: Research, critical analysis, classification (VALID_FIX, FALSE_POSITIVE, VALID_DEFER, etc). Phase 4-5: Apply minimal fixes, run verification suite (diagnostics, tests, lint, typecheck). Phase 6: Execute resolve/dismiss scripts to close GitHub threads. Returns dual output: Markdown summary + JSON with actions, confidence scores, and deferred items for orchestrator.",
       "mode": "subagent",
       "model": "zai-coding-plan/glm-4.7",
       "steps": 75,

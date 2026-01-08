@@ -450,10 +450,10 @@ generate_cluster_markdown() {
     echo ""
     echo '```bash'
     echo "# Resolve a specific comment thread"
-    echo "bash skills/pr-comment-resolver/scripts/pr-resolver-resolve.sh ${PR_NUMBER} <COMMENT_ID>"
+    echo "bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh ${PR_NUMBER} <COMMENT_ID>"
     echo ""
     echo "# Dismiss as false positive"
-    echo 'bash skills/pr-comment-resolver/scripts/pr-resolver-dismiss.sh '"${PR_NUMBER}"' <COMMENT_ID> "reason"'
+    echo 'bash skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh '"${PR_NUMBER}"' <COMMENT_ID> "reason"'
     echo '```'
   } > "$output_file"
 }
@@ -503,5 +503,5 @@ else
   echo "     - Read clusters from: ${OUTPUT_FILE}"
   echo "     - Focus on clusters where actionable=true"
   echo "     - After fixing, resolve threads with:"
-  echo "       bash skills/pr-comment-resolver/scripts/pr-resolver-resolve.sh ${PR_NUMBER} <COMMENT_ID>"
+  echo "       bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh ${PR_NUMBER} <COMMENT_ID>"
 fi

@@ -65,7 +65,7 @@ check_skills_dir() {
   fi
   
   # Verify key skill directories exist
-  local required_skills=("code-quality" "docs-check" "code-review" "pr-comment-resolver")
+  local required_skills=("code-quality" "docs-check" "code-review" "resolve-pr-comments")
   local missing_skills=()
   
   for skill in "${required_skills[@]}"; do
@@ -158,9 +158,9 @@ main() {
   echo "  1. Install skills to OpenCode:"
   echo "     bash ${ATELIER_DIR}/install.sh"
   echo ""
-  echo "  2. Verify skills are loaded in OpenCode:"
+echo "  2. Verify skills are loaded in OpenCode:"
   echo "     - Ask OpenCode: 'What skills are available?'"
-  echo "     - Should list: code-quality, docs-check, docs-write, git-commit, code-review, pr-comment-resolver, search, research, ui-animation"
+  echo "     - Should list: code-quality, docs-check, docs-write, git-commit, code-review, resolve-pr-comments, search, research, ui-animation"
   echo ""
   echo "  3. Read the skills documentation:"
   echo "     cat ${ATELIER_DIR}/skills/README.md"

@@ -1,5 +1,5 @@
 ---
-name: pr-comment-resolver
+name: resolve-pr-comments
 description: "Resolve bot review comments (CodeRabbit, Copilot, Gemini) on GitHub PRs using subagents. Use when: (1) User asks to 'review PR comments' or 'resolve PR comments', (2) User says 'work through PR N comments' or 'handle bot comments', (3) Need to triage CodeRabbit/Copilot/Gemini review comments, (4) Processing PR feedback at scale, (5) Want to see what's already fixed vs still pending. NOT for: creating PRs, reviewing code yourself, writing new reviews. Triggers: review PR comments, resolve PR comments, work through PR comments, handle bot comments, process CodeRabbit comments, triage PR feedback, fix PR review issues, resolve bot comments, pr comment resolver."
 ---
 
@@ -34,7 +34,7 @@ The script already fetches everything. Manual `gh` calls waste 10-50x tokens on 
 **✅ CORRECT: Run this script FIRST**
 
 ```bash
-bash skills/pr-comment-resolver/scripts/pr-resolver.sh <PR_NUMBER>
+bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER>
 ```
 
 **Then:**
@@ -65,7 +65,7 @@ Orchestrator (You)
 
 ```bash
 # 1. Fetch and cluster all comments (script does ALL the API work)
-bash skills/pr-comment-resolver/scripts/pr-resolver.sh 7
+bash skills/resolve-pr-comments/scripts/pr-resolver.sh 7
 
 # Output: .ada/data/pr-resolver/pr-7/
 #   ├── data.json       (full data, all clusters)
@@ -84,7 +84,7 @@ background_task({ agent: "pr-comment-reviewer", prompt: "Process cluster. Read: 
 
 ```bash
 # 3. After all subagents complete, verify
-bash skills/pr-comment-resolver/scripts/pr-resolver.sh 7
+bash skills/resolve-pr-comments/scripts/pr-resolver.sh 7
 # Success: actionable_clusters should be 0
 ```
 
@@ -130,7 +130,7 @@ bash skills/pr-comment-resolver/scripts/pr-resolver.sh 7
 ### Phase 1: Fetch and Analyze
 
 ```bash
-bash skills/pr-comment-resolver/scripts/pr-resolver.sh <PR_NUMBER>
+bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER>
 ```
 
 Read `actionable.json` to understand workload:
@@ -278,10 +278,10 @@ See [Investigation Guide](references/investigation-guide.md) for detailed exampl
 
 ```bash
 # After fixing
-bash skills/pr-comment-resolver/scripts/pr-resolver-resolve.sh <PR> <COMMENT_ID>
+bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh <PR> <COMMENT_ID>
 
 # After dismissing with evidence
-bash skills/pr-comment-resolver/scripts/pr-resolver-dismiss.sh <PR> <COMMENT_ID> "reason with evidence"
+bash skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh <PR> <COMMENT_ID> "reason with evidence"
 ```
 
 #### Escalation Format
@@ -315,7 +315,7 @@ When escalating to human, provide full context:
 After all subagents complete and deferred items are handled:
 
 ```bash
-bash skills/pr-comment-resolver/scripts/pr-resolver.sh <PR_NUMBER>
+bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER>
 ```
 
 **Success Criteria**: `actionable_clusters: 0`
@@ -398,7 +398,7 @@ gh api repos/.../pulls/<N>/reviews
 gh api graphql -f query='...' # for PR comments
 
 # ✅ CORRECT - run this instead
-bash skills/pr-comment-resolver/scripts/pr-resolver.sh <PR_NUMBER>
+bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER>
 ```
 
 ### Other Anti-Patterns
