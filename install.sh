@@ -956,6 +956,131 @@ configure_opencode_agents() {
 }
 
 # ============================================================================
+# CLAUDE CODE HOOKS CONFIGURATION (oh-my-opencode)
+# ============================================================================
+#
+# oh-my-opencode provides Claude Code compatibility, including hooks.
+# Hooks are loaded from these locations and MERGED (not overwritten):
+#   1. ~/.claude/settings.json (global - we install here)
+#   2. ./.claude/settings.json (project-level)
+#   3. ./.claude/settings.local.json (local override)
+#
+# Source: https://github.com/code-yeongyu/oh-my-opencode
+#         src/hooks/claude-code-hooks/config.ts
+
+CLAUDE_CONFIG_DIR="${HOME}/.claude"
+CLAUDE_CONFIG="${CLAUDE_CONFIG_DIR}/settings.json"
+
+configure_claude_hooks() {
+  log_info "Configuring oh-my-opencode hooks (Claude Code compatible)..."
+  
+  # Check if jq is available (required for JSON manipulation)
+  if ! command -v jq &> /dev/null; then
+    log_warning "jq not found. Skipping Claude hooks configuration."
+    return 0
+  fi
+  
+  # Check if use-graphite skill was installed and has the hook script
+  local graphite_hook_script="${OPENCODE_SKILLS_DIR}/use-graphite/scripts/graphite-block-hook.sh"
+  if [ ! -f "$graphite_hook_script" ]; then
+    log_info "use-graphite skill not installed or hook script not found, skipping Claude hooks"
+    return 0
+  fi
+  
+  # Ensure Claude config directory exists
+  mkdir -p "$CLAUDE_CONFIG_DIR"
+  
+  # Build the hooks configuration with absolute path
+  local hooks_config
+  hooks_config=$(jq -n \
+    --arg hook_script "bash ${graphite_hook_script}" \
+    '{
+      hooks: {
+        PreToolUse: [
+          {
+            matcher: "Bash",
+            hooks: [
+              {
+                type: "command",
+                command: $hook_script
+              }
+            ]
+          }
+        ]
+      }
+    }')
+  
+  if [ -f "$CLAUDE_CONFIG" ]; then
+    # Config exists, merge hooks
+    log_info "Updating existing Claude configuration..."
+    
+    # Validate existing config is valid JSON
+    if ! jq empty "$CLAUDE_CONFIG" 2>/dev/null; then
+      log_error "Existing Claude config is not valid JSON. Creating backup and starting fresh..."
+      mv "$CLAUDE_CONFIG" "${CLAUDE_CONFIG}.invalid.$(date +%s).backup"
+      echo "$hooks_config" > "$CLAUDE_CONFIG"
+      log_success "Created Claude hooks configuration at ${CLAUDE_CONFIG}"
+      return 0
+    fi
+    
+    # Create backup before modification
+    cp "$CLAUDE_CONFIG" "${CLAUDE_CONFIG}.backup"
+    log_info "Backup created: ${CLAUDE_CONFIG}.backup"
+    
+    # Check if PreToolUse hooks already exist
+    if jq -e '.hooks.PreToolUse' "$CLAUDE_CONFIG" > /dev/null 2>&1; then
+      # Check if our Graphite hook is already present (by checking for graphite-block-hook.sh in any hook command)
+      local graphite_hook_exists
+      graphite_hook_exists=$(jq -r '.hooks.PreToolUse[].hooks[]?.command // empty' "$CLAUDE_CONFIG" 2>/dev/null | grep -c "graphite-block-hook.sh" || true)
+      
+      if [ "$graphite_hook_exists" -gt 0 ]; then
+        # Update existing Graphite hook with new path
+        log_info "Updating existing Graphite hook with installed path..."
+        jq --arg hook_script "bash ${graphite_hook_script}" \
+          '(.hooks.PreToolUse[].hooks[] | select(.command | test("graphite-block-hook.sh"))) .command = $hook_script' \
+          "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" && \
+          mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG"
+        log_success "Updated Graphite hook path in ${CLAUDE_CONFIG}"
+      else
+        # Add our hook to existing PreToolUse array
+        log_info "Adding Graphite hook to existing PreToolUse hooks..."
+        local new_hook
+        new_hook=$(echo "$hooks_config" | jq '.hooks.PreToolUse[0]')
+        jq --argjson new_hook "$new_hook" \
+          '.hooks.PreToolUse += [$new_hook]' \
+          "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" && \
+          mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG"
+        log_success "Added Graphite hook to ${CLAUDE_CONFIG}"
+      fi
+    else
+      # No PreToolUse hooks exist, add the hooks section
+      log_info "Adding hooks section to Claude config..."
+      if jq -e '.hooks' "$CLAUDE_CONFIG" > /dev/null 2>&1; then
+        # hooks section exists but no PreToolUse
+        jq --argjson pretooluse "$(echo "$hooks_config" | jq '.hooks.PreToolUse')" \
+          '.hooks.PreToolUse = $pretooluse' \
+          "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" && \
+          mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG"
+      else
+        # No hooks section at all, merge it in
+        jq --argjson hooks_section "$(echo "$hooks_config" | jq '.hooks')" \
+          '.hooks = $hooks_section' \
+          "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" && \
+          mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG"
+      fi
+      log_success "Added Claude hooks to ${CLAUDE_CONFIG}"
+    fi
+  else
+    # Config doesn't exist, create new one
+    log_info "Creating new Claude configuration with hooks..."
+    echo "$hooks_config" > "$CLAUDE_CONFIG"
+    log_success "Created Claude hooks configuration at ${CLAUDE_CONFIG}"
+  fi
+  
+  log_info "Graphite PreToolUse hook configured to block git push/checkout -b/gh pr create in Graphite repos"
+}
+
+# ============================================================================
 # DEPRECATED SKILL CLEANUP
 # ============================================================================
 
@@ -1370,12 +1495,17 @@ log_info "━━━ Cleaning Up Deprecated Skills ━━━"
   post_install_check "opencode" "$OPENCODE_SKILLS_DIR"
   
   echo ""
+  log_info "━━━ Configuring Claude Code Hooks (oh-my-opencode) ━━━"
+  configure_claude_hooks
+  
+  echo ""
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   log_success "Installation complete!"
   echo ""
   echo "OpenCode:"
-  echo "  Skills: ${OPENCODE_SKILLS_DIR} (global, per OpenCode spec)"
+  echo "  Skills: ${OPENCODE_SKILLS_DIR}"
   echo "  MCPs: ${OPENCODE_CONFIG}"
+  echo "  Claude Hooks: ${CLAUDE_CONFIG} (for oh-my-opencode)"
   echo ""
   echo "To verify, ask your agent: 'What skills are available?'"
   echo ""
