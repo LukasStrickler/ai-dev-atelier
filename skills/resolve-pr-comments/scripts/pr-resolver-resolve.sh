@@ -1,6 +1,6 @@
 #!/bin/bash
 # Resolve PR review comment thread(s) in GitHub
-# Usage: bash pr-resolver-resolve.sh <PR_NUMBER> <COMMENT_ID> [COMMENT_ID_2] ...
+# Usage: bash pr-resolver-resolve.sh <PR_NUMBER> <COMMENT_ID> [COMMENT_ID_2] ... [--repo owner/repo]
 # 
 # This resolves the thread containing the comment(s) in GitHub.
 # Use after you've fixed the issue the comment refers to.
@@ -15,18 +15,46 @@ if ! check_prerequisites; then
 fi
 
 # Parse arguments
-if [ $# -lt 2 ]; then
-  echo "Usage: $0 <PR_NUMBER> <COMMENT_ID> [COMMENT_ID_2] ..."
+PR_NUMBER=""
+TARGET_REPO=""
+COMMENT_IDS=()
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --repo)
+      if [[ $# -lt 2 || "$2" == -* ]]; then
+        log_error "--repo requires a value (owner/repo)"
+        echo "Usage: $0 <PR_NUMBER> <COMMENT_ID> [COMMENT_ID_2] ... [--repo owner/repo]" >&2
+        exit 1
+      fi
+      TARGET_REPO="$2"
+      shift 2
+      ;;
+    -*)
+      log_error "Unknown option: $1"
+      echo "Usage: $0 <PR_NUMBER> <COMMENT_ID> [COMMENT_ID_2] ... [--repo owner/repo]" >&2
+      exit 1
+      ;;
+    *)
+      if [ -z "$PR_NUMBER" ]; then
+        PR_NUMBER="$1"
+      else
+        COMMENT_IDS+=("$1")
+      fi
+      shift
+      ;;
+  esac
+done
+
+if [ -z "$PR_NUMBER" ] || [ ${#COMMENT_IDS[@]} -eq 0 ]; then
+  echo "Usage: $0 <PR_NUMBER> <COMMENT_ID> [COMMENT_ID_2] ... [--repo owner/repo]"
   echo ""
   echo "Examples:"
-  echo "  $0 7 2666193945               # Resolve single comment thread"
-  echo "  $0 7 2666193945 2666191192    # Resolve multiple comment threads"
+  echo "  $0 7 2666193945                              # Resolve single comment thread"
+  echo "  $0 7 2666193945 2666191192                   # Resolve multiple comment threads"
+  echo "  $0 7 2666193945 --repo upstream/repo         # Resolve in upstream repo (for forks)"
   exit 1
 fi
-
-PR_NUMBER="$1"
-shift
-COMMENT_IDS=("$@")
 
 if ! validate_pr_number "$PR_NUMBER"; then
   log_error "Invalid PR number: $PR_NUMBER"
@@ -40,7 +68,7 @@ for cid in "${COMMENT_IDS[@]}"; do
   fi
 done
 
-OWNER_REPO=$(get_repo_owner_repo)
+OWNER_REPO=$(get_effective_repo "$TARGET_REPO")
 if [ -z "$OWNER_REPO" ]; then
   exit 1
 fi

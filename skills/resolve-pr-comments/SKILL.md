@@ -348,6 +348,20 @@ The `@pr-comment-reviewer` subagent (defined in `agents/pr-comment-reviewer.md`)
 | `pr-resolver-resolve.sh <PR> <ID> [ID2...]` | Resolve thread(s) after fixing | Post-fix cleanup |
 | `pr-resolver-dismiss.sh <PR> <ID> "reason"` | Dismiss with reply | False positive handling |
 
+### Fork/Upstream Support
+
+When working with PRs from forks to upstream repos, use `--repo` to specify the upstream:
+
+```bash
+# Fetch PR comments from upstream repo (when in a fork)
+bash skills/resolve-pr-comments/scripts/pr-resolver.sh 123 --repo upstream-owner/repo
+
+# Resolve/dismiss also support --repo
+bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh 123 456789 --repo upstream-owner/repo
+```
+
+Auto-detection: If you're in a fork, the scripts automatically detect the upstream and use it. The `--repo` flag overrides this for explicit control.
+
 ## Concern Categories
 
 Comments are auto-categorized by content:

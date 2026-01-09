@@ -130,6 +130,49 @@ parse_owner_repo() {
   echo "$owner $repo"
 }
 
+# Detect if current repo (from origin) is a fork and get upstream/parent repo
+# Returns: parent owner/repo if fork, empty otherwise
+get_upstream_repo() {
+  local repo_info
+  repo_info=$(gh repo view --json isFork,parent --jq 'if .isFork then .parent.nameWithOwner else "" end' 2>/dev/null) || return 1
+  
+  if [[ -n "$repo_info" && "$repo_info" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+    echo "$repo_info"
+    return 0
+  fi
+  return 1
+}
+
+# Get effective repo for PR operations
+# If --repo arg provided, use it. If fork detected, use upstream. Otherwise use origin.
+# Args: $1 = optional explicit repo override
+get_effective_repo() {
+  local explicit_repo="${1:-}"
+  
+  # If explicit repo provided, validate and use it
+  if [ -n "$explicit_repo" ]; then
+    if [[ ! "$explicit_repo" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+      log_error "Invalid repo format: $explicit_repo (expected: owner/repo)"
+      return 1
+    fi
+    echo "$explicit_repo"
+    return 0
+  fi
+  
+  # Try to detect upstream (fork scenario)
+  # Note: || true prevents script crash under set -e when not a fork
+  local upstream
+  upstream=$(get_upstream_repo 2>/dev/null || true)
+  if [ -n "$upstream" ]; then
+    log_info "Detected fork - using upstream: $upstream"
+    echo "$upstream"
+    return 0
+  fi
+  
+  # Fall back to origin
+  get_repo_owner_repo
+}
+
 validate_pr_number() {
   local pr_number="$1"
   [ -n "$pr_number" ] && echo "$pr_number" | grep -qE '^[0-9]+$'

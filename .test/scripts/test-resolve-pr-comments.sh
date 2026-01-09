@@ -304,6 +304,200 @@ fi
 rm -rf "$MOCK_GH_DIR2"
 
 #==============================================================================
+# Fork/Upstream Support tests
+#==============================================================================
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Testing: Fork/Upstream Support (--repo parameter)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+UTILS_SCRIPT="$REPO_ROOT/skills/resolve-pr-comments/scripts/lib/pr-resolver-utils.sh"
+
+echo ""
+echo "--- get_effective_repo tests ---"
+echo ""
+
+test_effective_repo() {
+  local input="$1"
+  local expected_pattern="$2"
+  local description="$3"
+  
+  local result
+  result=$(bash -c "source '$UTILS_SCRIPT' && get_effective_repo '$input'" 2>&1)
+  local exit_code=$?
+  
+  if [ "$exit_code" -eq 0 ] && echo "$result" | grep -q "$expected_pattern"; then
+    pass "$description"
+  else
+    fail "$description (got: $result, expected pattern: $expected_pattern)"
+  fi
+}
+
+test_effective_repo_error() {
+  local input="$1"
+  local description="$2"
+  
+  local result exit_code=0
+  result=$(bash -c "source '$UTILS_SCRIPT' && get_effective_repo '$input'" 2>&1) || exit_code=$?
+  
+  if [ "$exit_code" -ne 0 ]; then
+    pass "$description"
+  else
+    fail "$description (expected error, got success: $result)"
+  fi
+}
+
+test_effective_repo "owner/repo" "owner/repo" "get_effective_repo: explicit repo passed through"
+test_effective_repo "upstream-owner/upstream-repo" "upstream-owner/upstream-repo" "get_effective_repo: explicit upstream passed through"
+test_effective_repo "my-org/my-project" "my-org/my-project" "get_effective_repo: org/project format works"
+
+test_effective_repo_error "invalid" "get_effective_repo: rejects invalid format (no slash)"
+test_effective_repo_error "too/many/slashes" "get_effective_repo: rejects invalid format (too many slashes)"
+
+echo ""
+echo "--- --repo parameter parsing tests ---"
+echo ""
+
+PR_RESOLVER="$REPO_ROOT/skills/resolve-pr-comments/scripts/pr-resolver.sh"
+PR_RESOLVE="$REPO_ROOT/skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh"
+PR_DISMISS="$REPO_ROOT/skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh"
+
+test_script_help() {
+  local script="$1"
+  local name="$2"
+  
+  local output
+  output=$("$script" 2>&1 || true)
+  
+  if echo "$output" | grep -q "\-\-repo"; then
+    pass "$name: --repo mentioned in usage/help"
+  else
+    fail "$name: --repo not mentioned in usage/help"
+  fi
+}
+
+test_script_help "$PR_RESOLVER" "pr-resolver.sh"
+test_script_help "$PR_RESOLVE" "pr-resolver-resolve.sh"
+test_script_help "$PR_DISMISS" "pr-resolver-dismiss.sh"
+
+test_invalid_repo_format() {
+  local script="$1"
+  local args="$2"
+  local name="$3"
+  
+  local output
+  output=$(bash "$script" $args 2>&1 || true)
+  local exit_code=$?
+  
+  if echo "$output" | grep -qi "invalid\|error\|usage"; then
+    pass "$name: rejects invalid --repo format"
+  else
+    fail "$name: should reject invalid --repo format (got: $output)"
+  fi
+}
+
+test_invalid_repo_format "$PR_RESOLVER" "123 --repo invalid" "pr-resolver.sh"
+
+test_missing_repo_value() {
+  local script="$1"
+  local args="$2"
+  local name="$3"
+  
+  local output
+  output=$(bash "$script" $args 2>&1 || true)
+  
+  if echo "$output" | grep -qi "requires a value\|error\|usage"; then
+    pass "$name: rejects --repo without value"
+  else
+    fail "$name: should reject --repo without value (got: $output)"
+  fi
+}
+
+test_missing_repo_value "$PR_RESOLVER" "123 --repo" "pr-resolver.sh"
+
+echo ""
+echo "--- Hook fork detection tests ---"
+echo ""
+
+MOCK_GH_FORK=$(mktemp -d)
+cat > "$MOCK_GH_FORK/gh" << 'MOCK_EOF'
+#!/bin/bash
+if [[ "$*" == *"--json state"* ]]; then
+  echo "OPEN"
+  exit 0
+fi
+if [[ "$*" == *"repo view"*"--json"*"isFork"* ]]; then
+  echo "upstream-owner/upstream-repo"
+  exit 0
+fi
+exit 1
+MOCK_EOF
+chmod +x "$MOCK_GH_FORK/gh"
+
+test_fork_block_message() {
+  local cmd="$1"
+  local expected_pattern="$2"
+  local description="$3"
+  
+  local output
+  output=$(PATH="$MOCK_GH_FORK:$PATH" bash -c "echo '{\"tool_input\":{\"command\":\"$cmd\"}}' | bash '$HOOK_SCRIPT'" 2>&1) || true
+  
+  if echo "$output" | grep -qi "$expected_pattern"; then
+    pass "$description"
+  else
+    fail "$description (expected pattern: $expected_pattern)"
+  fi
+}
+
+test_fork_block_message "gh pr view 123 --json comments" "fork\|upstream" "Hook mentions fork/upstream when in fork repo"
+test_fork_block_message "gh pr view 123 --json comments" "\-\-repo" "Hook mentions --repo flag when in fork repo"
+
+rm -rf "$MOCK_GH_FORK"
+
+echo ""
+echo "--- Hook blocks upstream repo queries when in fork ---"
+echo ""
+
+UPSTREAM_REPO="upstream-owner/upstream-repo"
+
+MOCK_GH_FORK2=$(mktemp -d)
+cat > "$MOCK_GH_FORK2/gh" << MOCK_EOF2
+#!/bin/bash
+if [[ "\$*" == *"--json state"* ]]; then
+  echo "OPEN"
+  exit 0
+fi
+if [[ "\$*" == *"repo view"*"--json"*"isFork"* ]]; then
+  echo "$UPSTREAM_REPO"
+  exit 0
+fi
+exit 1
+MOCK_EOF2
+chmod +x "$MOCK_GH_FORK2/gh"
+
+test_hook_blocks_upstream() {
+  local cmd="$1"
+  local expected_exit="$2"
+  local description="$3"
+  
+  local actual_exit=0
+  PATH="$MOCK_GH_FORK2:$PATH" bash -c "echo '{\"tool_input\":{\"command\":\"$cmd\"}}' | bash '$HOOK_SCRIPT'" >/dev/null 2>&1 || actual_exit=$?
+  
+  if [ "$actual_exit" -eq "$expected_exit" ]; then
+    pass "$description"
+  else
+    fail "$description (expected exit $expected_exit, got $actual_exit)"
+  fi
+}
+
+test_hook_blocks_upstream "gh api repos/$UPSTREAM_REPO/pulls/123/comments" 2 "Blocks: upstream repo PR comments when in fork"
+test_hook_blocks_upstream "gh api repos/$UPSTREAM_REPO/pulls/123/reviews" 2 "Blocks: upstream repo PR reviews when in fork"
+test_hook_blocks_upstream "gh api repos/other-owner/other-repo/pulls/123/comments" 0 "Allows: unrelated external repo"
+
+rm -rf "$MOCK_GH_FORK2"
+
+#==============================================================================
 # Summary
 #==============================================================================
 
