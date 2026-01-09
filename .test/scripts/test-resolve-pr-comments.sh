@@ -387,6 +387,7 @@ test_invalid_repo_format() {
   local name="$3"
   
   local output
+  # shellcheck disable=SC2086 # Intentional word splitting for multiple args
   output=$(bash "$script" $args 2>&1 || true)
   local exit_code=$?
   
@@ -405,6 +406,7 @@ test_missing_repo_value() {
   local name="$3"
   
   local output
+  # shellcheck disable=SC2086 # Intentional word splitting for multiple args
   output=$(bash "$script" $args 2>&1 || true)
   
   if echo "$output" | grep -qi "requires a value\|error\|usage"; then
