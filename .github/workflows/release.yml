@@ -164,14 +164,22 @@ jobs:
           PRERELEASE_FLAG=""
           LATEST_FLAG=""
 
-          # Guard --latest for gh CLI >= 2.49.2
-          GH_VERSION=$(gh --version | head -1 | awk '{print $3}')
+          # Guard --latest for gh CLI >= 2.49.2 (best-effort, with validation)
+          GH_VERSION_RAW="$(gh --version | head -1 || true)"
+          GH_VERSION="$(printf '%s\n' "$GH_VERSION_RAW" | awk '{print $3}')"
+
+          # Validate that GH_VERSION looks like a version (e.g., 2.49.2) before using it
+          if ! printf '%s\n' "$GH_VERSION" | grep -Eq '^[0-9]+(\.[0-9]+)*$'; then
+            echo "Warning: Unable to determine a valid gh version from: '$GH_VERSION_RAW'. Not using --latest flag." >&2
+            GH_VERSION=""
+          fi
+
           if [ "${{ inputs.prerelease }}" = "true" ]; then
             PRERELEASE_FLAG="--prerelease"
             echo "📦 Creating pre-release v${{ inputs.version }}..."
           else
             # Use --latest only if gh version supports it (>= 2.49.2)
-            if printf '%s\n%s\n' "2.49.2" "$GH_VERSION" | sort -V -C; then
+            if [ -n "$GH_VERSION" ] && printf '%s\n%s\n' "2.49.2" "$GH_VERSION" | sort -V -C; then
               LATEST_FLAG="--latest"
             fi
             echo "📦 Creating release v${{ inputs.version }}..."
