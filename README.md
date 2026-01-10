@@ -87,7 +87,7 @@ Verify in your agent:
 
 - [SETUP.md](./SETUP.md): Verify the repository and skill structure before installing.
 - [INSTALL.md](./INSTALL.md): Full dependency and MCP setup across platforms.
-- [MY_AGENTIC_DEV_SETUP.md](./MY_AGENTIC_DEV_SETUP.md): Personal agentic development setup with Vibora, oh-my-opencode, and Cloudflare Tunnels.
+- [MY_AGENTIC_DEV_SETUP.md](./MY_AGENTIC_DEV_SETUP.md): Personal agentic development setup with Vibora, oh-my-opencode, and Tailscale.
 
 ## License
 

@@ -100,6 +100,4 @@ Open Vibora, create a task, watch it work.
 - [Tailscale](https://tailscale.com)
 - [AI Dev Atelier](https://github.com/LukasStrickler/ai-dev-atelier)
 
----
-
-*January 2026*
+*Last updated: January 2026*
