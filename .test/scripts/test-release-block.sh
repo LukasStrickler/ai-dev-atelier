@@ -538,6 +538,30 @@ test_hook "echo 'gh release create' | batch" 2 "Blocks: batch with release"
 test_hook "at now <<< 'gh workflow run release.yml'" 2 "Blocks: at with here-string"
 
 echo ""
+echo "--- Container execution attacks (docker, podman) ---"
+echo ""
+
+test_hook 'docker run --rm alpine gh workflow run release.yml' 2 "Blocks: docker run with gh workflow"
+test_hook 'docker run --rm alpine sh -c "gh workflow run release.yml"' 2 "Blocks: docker run sh -c with release"
+test_hook 'docker exec mycontainer gh release create v1' 2 "Blocks: docker exec with release"
+test_hook 'podman run --rm fedora gh workflow run release.yml' 2 "Blocks: podman run with release"
+test_hook 'podman exec pod gh release create' 2 "Blocks: podman exec with release"
+test_hook 'docker run --rm alpine echo hello' 0 "Allows: docker run without release"
+test_hook 'docker exec mycontainer ls -la' 0 "Allows: docker exec without release"
+
+echo ""
+echo "--- Network tools to api.github.com ---"
+echo ""
+
+test_hook 'socat - TCP:api.github.com:443' 2 "Blocks: socat to github"
+test_hook 'ncat api.github.com 443' 2 "Blocks: ncat to github"
+test_hook 'nc api.github.com 443' 2 "Blocks: nc to github"
+test_hook 'telnet api.github.com 443' 2 "Blocks: telnet to github"
+test_hook 'openssl s_client -connect api.github.com:443' 2 "Blocks: openssl to github"
+test_hook 'socat - TCP:example.com:443' 0 "Allows: socat to other hosts"
+test_hook 'telnet smtp.gmail.com 587' 0 "Allows: telnet to other hosts"
+
+echo ""
 echo "--- Legacy hub CLI ---"
 echo ""
 

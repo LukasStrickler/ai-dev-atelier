@@ -33,6 +33,14 @@ is_release_command() {
     return 0
   fi
   
+  if [[ "$cmd" =~ (docker|podman)[[:space:]]+(run|exec) ]] && [[ "$cmd" =~ gh[[:space:]]+(workflow|release) ]]; then
+    return 0
+  fi
+  
+  if [[ "$cmd" =~ (socat|ncat|nc|telnet|openssl)[[:space:]].*api\.github\.com ]]; then
+    return 0
+  fi
+  
   if [[ "$cmd" =~ (curl|wget|http|https)[[:space:]].*api\.github\.com.*/releases ]]; then
     return 0
   fi
