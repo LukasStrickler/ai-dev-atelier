@@ -1,10 +1,14 @@
 #!/bin/bash
 # Fetch and cluster PR review comments in one call
-# Usage: bash pr-resolver.sh [PR_NUMBER]
+# Usage: bash pr-resolver.sh [PR_NUMBER] [--repo owner/repo]
 # Output: .ada/data/pr-resolver/pr-{N}/data.json (encapsulated per PR)
 #
 # Clusters include BOTH resolved and unresolved comments for context.
 # Resolved comments are marked with resolved:true so you know what's already done.
+#
+# Fork/Upstream Support:
+#   For PRs from forks to upstream repos, use --repo to specify the upstream:
+#   bash pr-resolver.sh 123 --repo upstream-owner/upstream-repo
 
 set -euo pipefail
 
@@ -23,13 +27,40 @@ if ! check_prerequisites; then
 fi
 
 # Parse arguments
-PR_NUMBER="${1:-}"
+PR_NUMBER=""
+TARGET_REPO=""
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --repo)
+      if [[ $# -lt 2 || "$2" == -* ]]; then
+        log_error "--repo requires a value (owner/repo)"
+        echo "Usage: $0 [PR_NUMBER] [--repo owner/repo]" >&2
+        exit 1
+      fi
+      TARGET_REPO="$2"
+      shift 2
+      ;;
+    -*)
+      log_error "Unknown option: $1"
+      echo "Usage: $0 [PR_NUMBER] [--repo owner/repo]" >&2
+      exit 1
+      ;;
+    *)
+      if [ -z "$PR_NUMBER" ]; then
+        PR_NUMBER="$1"
+      fi
+      shift
+      ;;
+  esac
+done
+
 if [ -z "$PR_NUMBER" ]; then
   log_info "No PR number provided, detecting..."
   PR_NUMBER=$(detect_pr_number 2>/dev/null || echo "")
   if [ -z "$PR_NUMBER" ]; then
     log_error "Could not detect PR number"
-    echo "Usage: $0 <PR_NUMBER>" >&2
+    echo "Usage: $0 <PR_NUMBER> [--repo owner/repo]" >&2
     exit 1
   fi
   log_info "Detected PR: #${PR_NUMBER}"
@@ -40,12 +71,25 @@ if ! validate_pr_number "$PR_NUMBER"; then
   exit 1
 fi
 
-# Get repository info
-OWNER_REPO=$(get_repo_owner_repo)
+# Get repository info (uses --repo if provided, else auto-detects with fork support)
+OWNER_REPO=$(get_effective_repo "$TARGET_REPO")
 if [ -z "$OWNER_REPO" ]; then
   exit 1
 fi
 read -r OWNER REPO <<< "$(parse_owner_repo "$OWNER_REPO")"
+
+# Determine if we should show --repo in examples
+# Show when: explicit --repo provided, OR get_effective_repo detected upstream (fork)
+SHOW_REPO_FLAG=false
+if [ -n "$TARGET_REPO" ]; then
+  SHOW_REPO_FLAG=true
+else
+  # Check if OWNER_REPO differs from origin (means upstream was used)
+  ORIGIN_REPO=$(get_repo_owner_repo 2>/dev/null || echo "")
+  if [ -n "$ORIGIN_REPO" ] && [ "${OWNER_REPO,,}" != "${ORIGIN_REPO,,}" ]; then
+    SHOW_REPO_FLAG=true
+  fi
+fi
 
 # Ensure data directory exists
 ensure_pr_resolver_dir
@@ -450,10 +494,18 @@ generate_cluster_markdown() {
     echo ""
     echo '```bash'
     echo "# Resolve a specific comment thread"
-    echo "bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh ${PR_NUMBER} <COMMENT_ID>"
+    if [ "$SHOW_REPO_FLAG" = "true" ]; then
+      echo "bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh ${PR_NUMBER} <COMMENT_ID> --repo ${OWNER}/${REPO}"
+    else
+      echo "bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh ${PR_NUMBER} <COMMENT_ID>"
+    fi
     echo ""
     echo "# Dismiss as false positive"
-    echo 'bash skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh '"${PR_NUMBER}"' <COMMENT_ID> "reason"'
+    if [ "$SHOW_REPO_FLAG" = "true" ]; then
+      echo 'bash skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh '"${PR_NUMBER}"' <COMMENT_ID> "reason" --repo '"${OWNER}/${REPO}"''
+    else
+      echo 'bash skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh '"${PR_NUMBER}"' <COMMENT_ID> "reason"'
+    fi
     echo '```'
   } > "$output_file"
 }
@@ -503,5 +555,9 @@ else
   echo "     - Read clusters from: ${OUTPUT_FILE}"
   echo "     - Focus on clusters where actionable=true"
   echo "     - After fixing, resolve threads with:"
-  echo "       bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh ${PR_NUMBER} <COMMENT_ID>"
+  if [ "$SHOW_REPO_FLAG" = "true" ]; then
+    echo "       bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh ${PR_NUMBER} <COMMENT_ID> --repo ${OWNER}/${REPO}"
+  else
+    echo "       bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh ${PR_NUMBER} <COMMENT_ID>"
+  fi
 fi

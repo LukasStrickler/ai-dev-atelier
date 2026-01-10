@@ -1,6 +1,6 @@
 #!/bin/bash
 # Dismiss PR review comment with a reason, then resolve the thread
-# Usage: bash pr-resolver-dismiss.sh <PR_NUMBER> <COMMENT_ID> "<REASON>"
+# Usage: bash pr-resolver-dismiss.sh <PR_NUMBER> <COMMENT_ID> "<REASON>" [--repo owner/repo]
 #
 # This adds a reply comment with the dismissal reason, then resolves the thread.
 # Use when the comment is a false positive or not applicable.
@@ -15,18 +15,49 @@ if ! check_prerequisites; then
 fi
 
 # Parse arguments
-if [ $# -lt 3 ]; then
-  echo "Usage: $0 <PR_NUMBER> <COMMENT_ID> \"<REASON>\""
+PR_NUMBER=""
+COMMENT_ID=""
+REASON=""
+TARGET_REPO=""
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --repo)
+      if [[ $# -lt 2 || "$2" == -* ]]; then
+        log_error "--repo requires a value (owner/repo)"
+        echo "Usage: $0 <PR_NUMBER> <COMMENT_ID> \"<REASON>\" [--repo owner/repo]" >&2
+        exit 1
+      fi
+      TARGET_REPO="$2"
+      shift 2
+      ;;
+    -*)
+      log_error "Unknown option: $1"
+      echo "Usage: $0 <PR_NUMBER> <COMMENT_ID> \"<REASON>\" [--repo owner/repo]" >&2
+      exit 1
+      ;;
+    *)
+      if [ -z "$PR_NUMBER" ]; then
+        PR_NUMBER="$1"
+      elif [ -z "$COMMENT_ID" ]; then
+        COMMENT_ID="$1"
+      elif [ -z "$REASON" ]; then
+        REASON="$1"
+      fi
+      shift
+      ;;
+  esac
+done
+
+if [ -z "$PR_NUMBER" ] || [ -z "$COMMENT_ID" ] || [ -z "$REASON" ]; then
+  echo "Usage: $0 <PR_NUMBER> <COMMENT_ID> \"<REASON>\" [--repo owner/repo]"
   echo ""
   echo "Examples:"
   echo "  $0 7 2666193945 \"False positive - the import is intentionally from the local module\""
   echo "  $0 7 2666191192 \"Not applicable - this is auto-generated code\""
+  echo "  $0 7 2666193945 \"False positive\" --repo upstream/repo  # For forks"
   exit 1
 fi
-
-PR_NUMBER="$1"
-COMMENT_ID="$2"
-REASON="$3"
 
 if ! validate_pr_number "$PR_NUMBER"; then
   log_error "Invalid PR number: $PR_NUMBER"
@@ -38,12 +69,7 @@ if ! validate_comment_id "$COMMENT_ID"; then
   exit 1
 fi
 
-if [ -z "$REASON" ]; then
-  log_error "Dismissal reason is required"
-  exit 1
-fi
-
-OWNER_REPO=$(get_repo_owner_repo)
+OWNER_REPO=$(get_effective_repo "$TARGET_REPO")
 if [ -z "$OWNER_REPO" ]; then
   exit 1
 fi

@@ -33,6 +33,17 @@ get_current_repo() {
   return 1
 }
 
+get_upstream_repo() {
+  local repo_info
+  repo_info=$(gh repo view --json isFork,parent --jq 'if .isFork then .parent.nameWithOwner else "" end' 2>/dev/null) || return 1
+  
+  if [[ -n "$repo_info" && "$repo_info" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+    echo "${repo_info,,}"
+    return 0
+  fi
+  return 1
+}
+
 is_pr_open() {
   local pr_number="$1"
   command -v gh &>/dev/null || return 1
@@ -47,9 +58,8 @@ check_blocked() {
   
   [[ "$cmd" != gh\ * ]] && return 1
   
-  local current_repo pr_number="" blocked_pattern="" is_current_repo=false
+  local pr_number="" blocked_pattern="" needs_repo_check=false target_repo_from_cmd=""
   
-  # Handle both --json fields and --json=fields syntax
   if [[ "$cmd" =~ ^gh\ pr\ view\ ([0-9]+).*--json[=\ ]+([^#]+) ]]; then
     local pr_num="${BASH_REMATCH[1]}"
     local json_fields="${BASH_REMATCH[2]}"
@@ -60,7 +70,7 @@ check_blocked() {
       if [[ "$field" == "comments" || "$field" == "reviews" ]]; then
         pr_number="$pr_num"
         blocked_pattern="gh pr view --json comments/reviews"
-        is_current_repo=true
+        needs_repo_check=true
         break
       fi
     done
@@ -69,7 +79,7 @@ check_blocked() {
   if [[ -z "$blocked_pattern" && "$cmd" =~ ^gh\ pr\ view\ ([0-9]+).*--comments ]]; then
     pr_number="${BASH_REMATCH[1]}"
     blocked_pattern="gh pr view --comments"
-    is_current_repo=true
+    needs_repo_check=true
   fi
   
   if [[ -z "$blocked_pattern" && "$cmd" =~ ^gh\ api\ (.+) ]]; then
@@ -83,43 +93,69 @@ check_blocked() {
     api_path="${api_path#/}"
     
     if [[ "$api_path" =~ ^repos/([^/]+/[^/]+)/pulls/([0-9]+)/(comments|reviews)$ ]]; then
-      local target_repo="${BASH_REMATCH[1],,}"
-      current_repo=$(get_current_repo) || return 1
-      
-      if [[ "$target_repo" == "$current_repo" ]]; then
-        pr_number="${BASH_REMATCH[2]}"
-        blocked_pattern="gh api .../pulls/N/${BASH_REMATCH[3]}"
-        is_current_repo=true
-      else
-        return 1
-      fi
+      target_repo_from_cmd="${BASH_REMATCH[1],,}"
+      pr_number="${BASH_REMATCH[2]}"
+      blocked_pattern="gh api .../pulls/N/${BASH_REMATCH[3]}"
+      needs_repo_check=true
     elif [[ "$api_path" =~ ^pulls/([0-9]+)/(comments|reviews)$ ]]; then
       pr_number="${BASH_REMATCH[1]}"
       blocked_pattern="gh api pulls/N/${BASH_REMATCH[2]}"
-      is_current_repo=true
+      needs_repo_check=true
     fi
   fi
   
   if [[ -z "$blocked_pattern" && "$cmd" =~ gh\ api\ graphql.*-f\ query=.*pullRequest ]]; then
-    current_repo=${current_repo:-$(get_current_repo)} || return 1
-    local owner="${current_repo%%/*}"
-    local repo="${current_repo##*/}"
-    if [[ "$cmd" == *"$current_repo"* ]] || \
-       [[ "$cmd" =~ owner:\ *\"$owner\".*name:\ *\"$repo\" ]] || \
-       [[ "$cmd" =~ name:\ *\"$repo\".*owner:\ *\"$owner\" ]]; then
-      blocked_pattern="gh api graphql (pullRequest)"
-      is_current_repo=true
-    fi
+    blocked_pattern="gh api graphql (pullRequest)"
+    needs_repo_check=true
   fi
   
   [[ -z "$blocked_pattern" ]] && return 1
-  [[ "$is_current_repo" != "true" ]] && return 1
+  [[ "$needs_repo_check" != "true" ]] && return 1
+  
+  local current_repo upstream_repo=""
+  current_repo=$(get_current_repo) || return 1
+  upstream_repo=$(get_upstream_repo 2>/dev/null || echo "")
+  
+  if [[ -n "$target_repo_from_cmd" ]]; then
+    if [[ "$target_repo_from_cmd" != "$current_repo" ]] && [[ "$target_repo_from_cmd" != "$upstream_repo" ]]; then
+      return 1
+    fi
+  fi
+  
+  if [[ "$blocked_pattern" == "gh api graphql (pullRequest)" ]]; then
+    local owner="${current_repo%%/*}"
+    local repo="${current_repo##*/}"
+    local matches_current=false
+    # Enable case-insensitive matching for owner/repo names in GraphQL queries
+    # GitHub usernames/repos are case-insensitive, but queries may use mixed case
+    shopt -s nocasematch
+    if [[ "$cmd" =~ (^|[^A-Za-z0-9_.-])"$current_repo"([^A-Za-z0-9_.-]|$) ]] || \
+       [[ "$cmd" =~ owner:\ *\"$owner\".*name:\ *\"$repo\" ]] || \
+       [[ "$cmd" =~ name:\ *\"$repo\".*owner:\ *\"$owner\" ]]; then
+      matches_current=true
+    fi
+    if [[ -n "$upstream_repo" ]]; then
+      local up_owner="${upstream_repo%%/*}"
+      local up_repo="${upstream_repo##*/}"
+      if [[ "$cmd" =~ (^|[^A-Za-z0-9_.-])"$upstream_repo"([^A-Za-z0-9_.-]|$) ]] || \
+         [[ "$cmd" =~ owner:\ *\"$up_owner\".*name:\ *\"$up_repo\" ]] || \
+         [[ "$cmd" =~ name:\ *\"$up_repo\".*owner:\ *\"$up_owner\" ]]; then
+        matches_current=true
+      fi
+    fi
+    shopt -u nocasematch
+    [[ "$matches_current" != "true" ]] && return 1
+  fi
   
   if [[ -n "$pr_number" ]] && ! is_pr_open "$pr_number"; then
     return 1
   fi
   
-  echo "${blocked_pattern}:/resolve-pr-comments"
+  if [[ -n "$upstream_repo" ]]; then
+    echo "${blocked_pattern}:/resolve-pr-comments:fork:${upstream_repo}"
+  else
+    echo "${blocked_pattern}:/resolve-pr-comments"
+  fi
   return 0
 }
 
@@ -133,11 +169,44 @@ main() {
   local matched
   matched=$(check_blocked "$cmd") || exit 0
   
-  local blocked_cmd="${matched%%:*}"
-  local skill="${matched#*:}"
+  local blocked_cmd skill is_fork upstream_repo
+  blocked_cmd="${matched%%:/*}"
+  local rest="${matched#*/}"
+  skill="${rest%%:*}"
   
-  cat >&2 <<EOF
-⚠️ BLOCKED: Direct gh cli/api for PR comments wastes 10-50x tokens.
+  is_fork=false
+  upstream_repo=""
+  if [[ "$rest" == *":fork:"* ]]; then
+    is_fork=true
+    upstream_repo="${rest##*:fork:}"
+  fi
+  
+  if [[ "$is_fork" == "true" ]]; then
+    cat >&2 <<EOF
+BLOCKED: Direct gh cli/api for PR comments wastes 10-50x tokens.
+
+Detected FORK of: $upstream_repo
+PRs to upstream require --repo flag.
+
+Instead of: $blocked_cmd
+Use skill: $skill
+
+Correct workflow for forks:
+  1. bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER> --repo $upstream_repo
+  2. Read .ada/data/pr-resolver/pr-<N>/actionable.json
+  3. Spawn subagents per cluster
+
+Load the skill for proper workflow:
+  /skill resolve-pr-comments
+
+Note: This block applies to OPEN PRs in this repo AND its upstream.
+Closed/merged PRs and unrelated repos are allowed.
+
+Bypass (not recommended): # BYPASS_PR_COMMENTS: <reason>
+EOF
+  else
+    cat >&2 <<EOF
+BLOCKED: Direct gh cli/api for PR comments wastes 10-50x tokens.
 
 Instead of: $blocked_cmd
 Use skill: $skill
@@ -163,6 +232,7 @@ Closed/merged PRs and external repos are allowed.
 
 Bypass (not recommended): # BYPASS_PR_COMMENTS: <reason>
 EOF
+  fi
   exit 2
 }
 
