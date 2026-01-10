@@ -21,7 +21,7 @@
 
 Production-grade skill pack for AI-assisted development: code quality, documentation, code review, research, and orchestration via Agent Skills and MCP.
 
-Quick links: [WORKFLOW_EXAMPLE.md](./WORKFLOW_EXAMPLE.md) | [SETUP.md](./SETUP.md) | [INSTALL.md](./INSTALL.md)
+Quick links: [My Agentic Dev Setup](./MY_AGENTIC_DEV_SETUP.md) | [SETUP.md](./SETUP.md) | [INSTALL.md](./INSTALL.md)
 
 ## Quick Start
 
@@ -87,7 +87,7 @@ Verify in your agent:
 
 - [SETUP.md](./SETUP.md): Verify the repository and skill structure before installing.
 - [INSTALL.md](./INSTALL.md): Full dependency and MCP setup across platforms.
-- [WORKFLOW_EXAMPLE.md](./WORKFLOW_EXAMPLE.md): Personal OpenCode (oh-my-opencode) and Vibekanban setup example.
+- [MY_AGENTIC_DEV_SETUP.md](./MY_AGENTIC_DEV_SETUP.md): Personal agentic development setup with Vibora, oh-my-opencode, and Tailscale.
 
 ## License
 

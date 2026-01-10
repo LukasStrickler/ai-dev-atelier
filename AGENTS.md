@@ -12,7 +12,7 @@ Read these first:
 - `README.md` for capabilities and entry points
 - `SETUP.md` for verification steps
 - `INSTALL.md` for dependencies and MCP setup
-- `WORKFLOW_EXAMPLE.md` for a personal OpenCode + Vibekanban usage example
+- `MY_AGENTIC_DEV_SETUP.md` for a personal Vibora + oh-my-opencode usage example
 
 ## Structure
 
