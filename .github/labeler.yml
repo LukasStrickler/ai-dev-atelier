@@ -13,6 +13,7 @@ chore:
       - any-glob-to-any-file:
           - '.github/**/*'
           - '.test/**/*'
+          - '.hooks/**/*'
           - '.gitignore'
           - '.env.example'
           - 'Makefile'

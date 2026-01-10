@@ -15,7 +15,10 @@ get_command() {
 is_release_command() {
   local cmd="$1"
   
-  [[ "$cmd" =~ gh[[:space:]]+workflow[[:space:]]+run[[:space:]]+.*release\.yml ]] && return 0
+  # Block by file path/name (release.yml) with word boundaries
+  [[ "$cmd" =~ gh[[:space:]]+workflow[[:space:]]+run[[:space:]]+.*\brelease\.yml\b ]] && return 0
+  # Also block invoking the workflow by its display name ("Release")
+  [[ "$cmd" =~ gh[[:space:]]+workflow[[:space:]]+run[[:space:]]+[\"\']*Release[\"\']* ]] && return 0
   [[ "$cmd" =~ gh[[:space:]]+release[[:space:]]+create ]] && return 0
   
   return 1

@@ -120,13 +120,13 @@ Unacceptable agent behavior:
 
 Example interaction:
 
-```
+```text
 User: "I think we're ready for a release"
 Agent: "Based on merged PRs since v0.1.0, I suggest releasing v0.2.0.
         Changes include: [summary]
-        
+
         Command: gh workflow run release.yml -f version=0.2.0
-        
+
         Should I run this?"
 User: "Yes"
 Agent: [runs command]
@@ -136,11 +136,11 @@ Agent: [runs command]
 
 ### Version already exists
 
-```
+```text
 Error: Tag v1.0.0 already exists!
 ```
 
-Choose a different version number, or delete the existing tag/release first:
+Choose a different version number, or delete the existing tag/release first (double-check the tag name before deleting):
 
 ```bash
 gh release delete v1.0.0 --yes

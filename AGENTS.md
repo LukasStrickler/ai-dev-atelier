@@ -167,7 +167,7 @@ Releases are manual. See [docs/RELEASING.md](./docs/RELEASING.md) for the full g
 |---------|-------------|
 | `gh workflow run release.yml -f version=X.Y.Z` | Create release |
 | `gh workflow run release.yml -f version=X.Y.Z -f dry_run=true` | Dry run |
-| `gh workflow run release.yml -f version=X.Y.Z -f prerelease=true` | Pre-release |
+| `gh workflow run release.yml -f version=X.Y.Z -f prerelease=true` | Prerelease |
 
 Agent behavior:
 - Help prepare releases (summarize changes, suggest version)

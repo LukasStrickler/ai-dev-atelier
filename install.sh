@@ -1086,10 +1086,29 @@ configure_claude_hooks() {
       fi
       
       # Hook scripts can be in skills/ (skill-specific) or project root (standalone)
-      local full_path="${SOURCE_SKILLS_DIR}/${hook_script}"
-      if [ ! -f "$full_path" ]; then
-        full_path="${ATELIER_DIR}/${hook_script}"
-      fi
+      local full_path=""
+      local candidate
+      for candidate in "${SOURCE_SKILLS_DIR}/${hook_script}" "${ATELIER_DIR}/${hook_script}"; do
+        if [ -f "$candidate" ]; then
+          # Canonicalize to prevent ../ escaping and symlink tricks
+          local resolved_dir resolved_path
+          if ! resolved_dir=$(cd "$(dirname "$candidate")" 2>/dev/null && pwd -P); then
+            continue
+          fi
+          resolved_path="${resolved_dir}/$(basename "$candidate")"
+
+          local canonical_skills_dir canonical_atelier_dir
+          canonical_skills_dir=$(cd "$SOURCE_SKILLS_DIR" 2>/dev/null && pwd -P)
+          canonical_atelier_dir=$(cd "$ATELIER_DIR" 2>/dev/null && pwd -P)
+
+          case "$resolved_path/" in
+            "$canonical_skills_dir/"*|"$canonical_atelier_dir/"*)
+              full_path="$resolved_path"
+              break
+              ;;
+          esac
+        fi
+      done
       
       if [ ! -f "$full_path" ]; then
         log_warning "Hook script not found: ${hook_script}"

@@ -42,8 +42,9 @@ jobs:
         run: |
           VERSION="${{ inputs.version }}"
           
-          # Validate SemVer format
-          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+          # Validate SemVer format (https://semver.org)
+          SEMVER_RE='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-([0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?(\+([0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?$'
+          if ! [[ "$VERSION" =~ $SEMVER_RE ]]; then
             echo "::error::Invalid version format: $VERSION"
             echo "Use SemVer format: 1.0.0, 0.2.0-beta.1, 1.0.0-rc.1"
             exit 1
@@ -55,8 +56,14 @@ jobs:
 
       - name: Check tag availability
         run: |
-          if git rev-parse "v${{ inputs.version }}" >/dev/null 2>&1; then
-            echo "::error::Tag v${{ inputs.version }} already exists!"
+          TAG="v${{ inputs.version }}"
+          if git show-ref --tags --verify --quiet "refs/tags/$TAG"; then
+            echo "::error::Tag $TAG already exists locally!"
+            echo "Choose a different version or delete the existing tag first."
+            exit 1
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "::error::Remote tag $TAG already exists!"
             echo "Choose a different version or delete the existing tag first."
             exit 1
           fi
@@ -102,6 +109,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Ensure running on main
+        run: |
+          if [ "${{ github.ref_name }}" != "main" ]; then
+            echo "::error::Releases must be run from main (got: ${{ github.ref_name }})"
+            exit 1
+          fi
+
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
@@ -123,7 +137,7 @@ jobs:
       - name: Generate release body
         id: body
         run: |
-          cat > release-body.md << 'RELEASE_BODY'
+          cat > release-body.md << RELEASE_BODY
           ## Installation
 
           ```bash
@@ -148,30 +162,38 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PRERELEASE_FLAG=""
-          LATEST_FLAG="--latest"
-          
+          LATEST_FLAG=""
+
+          # Guard --latest for gh CLI >= 2.49.2
+          GH_VERSION=$(gh --version | head -1 | awk '{print $3}')
           if [ "${{ inputs.prerelease }}" = "true" ]; then
             PRERELEASE_FLAG="--prerelease"
-            LATEST_FLAG=""
             echo "📦 Creating pre-release v${{ inputs.version }}..."
           else
+            # Use --latest only if gh version supports it (>= 2.49.2)
+            if printf '%s\n%s\n' "2.49.2" "$GH_VERSION" | sort -V -C; then
+              LATEST_FLAG="--latest"
+            fi
             echo "📦 Creating release v${{ inputs.version }}..."
           fi
-          
+
           # Create release with auto-generated notes
           NOTES_START=""
           if [ -n "${{ needs.validate.outputs.previous_tag }}" ]; then
             NOTES_START="--notes-start-tag ${{ needs.validate.outputs.previous_tag }}"
           fi
-          
+
+          # Read custom notes from file and prepend to auto-generated notes
+          CUSTOM_NOTES=$(cat release-body.md)
+
           gh release create "v${{ inputs.version }}" \
             --title "v${{ inputs.version }}" \
-            --notes-file release-body.md \
+            --notes "$CUSTOM_NOTES" \
             --generate-notes \
             $NOTES_START \
             $PRERELEASE_FLAG \
             $LATEST_FLAG
-          
+
           echo "✅ Release created!"
           echo "🔗 https://github.com/${{ github.repository }}/releases/tag/v${{ inputs.version }}"
 
