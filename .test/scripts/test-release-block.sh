@@ -1,6 +1,31 @@
 #!/bin/bash
 # Tests for release-block-hook.sh
 # Comprehensive test suite ensuring releases cannot be triggered by AI agents
+#
+# SECURITY MODEL:
+# This hook performs STATIC STRING MATCHING on commands BEFORE execution.
+# It blocks common literal patterns that trigger GitHub releases.
+#
+# WHAT IT BLOCKS:
+# - gh workflow run release.yml (and variations)
+# - gh release create
+# - curl/wget/httpie to api.github.com/releases or /dispatches
+# - gh api with releases/dispatches/graphql endpoints
+# - hub release create (legacy CLI)
+# - Job schedulers (at, cron, batch) containing release commands
+# - Unicode bypass attempts (zero-width spaces, non-breaking spaces)
+#
+# KNOWN LIMITATIONS (architecturally unblockable):
+# - Base64/hex encoded commands piped to interpreters
+# - Variable expansion execution ($cmd where cmd contains release)
+# - File write then execute sequences (echo "gh release" > f.sh; bash f.sh)
+# - Python/Node/Ruby HTTP clients making API calls
+# - /dev/tcp direct socket connections
+# - Process substitution with encoded payloads
+#
+# These require runtime monitoring or sandboxing, not static analysis.
+# The hook provides defense-in-depth, not absolute prevention.
+#
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -380,6 +405,153 @@ test_hook "source ~/.bashrc && gh workflow run release.yml" 2 "Blocks: source + 
 test_hook ". ~/.profile && gh workflow run release.yml" 2 "Blocks: dot source + command"
 test_hook "set -e && gh workflow run release.yml" 2 "Blocks: set -e + command"
 test_hook "trap 'echo done' EXIT && gh workflow run release.yml" 2 "Blocks: trap + command"
+
+echo ""
+echo "--- Additional flag variations ---"
+echo ""
+
+test_hook "gh workflow run release.yml -F version=1.0.0" 2 "Blocks: uppercase -F flag"
+test_hook "gh workflow run release.yml --field version=1.0.0" 2 "Blocks: --field flag"
+test_hook "gh workflow run release.yml --raw-field version=1.0.0" 2 "Blocks: --raw-field flag"
+test_hook "gh workflow run release.yml --json" 2 "Blocks: --json flag"
+test_hook "gh workflow run release.yml --jq .id" 2 "Blocks: --jq flag"
+test_hook "gh workflow run release.yml --repo=owner/repo" 2 "Blocks: --repo with equals"
+test_hook "gh workflow run release.yml --ref=main" 2 "Blocks: --ref with equals"
+test_hook "gh workflow run release.yml -R https://github.com/owner/repo" 2 "Blocks: HTTPS repo URL"
+test_hook "GH_REPO=owner/repo gh workflow run release.yml" 2 "Blocks: GH_REPO env var"
+test_hook "GH_TOKEN=xxx gh workflow run release.yml" 2 "Blocks: GH_TOKEN env var"
+test_hook "gh release create v1.0.0 --notes=Release" 2 "Blocks: gh release create --notes="
+test_hook "gh release create v1.0.0 --title=v1.0.0" 2 "Blocks: gh release create --title="
+
+echo ""
+echo "--- Absolute path variations (also blocked - more secure) ---"
+echo ""
+
+test_hook "/usr/bin/gh workflow run release.yml" 2 "Blocks: /usr/bin/gh (absolute path)"
+test_hook "/usr/local/bin/gh workflow run release.yml" 2 "Blocks: /usr/local/bin/gh"
+test_hook "./gh workflow run release.yml" 2 "Blocks: ./gh (relative path)"
+test_hook '$(which gh) workflow run release.yml' 0 "Allows: \$(which gh) (no literal gh token)"
+
+echo ""
+echo "--- Help commands should be allowed ---"
+echo ""
+
+test_hook "gh workflow run --help" 0 "Allows: gh workflow run --help"
+test_hook "gh release create --help" 0 "Allows: gh release create --help"
+test_hook "gh workflow run release.yml --help" 0 "Allows: release.yml --help"
+
+echo ""
+echo "--- Multiple commands in one line ---"
+echo ""
+
+test_hook "gh workflow run release.yml && gh release create v1.0.0" 2 "Blocks: two release commands"
+test_hook "gh workflow run ci.yml && gh workflow run release.yml" 2 "Blocks: ci.yml then release.yml"
+test_hook "true; gh workflow run release.yml" 2 "Blocks: semicolon separator"
+test_hook "gh workflow run release.yml; true" 2 "Blocks: command then semicolon"
+
+echo ""
+echo "--- Variable/eval obfuscation (blocked due to literal match) ---"
+echo ""
+
+test_hook 'cmd="gh workflow run release.yml"; $cmd' 2 "Blocks: command in variable (literal match)"
+test_hook 'echo "gh workflow run release.yml" | bash' 0 "Allows: piped to bash (echo exclusion)"
+
+echo ""
+echo "--- Regex special characters that should NOT match ---"
+echo ""
+
+test_hook "gh *workflow run release.yml" 0 "Allows: glob star (not space)"
+test_hook "gh +workflow run release.yml" 0 "Allows: plus sign (not space)"
+test_hook "gh ?workflow run release.yml" 0 "Allows: question mark (not space)"
+test_hook "gh [workflow] run release.yml" 0 "Allows: brackets (not workflow)"
+
+echo ""
+echo "--- Path and extension edge cases ---"
+echo ""
+
+test_hook "gh workflow run release.yml.bak" 0 "Allows: .bak extension"
+test_hook "gh workflow run release.yml~" 0 "Allows: backup tilde"
+test_hook "gh workflow run release.yml.tar.gz" 0 "Allows: double extension"
+test_hook "gh workflow run .release.yml" 0 "Allows: hidden file prefix"
+test_hook "gh workflow run release1.yml" 0 "Allows: numeric suffix"
+test_hook "gh workflow run /tmp/release.yml" 2 "Blocks: absolute path to release.yml"
+
+echo ""
+echo "--- Multiline and escape sequence attacks ---"
+echo ""
+
+test_hook $'echo safe\ngh workflow run release.yml' 2 "Blocks: newline before release command"
+test_hook $'gh workflow run ci.yml\ngh workflow run release.yml' 2 "Blocks: release on second line"
+test_hook $'# comment\ngh workflow run release.yml' 2 "Blocks: comment then release on new line"
+test_hook 'gh\ workflow\ run\ release.yml' 2 "Blocks: escaped spaces"
+test_hook 'gh\\workflow run release.yml' 0 "Allows: double backslash (not space)"
+
+echo ""
+echo "--- Unicode and encoding (blocked - potential bypass vectors) ---"
+echo ""
+
+test_hook $'gh\u200Bworkflow run release.yml' 2 "Blocks: zero-width space bypass attempt"
+test_hook $'gh\u00A0workflow run release.yml' 2 "Blocks: non-breaking space bypass attempt"
+test_hook "GH workflow run release.yml" 0 "Allows: uppercase GH (not gh binary)"
+
+echo ""
+echo "--- API dispatch and quoting attacks ---"
+echo ""
+
+test_hook "gh api /repos/owner/repo/actions/workflows/release.yml/dispatches" 2 "Blocks: gh api workflow dispatch"
+test_hook "gh api repos/owner/repo/actions/workflows/release.yml/dispatches -X POST" 2 "Blocks: gh api dispatch POST"
+test_hook "gh workflow run 'release.yml'" 2 "Blocks: single-quoted filename"
+test_hook 'gh workflow run "release.yml"' 2 "Blocks: double-quoted filename"
+test_hook "gh workflow run rele''ase.yml" 2 "Blocks: empty string concatenation"
+test_hook 'gh workflow run rel""ease.yml' 2 "Blocks: double-quote empty concat"
+test_hook "gh workflow run ./release.yml" 2 "Blocks: ./ prefix with release.yml"
+
+echo ""
+echo "--- HTTP-based release attacks (curl, wget, httpie) ---"
+echo ""
+
+test_hook "curl -X POST https://api.github.com/repos/owner/repo/releases" 2 "Blocks: curl POST releases"
+test_hook "curl -X POST https://api.github.com/repos/owner/repo/actions/workflows/release.yml/dispatches" 2 "Blocks: curl dispatch"
+test_hook "curl -H 'Authorization: token xxx' https://api.github.com/repos/o/r/releases -X POST" 2 "Blocks: curl with auth"
+test_hook "wget --post-data='' https://api.github.com/repos/owner/repo/releases" 2 "Blocks: wget releases"
+test_hook "http POST https://api.github.com/repos/owner/repo/releases" 2 "Blocks: httpie releases"
+test_hook "https POST api.github.com/repos/owner/repo/releases" 2 "Blocks: https releases"
+
+echo ""
+echo "--- gh api and GraphQL attacks ---"
+echo ""
+
+test_hook "gh api repos/owner/repo/releases -X POST" 2 "Blocks: gh api releases POST"
+test_hook "gh api repos/owner/repo/releases --method POST" 2 "Blocks: gh api --method"
+test_hook "gh api repos/owner/repo/releases -f tag_name=v1.0.0" 2 "Blocks: gh api releases -f"
+test_hook "gh api graphql -f query='mutation { createRelease }'" 2 "Blocks: GraphQL release mutation"
+test_hook "curl -X POST https://api.github.com/graphql -d '{\"query\":\"mutation { createRelease }\"}'" 2 "Blocks: curl GraphQL release"
+
+echo ""
+echo "--- Job scheduler attacks (at, cron, batch) ---"
+echo ""
+
+test_hook "echo 'gh workflow run release.yml' | at now" 2 "Blocks: at scheduler with release"
+test_hook "echo 'gh release create v1' | at now + 1min" 2 "Blocks: at scheduler delayed"
+test_hook "echo '* * * * * gh workflow run release.yml' | crontab -" 2 "Blocks: crontab with release"
+test_hook "echo 'gh release create' | batch" 2 "Blocks: batch with release"
+test_hook "at now <<< 'gh workflow run release.yml'" 2 "Blocks: at with here-string"
+
+echo ""
+echo "--- Legacy hub CLI ---"
+echo ""
+
+test_hook "hub release create v1.0.0" 2 "Blocks: hub release create"
+test_hook "hub release create v1.0.0 -m 'Release'" 2 "Blocks: hub release with message"
+
+echo ""
+echo "--- Safe API commands that should be allowed ---"
+echo ""
+
+test_hook "gh api repos/owner/repo/releases" 0 "Allows: gh api releases (GET)"
+test_hook "curl https://api.github.com/repos/owner/repo" 0 "Allows: curl repo info"
+test_hook "gh api user" 0 "Allows: gh api user"
+test_hook "curl https://api.github.com/user" 0 "Allows: curl user"
 
 #==============================================================================
 # Summary
