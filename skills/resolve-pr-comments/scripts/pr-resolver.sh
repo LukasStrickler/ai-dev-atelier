@@ -78,6 +78,13 @@ if [ -z "$OWNER_REPO" ]; then
 fi
 read -r OWNER REPO <<< "$(parse_owner_repo "$OWNER_REPO")"
 
+SHOW_REPO_FLAG=false
+if [ -n "$TARGET_REPO" ]; then
+  SHOW_REPO_FLAG=true
+elif get_upstream_repo &>/dev/null; then
+  SHOW_REPO_FLAG=true
+fi
+
 # Ensure data directory exists
 ensure_pr_resolver_dir
 
@@ -481,10 +488,18 @@ generate_cluster_markdown() {
     echo ""
     echo '```bash'
     echo "# Resolve a specific comment thread"
-    echo "bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh ${PR_NUMBER} <COMMENT_ID> --repo ${OWNER}/${REPO}"
+    if [ "$SHOW_REPO_FLAG" = "true" ]; then
+      echo "bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh ${PR_NUMBER} <COMMENT_ID> --repo ${OWNER}/${REPO}"
+    else
+      echo "bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh ${PR_NUMBER} <COMMENT_ID>"
+    fi
     echo ""
     echo "# Dismiss as false positive"
-    echo 'bash skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh '"${PR_NUMBER}"' <COMMENT_ID> "reason" --repo '"${OWNER}/${REPO}"''
+    if [ "$SHOW_REPO_FLAG" = "true" ]; then
+      echo 'bash skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh '"${PR_NUMBER}"' <COMMENT_ID> "reason" --repo '"${OWNER}/${REPO}"''
+    else
+      echo 'bash skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh '"${PR_NUMBER}"' <COMMENT_ID> "reason"'
+    fi
     echo '```'
   } > "$output_file"
 }
@@ -534,5 +549,9 @@ else
   echo "     - Read clusters from: ${OUTPUT_FILE}"
   echo "     - Focus on clusters where actionable=true"
   echo "     - After fixing, resolve threads with:"
-  echo "       bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh ${PR_NUMBER} <COMMENT_ID> --repo ${OWNER}/${REPO}"
+  if [ "$SHOW_REPO_FLAG" = "true" ]; then
+    echo "       bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh ${PR_NUMBER} <COMMENT_ID> --repo ${OWNER}/${REPO}"
+  else
+    echo "       bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh ${PR_NUMBER} <COMMENT_ID>"
+  fi
 fi

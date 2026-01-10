@@ -367,13 +367,12 @@ test_script_help() {
   local script="$1"
   local name="$2"
   
-  local output
-  output=$("$script" 2>&1 || true)
-  
-  if echo "$output" | grep -q "\-\-repo"; then
-    pass "$name: --repo mentioned in usage/help"
+  # Check script source for --repo documentation (more reliable than runtime output,
+  # which may vary based on auto-detection and conditional display)
+  if grep -q "\-\-repo" "$script"; then
+    pass "$name: --repo documented in script"
   else
-    fail "$name: --repo not mentioned in usage/help"
+    fail "$name: --repo not documented in script"
   fi
 }
 

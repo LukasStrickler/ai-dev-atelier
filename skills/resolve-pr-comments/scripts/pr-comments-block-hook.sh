@@ -126,7 +126,7 @@ check_blocked() {
     local owner="${current_repo%%/*}"
     local repo="${current_repo##*/}"
     local matches_current=false
-    if [[ "$cmd" == *"$current_repo"* ]] || \
+    if [[ "$cmd" =~ (^|[^A-Za-z0-9_.-])"$current_repo"([^A-Za-z0-9_.-]|$) ]] || \
        [[ "$cmd" =~ owner:\ *\"$owner\".*name:\ *\"$repo\" ]] || \
        [[ "$cmd" =~ name:\ *\"$repo\".*owner:\ *\"$owner\" ]]; then
       matches_current=true
@@ -134,7 +134,7 @@ check_blocked() {
     if [[ -n "$upstream_repo" ]]; then
       local up_owner="${upstream_repo%%/*}"
       local up_repo="${upstream_repo##*/}"
-      if [[ "$cmd" == *"$upstream_repo"* ]] || \
+      if [[ "$cmd" =~ (^|[^A-Za-z0-9_.-])"$upstream_repo"([^A-Za-z0-9_.-]|$) ]] || \
          [[ "$cmd" =~ owner:\ *\"$up_owner\".*name:\ *\"$up_repo\" ]] || \
          [[ "$cmd" =~ name:\ *\"$up_repo\".*owner:\ *\"$up_owner\" ]]; then
         matches_current=true

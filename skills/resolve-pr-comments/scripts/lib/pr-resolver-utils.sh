@@ -137,7 +137,7 @@ get_upstream_repo() {
   repo_info=$(gh repo view --json isFork,parent --jq 'if .isFork then .parent.nameWithOwner else "" end' 2>/dev/null) || return 1
   
   if [[ -n "$repo_info" && "$repo_info" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
-    echo "$repo_info"
+    echo "${repo_info,,}"
     return 0
   fi
   return 1
