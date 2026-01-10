@@ -165,13 +165,12 @@ jobs:
           LATEST_FLAG=""
 
           # Guard --latest for gh CLI >= 2.49.2 (best-effort, with validation)
-          GH_VERSION_RAW="$(gh --version | head -1 || true)"
-          GH_VERSION="$(printf '%s\n' "$GH_VERSION_RAW" | awk '{print $3}')"
+          # Extract version using grep -oE for robustness against format changes
+          GH_VERSION_RAW="$(gh --version 2>/dev/null | head -1 || true)"
+          GH_VERSION="$(printf '%s\n' "$GH_VERSION_RAW" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
 
-          # Validate that GH_VERSION looks like a version (e.g., 2.49.2) before using it
-          if ! printf '%s\n' "$GH_VERSION" | grep -Eq '^[0-9]+(\.[0-9]+)*$'; then
-            echo "Warning: Unable to determine a valid gh version from: '$GH_VERSION_RAW'. Not using --latest flag." >&2
-            GH_VERSION=""
+          if [ -z "$GH_VERSION" ]; then
+            echo "Warning: Unable to determine gh version from: '$GH_VERSION_RAW'. Not using --latest flag." >&2
           fi
 
           if [ "${{ inputs.prerelease }}" = "true" ]; then

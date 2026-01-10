@@ -183,7 +183,7 @@ A PreToolUse hook (`.hooks/release-block-hook.sh`) prevents AI agents from trigg
 
 ### No Bypass Available
 
-**There is no bypass mechanism.** Releases are 100% human-controlled. AI agents must provide a copy-pastable command for the human to run manually.
+**There is no bypass mechanism.** Bypass-style comments (e.g., `BYPASS_RELEASE`) are intentionally ignored by the hook. Releases are 100% human-controlled. AI agents must provide a copy-pastable command for the human to run manually.
 
 ### Known Limitations
 
