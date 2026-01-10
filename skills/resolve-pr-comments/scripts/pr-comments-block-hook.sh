@@ -126,6 +126,9 @@ check_blocked() {
     local owner="${current_repo%%/*}"
     local repo="${current_repo##*/}"
     local matches_current=false
+    # Enable case-insensitive matching for owner/repo names in GraphQL queries
+    # GitHub usernames/repos are case-insensitive, but queries may use mixed case
+    shopt -s nocasematch
     if [[ "$cmd" =~ (^|[^A-Za-z0-9_.-])"$current_repo"([^A-Za-z0-9_.-]|$) ]] || \
        [[ "$cmd" =~ owner:\ *\"$owner\".*name:\ *\"$repo\" ]] || \
        [[ "$cmd" =~ name:\ *\"$repo\".*owner:\ *\"$owner\" ]]; then
@@ -140,6 +143,7 @@ check_blocked() {
         matches_current=true
       fi
     fi
+    shopt -u nocasematch
     [[ "$matches_current" != "true" ]] && return 1
   fi
   
