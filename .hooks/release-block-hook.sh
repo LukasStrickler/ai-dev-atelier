@@ -100,29 +100,23 @@ is_release_command() {
   return 1
 }
 
-has_bypass() {
-  [[ "$1" == *"BYPASS_RELEASE:"* ]]
-}
-
 main() {
   local cmd
   cmd=$(get_command) || exit 0
   [ -z "$cmd" ] && exit 0
   
   is_release_command "$cmd" || exit 0
-  has_bypass "$cmd" && exit 0
   
   cat >&2 <<EOF
 🚫 BLOCKED: Releases require human approval.
 
 Detected: $cmd
 
-AI agents cannot trigger releases directly.
+AI agents cannot trigger releases. Provide a copy-pastable command for the human:
 
-Agent: Provide a copy-pastable command for the human to run:
   gh workflow run release.yml -f version=X.Y.Z
 
-Bypass (not recommended): # BYPASS_RELEASE: <reason>
+The human must run this command manually.
 EOF
   exit 2
 }

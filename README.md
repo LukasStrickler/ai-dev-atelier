@@ -81,7 +81,10 @@ Verify in your agent:
 - The installer preserves existing OpenCode configurations.
 - Outputs are written to `.ada/` directories; no hidden state.
 - Use `skills-config.json` to disable skills per agent.
-- **PreToolUse hooks** in `hooks.json` enforce workflow guardrails (e.g., blocking `git push` in Graphite repos, blocking wasteful gh CLI calls for PR comments).
+- **PreToolUse hooks** in `hooks.json` enforce workflow guardrails:
+  - `graphite-block`: Blocks `git push`, `git checkout -b`, `gh pr create` in Graphite-enabled repos
+  - `pr-comments-block`: Blocks wasteful `gh api` calls for PR comments (use `resolve-pr-comments` skill instead)
+  - `release-block`: Blocks AI agents from triggering releases without human approval (see [docs/RELEASING.md](./docs/RELEASING.md))
 
 ## Docs and Setup
 

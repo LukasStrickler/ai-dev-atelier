@@ -156,3 +156,53 @@ If release notes are empty, no PRs were merged since the last release tag. Eithe
 ### Wrong release notes
 
 Release notes are generated from PRs, not commits. If a change was committed directly to main without a PR, it won't appear in release notes. Always use PRs for changes.
+
+## Security: Release Block Hook
+
+A PreToolUse hook (`.hooks/release-block-hook.sh`) prevents AI agents from triggering releases without human approval.
+
+### What It Blocks
+
+| Category | Blocked Commands |
+|----------|------------------|
+| **Direct release** | `gh workflow run release.yml`, `gh release create` |
+| **Alternative CLIs** | `hub release create` |
+| **HTTP to GitHub API** | `curl`/`wget` to `/releases`, `/dispatches`, GraphQL `createRelease` |
+| **gh api write ops** | `gh api /releases -X POST`, `gh api graphql` with release mutations |
+| **Container escapes** | `docker run`/`podman exec` containing `gh workflow`/`release` |
+| **Network tools** | `socat`/`ncat`/`nc`/`telnet`/`openssl` to `api.github.com` |
+| **Job schedulers** | `at`/`batch`/`crontab` with release commands |
+| **Unicode tricks** | Zero-width characters (U+200B, U+200C, U+200D, U+FEFF, U+00A0) |
+
+### What It Allows
+
+- `gh api /repos/.../releases` (GET requests for reading release info)
+- `gh release list`, `gh release view` (read-only operations)
+- Commands with `--help` flag
+- Text processing commands that mention releases: `echo`, `grep`, `cat`, etc.
+
+### No Bypass Available
+
+**There is no bypass mechanism.** Releases are 100% human-controlled. AI agents must provide a copy-pastable command for the human to run manually.
+
+### Known Limitations
+
+The hook performs **static string matching** before command execution. It cannot block:
+
+| Vector | Why Unblockable |
+|--------|-----------------|
+| Base64/hex encoded commands | Decoded at runtime |
+| Variable expansion (`$cmd`) | Resolved after hook |
+| File write → execute | Two-step attack |
+| Python/Node HTTP clients | Not shell commands |
+| Symlinked/renamed `gh` binary | Path not inspectable |
+
+These are **architecturally unblockable** with static analysis. The hook provides defense-in-depth, not absolute prevention. The primary defense is the AI agent's instruction to wait for human approval.
+
+### Testing
+
+The hook has 259 test cases covering security vectors:
+
+```bash
+bash .test/scripts/test-release-block.sh
+```
