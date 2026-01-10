@@ -14,12 +14,26 @@ get_command() {
 
 is_release_command() {
   local cmd="$1"
+  local TEXT_CMDS="echo|printf|cat|grep|egrep|fgrep|awk|sed|less|more|head|tail|wc|cut|tr|sort|uniq|diff|cmp|file|strings|od|hexdump|xxd|base64"
+  local END='([[:space:]]|$|["'"'"'`)\]|&><])'
+  local pattern
   
-  # Block by file path/name (release.yml) with word boundaries
-  [[ "$cmd" =~ gh[[:space:]]+workflow[[:space:]]+run[[:space:]]+.*\brelease\.yml\b ]] && return 0
-  # Also block invoking the workflow by its display name ("Release")
-  [[ "$cmd" =~ gh[[:space:]]+workflow[[:space:]]+run[[:space:]]+[\"\']*Release[\"\']* ]] && return 0
-  [[ "$cmd" =~ gh[[:space:]]+release[[:space:]]+create ]] && return 0
+  pattern="gh[[:space:]]+workflow[[:space:]]+run[[:space:]]+(--[a-z-]+[[:space:]]+)*([^[:space:]]*/)?release\.yml${END}"
+  if [[ "$cmd" =~ $pattern ]]; then
+    [[ "$cmd" =~ ^[[:space:]]*($TEXT_CMDS)[[:space:]].*gh[[:space:]]+workflow[[:space:]]+run ]] && return 1
+    return 0
+  fi
+  
+  pattern="gh[[:space:]]+workflow[[:space:]]+run[[:space:]]+[\"']*Release[\"']*${END}"
+  if [[ "$cmd" =~ $pattern ]]; then
+    [[ "$cmd" =~ ^[[:space:]]*($TEXT_CMDS)[[:space:]].*gh[[:space:]]+workflow[[:space:]]+run ]] && return 1
+    return 0
+  fi
+  
+  if [[ "$cmd" =~ gh[[:space:]]+release[[:space:]]+create ]]; then
+    [[ "$cmd" =~ ^[[:space:]]*($TEXT_CMDS)[[:space:]].*gh[[:space:]]+release[[:space:]]+create ]] && return 1
+    return 0
+  fi
   
   return 1
 }
