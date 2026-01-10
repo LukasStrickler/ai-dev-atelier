@@ -574,7 +574,6 @@ echo ""
 
 test_hook "gh api repos/owner/repo/releases" 0 "Allows: gh api releases (GET)"
 test_hook "gh api repos/owner/repo/releases --jq '.[0].tag_name'" 0 "Allows: gh api releases with --jq (read)"
-test_hook "gh api repos/owner/repo/releases --jq '.[0].tag_name'" 0 "Allows: gh api releases with --jq (read)"
 test_hook "curl https://api.github.com/repos/owner/repo" 0 "Allows: curl repo info"
 test_hook "gh api user" 0 "Allows: gh api user"
 test_hook "curl https://api.github.com/user" 0 "Allows: curl user"

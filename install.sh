@@ -1101,31 +1101,19 @@ configure_claude_hooks() {
           canonical_skills_dir=$(cd "$SOURCE_SKILLS_DIR" 2>/dev/null && pwd -P)
           canonical_atelier_dir=$(cd "$ATELIER_DIR" 2>/dev/null && pwd -P)
 
-          # Security: ensure canonical paths are non-empty before validation
+          # Security: ensure at least one canonical path is non-empty
           if [ -z "$canonical_skills_dir" ] && [ -z "$canonical_atelier_dir" ]; then
             continue
           fi
 
-          # Build pattern only with non-empty paths
-          local valid_pattern=""
-          [ -n "$canonical_skills_dir" ] && valid_pattern="$canonical_skills_dir/"
-          if [ -n "$canonical_atelier_dir" ]; then
-            [ -n "$valid_pattern" ] && valid_pattern="$valid_pattern|"
-            valid_pattern="${valid_pattern}$canonical_atelier_dir/"
+          # Security: validate resolved path is within allowed directories
+          if [ -n "$canonical_skills_dir" ] && [[ "$resolved_path/" == "$canonical_skills_dir/"* ]]; then
+            full_path="$resolved_path"
+            break
+          elif [ -n "$canonical_atelier_dir" ] && [[ "$resolved_path/" == "$canonical_atelier_dir/"* ]]; then
+            full_path="$resolved_path"
+            break
           fi
-
-          case "$resolved_path/" in
-            "$canonical_skills_dir/"*|"$canonical_atelier_dir/"*)
-              # Double-check: at least one pattern must match AND be non-empty
-              if [ -n "$canonical_skills_dir" ] && [[ "$resolved_path/" == "$canonical_skills_dir/"* ]]; then
-                full_path="$resolved_path"
-                break
-              elif [ -n "$canonical_atelier_dir" ] && [[ "$resolved_path/" == "$canonical_atelier_dir/"* ]]; then
-                full_path="$resolved_path"
-                break
-              fi
-              ;;
-          esac
         fi
       done
       
