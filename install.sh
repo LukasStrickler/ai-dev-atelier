@@ -1085,7 +1085,11 @@ configure_claude_hooks() {
         continue
       fi
       
+      # Hook scripts can be in skills/ (skill-specific) or project root (standalone)
       local full_path="${SOURCE_SKILLS_DIR}/${hook_script}"
+      if [ ! -f "$full_path" ]; then
+        full_path="${ATELIER_DIR}/${hook_script}"
+      fi
       
       if [ ! -f "$full_path" ]; then
         log_warning "Hook script not found: ${hook_script}"

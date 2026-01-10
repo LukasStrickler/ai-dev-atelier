@@ -15,6 +15,13 @@
         "matcher": "Bash",
         "script": "resolve-pr-comments/scripts/pr-comments-block-hook.sh",
         "enabled": true
+      },
+      {
+        "id": "release-block",
+        "description": "Blocks AI from triggering releases (requires human approval)",
+        "matcher": "Bash",
+        "script": ".hooks/release-block-hook.sh",
+        "enabled": true
       }
     ]
   }
