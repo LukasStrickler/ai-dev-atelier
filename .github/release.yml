@@ -1,0 +1,48 @@
+# Configuration for auto-generated release notes
+# Used by: gh release create --generate-notes
+# Docs: https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
+
+changelog:
+  exclude:
+    labels:
+      - skip-changelog
+      - duplicate
+      - invalid
+      - question
+      - wontfix
+    authors:
+      - dependabot
+      - dependabot[bot]
+
+  categories:
+    - title: "💥 Breaking Changes"
+      labels:
+        - breaking
+
+    - title: "🚀 Skills"
+      labels:
+        - skill
+
+    - title: "🔒 Security"
+      labels:
+        - security
+
+    - title: "✨ Features"
+      labels:
+        - feature
+
+    - title: "🐛 Bug Fixes"
+      labels:
+        - bug
+
+    - title: "📚 Documentation"
+      labels:
+        - documentation
+
+    - title: "🔧 Maintenance"
+      labels:
+        - chore
+
+    - title: "Other Changes"
+      labels:
+        - "*"

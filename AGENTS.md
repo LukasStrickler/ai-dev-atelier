@@ -4,7 +4,7 @@ This file defines how AI agents and contributors should work in this repository.
 
 ## Overview
 
-AI Dev Atelier: Production-grade skill pack for AI-assisted development. 9 skills following Anthropic Agent Skills standard, with MCP integrations for search/research.
+AI Dev Atelier: Production-grade skill pack for AI-assisted development. 10 skills following Anthropic Agent Skills standard, with MCP integrations for search/research.
 
 ## For AI agents
 
@@ -18,10 +18,11 @@ Read these first:
 
 ```text
 ai-dev-atelier/
-├── skills/                    # 9 skill directories
+├── skills/                    # 10 skill directories
 │   ├── <name>/SKILL.md        # YAML frontmatter + instructions
 │   ├── <name>/scripts/        # Executable bash scripts
 │   └── <name>/references/     # Guides, templates, examples
+├── .hooks/                    # Standalone hook scripts
 ├── .test/                     # Validation and integration tests
 ├── .ada/                      # Runtime outputs (gitignored)
 ├── hooks.json                 # PreToolUse hook definitions
@@ -76,10 +77,12 @@ Hooks in `hooks.json` enforce workflow guardrails by intercepting tool calls bef
 |---------|---------|---------|
 | `graphite-block` | Bash | Blocks `git push`, `git checkout -b`, `gh pr create` in Graphite-enabled repos |
 | `pr-comments-block` | Bash | Blocks `gh api` calls fetching PR comments on current repo's open PRs |
+| `release-block` | Bash | Blocks `gh workflow run release.yml` and `gh release create` (requires human approval) |
 
 Hooks are installed to `~/.opencode/hook/` by `install.sh`. They help prevent:
 - Accidental git operations that conflict with Graphite stacked PR workflow
 - Wasteful API calls that can be replaced by the `resolve-pr-comments` skill
+- AI agents from triggering releases without human approval
 
 ## MCP Servers
 
@@ -154,6 +157,24 @@ description: "Purpose and triggers (max 1024 chars)"
 
 Body contains: instructions, workflows, examples, script references.
 
+## Releases
+
+**CRITICAL: AI agents must NEVER trigger releases without explicit user permission.**
+
+Releases are manual. See [docs/RELEASING.md](./docs/RELEASING.md) for the full guide.
+
+| Command | Description |
+|---------|-------------|
+| `gh workflow run release.yml -f version=X.Y.Z` | Create release |
+| `gh workflow run release.yml -f version=X.Y.Z -f dry_run=true` | Dry run |
+| `gh workflow run release.yml -f version=X.Y.Z -f prerelease=true` | Prerelease |
+
+Agent behavior:
+- Help prepare releases (summarize changes, suggest version)
+- Show the command to run
+- **ALWAYS wait for explicit user confirmation** before executing
+- Never assume a release should happen after merging PRs
+
 ## Guardrails
 
 - Do not commit unless explicitly requested
@@ -161,6 +182,7 @@ Body contains: instructions, workflows, examples, script references.
 - Do not add or expose secrets in files
 - Keep changes scoped to the requested task
 - Use `skills-config.json` to disable skills per agent
+- **Do not trigger releases** without explicit user permission
 
 ## Testing
 

@@ -1,0 +1,21 @@
+skill:
+  - changed-files:
+      - any-glob-to-any-file: 'skills/**/*'
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.md'
+          - 'docs/**/*'
+
+chore:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/**/*'
+          - '.test/**/*'
+          - '.hooks/**/*'
+          - '.gitignore'
+          - '.env.example'
+          - 'Makefile'
+          - '*.json'
+          - '*.sh'
