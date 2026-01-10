@@ -78,11 +78,17 @@ if [ -z "$OWNER_REPO" ]; then
 fi
 read -r OWNER REPO <<< "$(parse_owner_repo "$OWNER_REPO")"
 
+# Determine if we should show --repo in examples
+# Show when: explicit --repo provided, OR get_effective_repo detected upstream (fork)
 SHOW_REPO_FLAG=false
 if [ -n "$TARGET_REPO" ]; then
   SHOW_REPO_FLAG=true
-elif get_upstream_repo &>/dev/null; then
-  SHOW_REPO_FLAG=true
+else
+  # Check if OWNER_REPO differs from origin (means upstream was used)
+  ORIGIN_REPO=$(get_repo_owner_repo 2>/dev/null || echo "")
+  if [ -n "$ORIGIN_REPO" ] && [ "${OWNER_REPO,,}" != "${ORIGIN_REPO,,}" ]; then
+    SHOW_REPO_FLAG=true
+  fi
 fi
 
 # Ensure data directory exists
