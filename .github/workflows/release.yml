@@ -136,26 +136,21 @@ jobs:
 
       - name: Generate release body
         id: body
+        shell: bash
         run: |
-          cat > release-body.md << RELEASE_BODY
-          ## Installation
-
-          ```bash
-          # Clone and install
-          git clone https://github.com/${{ github.repository }}.git ~/ai-dev-atelier
-          cd ~/ai-dev-atelier && git checkout v${{ inputs.version }}
-          bash install.sh
-          ```
-
-          Or update an existing installation:
-
-          ```bash
-          cd ~/ai-dev-atelier
-          git fetch --tags && git checkout v${{ inputs.version }}
-          bash install.sh
-          ```
-
-          RELEASE_BODY
+          printf '%s\n\n## Installation\n\n' >> release-body.md
+          printf '\`\`\`bash\n' >> release-body.md
+          printf '# Clone and install\n' >> release-body.md
+          printf 'git clone https://github.com/%s.git ~/ai-dev-atelier\n' "${{ github.repository }}" >> release-body.md
+          printf 'cd ~/ai-dev-atelier && git checkout v%s\n' "${{ inputs.version }}" >> release-body.md
+          printf 'bash install.sh\n' >> release-body.md
+          printf '\`\`\`\n\n' >> release-body.md
+          printf 'Or update an existing installation:\n\n' >> release-body.md
+          printf '\`\`\`bash\n' >> release-body.md
+          printf 'cd ~/ai-dev-atelier\n' >> release-body.md
+          printf 'git fetch --tags && git checkout v%s\n' "${{ inputs.version }}" >> release-body.md
+          printf 'bash install.sh\n' >> release-body.md
+          printf '\`\`\`\n' >> release-body.md
 
       - name: Create GitHub Release
         env:
@@ -163,16 +158,16 @@ jobs:
         run: |
           PRERELEASE_FLAG=""
           LATEST_FLAG=""
-
+          
           # Guard --latest for gh CLI >= 2.49.2 (best-effort, with validation)
           # Extract version using grep -oE for robustness against format changes
           GH_VERSION_RAW="$(gh --version 2>/dev/null | head -1 || true)"
           GH_VERSION="$(printf '%s\n' "$GH_VERSION_RAW" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
-
+          
           if [ -z "$GH_VERSION" ]; then
             echo "Warning: Unable to determine gh version from: '$GH_VERSION_RAW'. Not using --latest flag." >&2
           fi
-
+          
           if [ "${{ inputs.prerelease }}" = "true" ]; then
             PRERELEASE_FLAG="--prerelease"
             echo "📦 Creating pre-release v${{ inputs.version }}..."
@@ -183,19 +178,17 @@ jobs:
             fi
             echo "📦 Creating release v${{ inputs.version }}..."
           fi
-
+          
           # Create release with auto-generated notes
           NOTES_START=""
           if [ -n "${{ needs.validate.outputs.previous_tag }}" ]; then
             NOTES_START="--notes-start-tag ${{ needs.validate.outputs.previous_tag }}"
           fi
 
-          # Read custom notes from file and prepend to auto-generated notes
-          CUSTOM_NOTES=$(cat release-body.md)
-
+          # Use --notes-file to prepend clean installation notes to auto-generated PR notes
           gh release create "v${{ inputs.version }}" \
             --title "v${{ inputs.version }}" \
-            --notes "$CUSTOM_NOTES" \
+            --notes-file release-body.md \
             --generate-notes \
             $NOTES_START \
             $PRERELEASE_FLAG \
