@@ -135,22 +135,11 @@ jobs:
           echo "✅ Created and pushed tag v${{ inputs.version }}"
 
       - name: Generate release body
-        id: body
         shell: bash
-        run: |
-          printf '%s\n\n## Installation\n\n' >> release-body.md
-          printf '\`\`\`bash\n' >> release-body.md
-          printf '# Clone and install\n' >> release-body.md
-          printf 'git clone https://github.com/%s.git ~/ai-dev-atelier\n' "${{ github.repository }}" >> release-body.md
-          printf 'cd ~/ai-dev-atelier && git checkout v%s\n' "${{ inputs.version }}" >> release-body.md
-          printf 'bash install.sh\n' >> release-body.md
-          printf '\`\`\`\n\n' >> release-body.md
-          printf 'Or update an existing installation:\n\n' >> release-body.md
-          printf '\`\`\`bash\n' >> release-body.md
-          printf 'cd ~/ai-dev-atelier\n' >> release-body.md
-          printf 'git fetch --tags && git checkout v%s\n' "${{ inputs.version }}" >> release-body.md
-          printf 'bash install.sh\n' >> release-body.md
-          printf '\`\`\`\n' >> release-body.md
+        env:
+          REPO_NAME: ${{ github.repository }}
+          VERSION: ${{ inputs.version }}
+        run: bash scripts/generate-release-notes.sh
 
       - name: Create GitHub Release
         env:
