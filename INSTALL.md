@@ -7,11 +7,15 @@ Complete installation guide for AI Dev Atelier, including all required and optio
 - **Operating System**: macOS, Linux, or Windows (with WSL/Git Bash)
 - **Shell**: Bash 4.0+ (included on macOS/Linux, Git Bash on Windows)
 
+## Automatic Dependency Install
+
+The installer checks dependencies and will prompt to install common packages with your system package manager when possible. If the automatic install fails, use the manual commands below.
+
 ## Required Dependencies
 
 ### 1. Git
 
-Version control system (required for all tools).
+Version control system (required for all tools). The installer will prompt to install Git via your system package manager if it's missing.
 
 **Installation:**
 
@@ -27,6 +31,12 @@ sudo apt-get install git
 
 # Linux (Fedora/RHEL)
 sudo dnf install git
+
+# Linux (Arch)
+sudo pacman -S git
+
+# Linux (openSUSE)
+sudo zypper install git
 
 # Windows
 # Download from: https://git-scm.com/download/win
@@ -75,6 +85,11 @@ bun --version   # Should show latest Bun version
 
 This skill pack is designed for OpenCode agent. Ensure you have it installed and configured.
 
+**Installation:**
+```bash
+curl -fsSL https://opencode.ai/install | bash
+```
+
 **Verify:**
 ```bash
 # Verify OpenCode config directory exists
@@ -85,7 +100,7 @@ ls -la ~/.opencode
 
 ### jq (JSON processor)
 
-Required for automatic MCP configuration by `install.sh`.
+Required for automatic MCP configuration by `install.sh`. The installer will prompt to install jq when it's missing.
 
 **Installation:**
 
@@ -98,6 +113,12 @@ sudo apt-get install jq
 
 # Linux (Fedora/RHEL)
 sudo dnf install jq
+
+# Linux (Arch)
+sudo pacman -S jq
+
+# Linux (openSUSE)
+sudo zypper install jq
 
 # Windows (using Chocolatey)
 choco install jq
@@ -112,7 +133,7 @@ jq --version
 
 ### GitHub CLI (gh)
 
-Required for PR review tools (used by the `pr-comment-resolver` skill).
+Required for PR review tools (used by the `resolve-pr-comments` skill).
 
 **Installation:**
 
@@ -149,6 +170,9 @@ Required for code review tools (used by the `code-review` skill).
 **Installation:**
 
 ```bash
+curl -fsSL https://cli.coderabbit.ai/install.sh | sh
+
+# OR with npm
 npm install -g @coderabbitai/cli
 
 # OR with Bun
@@ -164,6 +188,31 @@ coderabbit auth login
 **Verify:**
 ```bash
 coderabbit --version
+```
+
+### Graphite CLI (gt)
+
+Required for stacked PR workflows (used by the `use-graphite` skill).
+
+**Installation:**
+
+```bash
+# Homebrew
+brew install withgraphite/tap/graphite
+
+# npm
+npm install -g @withgraphite/graphite-cli@stable
+```
+
+**Authentication:**
+
+```bash
+gt auth login
+```
+
+**Verify:**
+```bash
+gt --version
 ```
 
 ## Project-Specific Dependencies
@@ -246,62 +295,7 @@ Your project should have these commands available for the code-quality skill to 
 
 ## Installation Steps
 
-> **⚡ Quick setup:** For a quick start guide, see [SETUP.md](./SETUP.md).
-
-### 1. Clone AI Dev Atelier
-
-```bash
-git clone https://github.com/LukasStrickler/ai-dev-atelier.git ~/ai-dev-atelier
-```
-
-**Alternative locations:**
-
-You can clone to any location. The install script will automatically detect the correct path.
-
-```bash
-git clone https://github.com/LukasStrickler/ai-dev-atelier.git ~/projects/ai-dev-atelier
-# Or any other path
-```
-
-### 2. Verify Skill Structure
-
-```bash
-bash ~/ai-dev-atelier/setup.sh
-```
-
-The setup script will:
-- ✅ Verify skills directory exists
-- ✅ Check for core skills (code-quality, docs-check, code-review, pr-comment-resolver)
-- ✅ Validate SKILL.md files are present
-- ✅ Report any missing or invalid skills
-
-### 3. Install Skills to OpenCode
-
-```bash
-bash ~/ai-dev-atelier/install.sh
-```
-
-The install script will:
-- ✅ Copy skills to `~/.opencode/skill`
-- ✅ Preserve existing configuration
-- ✅ Show smart diff before overwriting existing skills
-- ✅ Ask for confirmation before overwriting (use `--yes` to skip)
-
-**Options:**
-- `--yes` or `-y` - Skip confirmation prompts (auto-overwrite)
-- `--help` or `-h` - Show help message
-
-### 4. Verify Installation
-
-```bash
-# Check skills are installed
-ls -la ~/.opencode/skill
-
-# Ask OpenCode: "What skills are available?"
-# Should list: code-quality, docs-check, docs-write, git-commit, code-review, pr-comment-resolver, search, research, ui-animation
-```
-
-> **📖 Next steps:** See [SETUP.md](./SETUP.md) for configuring skills in your AI agent and usage examples.
+Follow [README.md](./README.md) for quick start and install commands. See [AGENTS.md](./AGENTS.md) and [skills/README.md](./skills/README.md) for workflow guidance and usage examples. Local development uses `make install` to install changes from your checkout.
 
 ## Feature-Specific Requirements
 
@@ -345,8 +339,8 @@ ls -la ~/.opencode/skill
 - jq installed
 
 **Usage:**
-- Ask OpenCode: "Fetch PR comments" (triggers `pr-comment-resolver` skill)
-- The skill will execute scripts embedded in `skills/pr-comment-resolver/scripts/pr-resolver*.sh`
+- Ask OpenCode: "Fetch PR comments" (triggers `resolve-pr-comments` skill)
+- The skill will execute scripts embedded in `skills/resolve-pr-comments/scripts/pr-resolver*.sh`
 
 ### MCP Dependencies (for Search and Research Skills)
 
@@ -369,6 +363,13 @@ ls -la ~/.opencode/skill
   - **Configuration:** Automatically added to OpenCode MCP config
   - **Usage:** Finding real-world code examples, implementation patterns, API usage, error handling patterns
   - **Note:** All MCPs from `mcp.json` are automatically configured by the installer. Update API keys after installation.
+
+**Optional for Search/Research:**
+
+- **Z.AI MCP (zai-zread + zai-vision)** - Repo semantic search and vision tools
+  - **Installation:** `npx -y @z_ai/mcp-server`
+  - **API Key Required:** `Z_AI_API_KEY`
+  - **Usage:** Semantic GitHub search and image/video analysis
 
 **Required for Research Skill:**
 
@@ -396,12 +397,12 @@ ls -la ~/.opencode/skill
 - The `install.sh` script automatically configures all MCPs from `mcp.json` for OpenCode
 - MCP configuration is created/updated at `~/.opencode/opencode.json` (or `$XDG_CONFIG_HOME/opencode/opencode.json`)
 - Existing MCP configurations are preserved; only missing MCPs are added
-- All MCPs from the example file are configured: Tavily, Context7, OpenAlex, PDF Reader, Paper-search, and Grep
+- All MCPs from the example file are configured: Tavily, Context7, OpenAlex, PDF Reader, Paper-search, Grep, Z.AI, and Graphite
 - Requires `jq` to be installed for automatic configuration
 - **Important:** After installation, update API keys in the `.env` file or directly in the config.
 
 **For Other Agents (Manual):**
-1. Copy `mcp.json` to your MCP configuration location (typically `~/.config/claude/mcp.json` for Claude Desktop)
+1. Copy `mcp.json` to your MCP configuration location (typically `~/.opencode/opencode.json` or your agent's MCP config)
 2. Update API keys in the configuration file
 3. Restart your AI agent to load MCP servers
 
@@ -409,30 +410,9 @@ See `mcp.json` for complete configuration format.
 
 ## How Agents Use Skills
 
-**IMPORTANT:** After installing skills, OpenCode will automatically discover them from `~/.opencode/skill`.
+See [skills/README.md](./skills/README.md) for the skill loading model, scripts, and usage details.
 
-> **📖 Detailed information:** See [SETUP.md](./SETUP.md) for complete setup instructions.
-
-### How It Works
-
-1. **Skills are installed to `~/.opencode/skill`:**
-   - Each skill is a directory with `SKILL.md` and `scripts/` subdirectory
-   - OpenCode automatically scans this directory for skills
-
-2. **Agents discover skills:**
-   - OpenCode reads `SKILL.md` files which contain YAML frontmatter and instructions
-   - Skills are triggered based on their descriptions and trigger keywords
-
-3. **Agents execute scripts:**
-   - When a skill is triggered, OpenCode reads the instructions in `SKILL.md`
-   - Scripts are executed via `bash skills/<skill-name>/scripts/<script-name>.sh`
-   - Scripts are embedded within skill directories, not in package.json
-
-4. **Verify skills are loaded:**
-   - Ask OpenCode: "What skills are available?"
-   - Should list: `code-quality`, `docs-check`, `docs-write`, `git-commit`, `code-review`, `pr-comment-resolver`, `search`, `research`, `ui-animation`
-
-5. **Test skill triggering:**
+### Test skill triggering:
    - Try: "Run code quality checks" (should trigger `code-quality` skill)
    - Try: "Check if documentation needs updates" (should trigger `docs-check` skill)
 
@@ -479,23 +459,18 @@ npx tsc --version
 npx eslint --version
 npx prettier --version
 
-# Verify skills are installed
-bash ~/ai-dev-atelier/setup.sh
-
 # Validate skill structure and integrity
-bash .test/scripts/validate-skills.sh
+make validate
 ```
 
 ## Next Steps
 
-After installation, see [SETUP.md](./SETUP.md) for:
-- Configuring skills in your AI agent
-- Usage examples
-- Integration into your workflow
-- Customization options
+After installation, see:
+- [AGENTS.md](./AGENTS.md) for workflow guidance and MCP references
+- [skills/README.md](./skills/README.md) for usage examples and scripts
 
 ## Support
 
-- **Setup Guide:** [SETUP.md](./SETUP.md) - Quick setup and configuration
 - **Documentation:** `~/ai-dev-atelier/skills/README.md`
+- **Workflow:** `~/ai-dev-atelier/AGENTS.md`
 - **Script help:** See individual skill documentation in `skills/*/SKILL.md`

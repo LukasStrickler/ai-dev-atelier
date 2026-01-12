@@ -4,13 +4,12 @@ This file defines how AI agents and contributors should work in this repository.
 
 ## Overview
 
-AI Dev Atelier: Production-grade skill pack for AI-assisted development. 10 skills following Anthropic Agent Skills standard, with MCP integrations for search/research.
+AI Dev Atelier: Production-grade skill pack for AI-assisted development. 10 skills following the open Agent Skills standard, with MCP integrations for search/research.
 
 ## For AI agents
 
 Read these first:
 - `README.md` for capabilities and entry points
-- `SETUP.md` for verification steps
 - `INSTALL.md` for dependencies and MCP setup
 - `MY_AGENTIC_DEV_SETUP.md` for a personal Vibora + oh-my-opencode usage example
 
@@ -27,9 +26,8 @@ ai-dev-atelier/
 ├── .ada/                      # Runtime outputs (gitignored)
 ├── hooks.json                 # PreToolUse hook definitions
 ├── install.sh                 # Deploy skills + MCPs + hooks
-├── setup.sh                   # Verify structure
 ├── mcp.json                   # MCP server definitions
-└── skills-config.json         # Per-agent skill filtering
+└── skills.json                # Per-agent skill filtering
 ```
 
 ## Skills Quick Reference
@@ -49,9 +47,8 @@ ai-dev-atelier/
 ## Commands
 
 ```bash
-bash setup.sh                              # Verify structure
 bash install.sh                            # Install skills + MCPs
-bash .test/scripts/validate-skills.sh      # Validate all skills
+make validate                              # Validate skill structure
 bash skills/<skill>/scripts/<script>.sh    # Run skill script
 ```
 
@@ -96,6 +93,7 @@ Hooks are installed to `~/.opencode/hook/` by `install.sh`. They help prevent:
 | `paper-search` | Multi-platform papers | Optional |
 | `zai-zread` | GitHub repo semantic search (issues, PRs, docs) | `Z_AI_API_KEY` |
 | `zai-vision` | Image/video analysis, UI code gen, diagrams | `Z_AI_API_KEY` |
+| `graphite` | Stacked PR management | None |
 
 ### Z.AI MCP Tool Filtering (OpenCode)
 
@@ -146,7 +144,7 @@ All runtime data under `.ada/` (gitignored):
 
 ## Skill Format
 
-Each skill follows Anthropic Agent Skills standard:
+Each skill follows the open [Agent Skills standard](https://agentskills.io/specification):
 
 ```yaml
 ---
@@ -181,23 +179,23 @@ Agent behavior:
 - Do not modify global git config
 - Do not add or expose secrets in files
 - Keep changes scoped to the requested task
-- Use `skills-config.json` to disable skills per agent
+- Use `skills.json` to disable skills per agent
 - **Do not trigger releases** without explicit user permission
 
 ## Testing
 
 ```bash
-bash .test/scripts/validate-skills.sh       # Validate skill structure
-bash .test/scripts/validate-skills-tests.sh # Test the validator itself
+make validate                              # Validate skill structure
+bash .test/tests/validate-skills-tests.sh # Test the validator itself
 ```
 
 ## For human contributors
 
 Before changes:
-- Run `bash setup.sh`
+- Run `bash install.sh` to install skills and check dependencies
 
 After changes:
-- Run `bash .test/scripts/validate-skills.sh`
+- Run `make validate`
 - Ensure each skill keeps the `SKILL.md` format and embedded scripts
 
 When adding or updating skills:

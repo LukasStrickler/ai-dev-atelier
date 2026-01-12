@@ -79,11 +79,6 @@ if command -v pre-commit &> /dev/null; then
   pre-commit install
 fi
 
-if [[ -f "setup.sh" ]]; then
-  echo "Running setup verification..."
-  bash setup.sh
-fi
-
 echo ""
 echo "Environment ready!"
 echo "Run 'make test' to validate all skills and lint shell scripts."

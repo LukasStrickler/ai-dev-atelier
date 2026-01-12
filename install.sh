@@ -5,14 +5,14 @@
 #
 # Description:
 #   Installs skills and MCP servers to OpenCode agent.
-#   Follows Anthropic Agent Skills standard and OpenCode specifications.
+#   Follows open Agent Skills standard and OpenCode specifications.
 #
 # Features:
 #   - Installs skills to OpenCode (~/.opencode/skill)
 #   - Configures MCPs for OpenCode with proper format conversion
 #   - Preserves existing configurations (never overwrites)
 #   - Smart diff-based confirmation for skill updates
-#   - Agent-specific skill filtering via skills-config.json
+#   - Agent-specific skill filtering via skills.json
 #
 # Dependencies:
 #   - jq (for JSON manipulation and MCP configuration)
@@ -23,7 +23,7 @@
 #   - MCPs: https://opencode.ai/docs/mcp-servers/
 #
 # Usage:
-#   ./install.sh [--yes] [--help]
+#   ./install.sh [--no] [--check] [--help]
 #
 # ============================================================================
 
@@ -39,8 +39,11 @@ NC='\033[0m' # No Color
 # Script directory (where this script is located)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ATELIER_DIR="$SCRIPT_DIR"
+REPO_URL="https://github.com/LukasStrickler/ai-dev-atelier.git"
+DEFAULT_INSTALL_DIR="${AI_DEV_ATELIER_DIR:-${HOME}/ai-dev-atelier}"
 SOURCE_SKILLS_DIR="${ATELIER_DIR}/skills"
-SKILLS_CONFIG="${ATELIER_DIR}/skills-config.json"
+SKILLS_CONFIG="${ATELIER_DIR}/skills.json"
+LEGACY_SKILLS_CONFIG="${ATELIER_DIR}/skills-config.json"
 MCP_CONFIG="${ATELIER_DIR}/mcp.json"
 AGENTS_CONFIG="${ATELIER_DIR}/agents.json"
 ENV_FILE="${ATELIER_DIR}/.env"
@@ -73,7 +76,10 @@ fi
 # GLOBAL VARIABLES
 # ============================================================================
 
-SKIP_CONFIRM=false  # Skip confirmation prompts when true
+SKIP_CONFIRM=true  # Skip confirmation prompts when true
+CHECK_ONLY=false
+MISSING_DEPS=()
+MISSING_OPTIONAL=()
 
 # ============================================================================
 # UTILITY FUNCTIONS
@@ -99,6 +105,183 @@ log_warning() {
 
 log_error() {
   echo -e "${RED}❌${NC} $1" >&2
+}
+
+confirm_action() {
+  local prompt="$1"
+
+  if [ "$SKIP_CONFIRM" = true ]; then
+    return 0
+  fi
+
+  echo -n "${prompt} [Y/n]: "
+  read -r response
+  case "$response" in
+    [nN][oO]|[nN])
+      return 1
+      ;;
+    *)
+      return 0
+      ;;
+  esac
+}
+
+detect_package_manager() {
+  if command -v brew >/dev/null 2>&1; then
+    echo "brew"
+  elif command -v apt-get >/dev/null 2>&1; then
+    echo "apt-get"
+  elif command -v dnf >/dev/null 2>&1; then
+    echo "dnf"
+  elif command -v yum >/dev/null 2>&1; then
+    echo "yum"
+  elif command -v pacman >/dev/null 2>&1; then
+    echo "pacman"
+  elif command -v zypper >/dev/null 2>&1; then
+    echo "zypper"
+  else
+    echo ""
+  fi
+}
+
+package_for_command() {
+  case "$1" in
+    bash)
+      echo "bash"
+      ;;
+    git)
+      echo "git"
+      ;;
+    jq)
+      echo "jq"
+      ;;
+    awk|gawk)
+      echo "gawk"
+      ;;
+    sed)
+      echo "sed"
+      ;;
+    diff)
+      echo "diffutils"
+      ;;
+    *)
+      echo ""
+      ;;
+  esac
+}
+
+install_missing_dependencies() {
+  local has_required=${#MISSING_DEPS[@]}
+  local packages=()
+  local unmapped=()
+  local cmd
+  local pkg
+
+  for cmd in "${MISSING_DEPS[@]}" "${MISSING_OPTIONAL[@]}"; do
+    pkg=$(package_for_command "$cmd")
+    if [ -n "$pkg" ]; then
+      packages+=("$pkg")
+    else
+      unmapped+=("$cmd")
+    fi
+  done
+
+  if [ ${#packages[@]} -eq 0 ]; then
+    if [ ${#unmapped[@]} -gt 0 ]; then
+      log_error "Missing dependencies require manual install: ${unmapped[*]}"
+    fi
+    if [ "$has_required" -gt 0 ]; then
+      return 1
+    fi
+    return 0
+  fi
+
+  local manager
+  manager=$(detect_package_manager)
+  if [ -z "$manager" ]; then
+    log_error "No supported package manager found."
+    echo "Install missing dependencies manually: ${packages[*]}"
+    if [ "$has_required" -gt 0 ]; then
+      return 1
+    fi
+    return 0
+  fi
+
+  if ! confirm_action "Install missing dependencies: ${packages[*]}?"; then
+    if [ "$has_required" -gt 0 ]; then
+      log_error "Missing required dependencies: ${MISSING_DEPS[*]}"
+      return 1
+    fi
+    return 0
+  fi
+
+  local sudo_cmd=""
+  if [ "${EUID}" -ne 0 ] && command -v sudo >/dev/null 2>&1; then
+    sudo_cmd="sudo"
+  fi
+
+  case "$manager" in
+    brew)
+      brew install "${packages[@]}"
+      ;;
+    apt-get)
+      ${sudo_cmd} apt-get update
+      ${sudo_cmd} apt-get install -y "${packages[@]}"
+      ;;
+    dnf)
+      ${sudo_cmd} dnf install -y "${packages[@]}"
+      ;;
+    yum)
+      ${sudo_cmd} yum install -y "${packages[@]}"
+      ;;
+    pacman)
+      ${sudo_cmd} pacman -S --noconfirm "${packages[@]}"
+      ;;
+    zypper)
+      ${sudo_cmd} zypper install -y "${packages[@]}"
+      ;;
+  esac
+
+  return 0
+}
+
+ensure_repo_checkout() {
+  if [ -d "$SOURCE_SKILLS_DIR" ]; then
+    return 0
+  fi
+
+  log_warning "Skills directory not found in ${ATELIER_DIR}."
+  local target_dir="$DEFAULT_INSTALL_DIR"
+
+  if [ -d "${target_dir}/skills" ] && [ -f "${target_dir}/install.sh" ]; then
+    log_info "Using existing checkout at ${target_dir}"
+    exec bash "${target_dir}/install.sh" "$@"
+  fi
+
+  if ! confirm_action "Clone AI Dev Atelier into ${target_dir}?"; then
+    log_error "Cannot continue without a local checkout."
+    exit 1
+  fi
+
+  if ! git clone "$REPO_URL" "$target_dir"; then
+    log_error "Failed to clone ${REPO_URL}"
+    exit 1
+  fi
+
+  exec bash "${target_dir}/install.sh" "$@"
+}
+
+resolve_skills_config() {
+  if [ -f "$SKILLS_CONFIG" ]; then
+    return 0
+  fi
+
+  if [ -f "$LEGACY_SKILLS_CONFIG" ]; then
+    log_warning "Found legacy skills-config.json. Copying to skills.json."
+    cp "$LEGACY_SKILLS_CONFIG" "$SKILLS_CONFIG"
+    rm -f "$LEGACY_SKILLS_CONFIG"
+    return 0
+  fi
 }
 
 # ============================================================================
@@ -152,6 +335,14 @@ parse_args() {
         SKIP_CONFIRM=true
         shift
         ;;
+      --no)
+        SKIP_CONFIRM=false
+        shift
+        ;;
+      --check)
+        CHECK_ONLY=true
+        shift
+        ;;
       --help|-h)
         show_help
         exit 0
@@ -173,14 +364,16 @@ Usage: $0 [OPTIONS]
 
 Options:
   -y, --yes    Skip confirmation prompts (auto-overwrite)
+  --no         Require confirmation before overwriting skills
+  --check      Run preflight checks only
   -h, --help   Show this help message
 
 This script installs skills and MCPs to OpenCode:
   - Skills: ${OPENCODE_SKILLS_DIR}
   - MCPs: ${OPENCODE_CONFIG} (JSON format)
 
-Skills are installed following the Anthropic Agent Skills standard.
-Skills can be disabled per agent in skills-config.json.
+Skills are installed following the open Agent Skills standard.
+Skills can be disabled per agent in skills.json.
 EOF
 }
 
@@ -246,46 +439,116 @@ check_source_dir() {
     echo "Please run this script from the AI Dev Atelier root directory"
     exit 1
   fi
-  
-  # Check for at least one skill with SKILL.md
-  local skill_count=0
-  for skill_dir in "${SOURCE_SKILLS_DIR}"/*; do
-    if [ -d "$skill_dir" ] && [ -f "${skill_dir}/SKILL.md" ]; then
-      skill_count=$((skill_count + 1))
+
+  local required_skills=("code-quality" "docs-check" "code-review" "resolve-pr-comments")
+  local missing_skills=()
+
+  for skill in "${required_skills[@]}"; do
+    if [ ! -d "${SOURCE_SKILLS_DIR}/${skill}" ]; then
+      missing_skills+=("$skill")
+    elif [ ! -f "${SOURCE_SKILLS_DIR}/${skill}/SKILL.md" ]; then
+      log_warning "SKILL.md not found in ${skill} directory"
     fi
   done
-  
-  if [ $skill_count -eq 0 ]; then
-    log_error "No skills found in ${SOURCE_SKILLS_DIR}"
-    echo "Expected to find directories with SKILL.md files"
+
+  if [ ${#missing_skills[@]} -gt 0 ]; then
+    log_error "Required skill directories not found: ${missing_skills[*]}"
     exit 1
   fi
-  
-  log_success "Found ${skill_count} skill(s) in source directory"
+
+  local optional_skills=("research" "search" "docs-write" "git-commit" "ui-animation" "use-graphite")
+  for skill in "${optional_skills[@]}"; do
+    if [ ! -d "${SOURCE_SKILLS_DIR}/${skill}" ]; then
+      log_warning "Optional skill '${skill}' not found"
+    elif [ ! -f "${SOURCE_SKILLS_DIR}/${skill}/SKILL.md" ]; then
+      log_warning "SKILL.md not found in optional skill '${skill}'"
+    fi
+  done
+
+  log_success "Skills directory structure verified"
 }
 
 check_dependencies() {
-  local missing=0
+  MISSING_DEPS=()
+  MISSING_OPTIONAL=()
+
   local cmd
-  local required_cmds=("git" "diff" "cp" "rm" "awk" "sed" "mkdir" "basename" "dirname")
+  local required_cmds=("bash" "git" "diff" "cp" "rm" "awk" "sed" "mkdir" "basename" "dirname")
 
   for cmd in "${required_cmds[@]}"; do
     if ! command -v "$cmd" > /dev/null 2>&1; then
-      log_error "Missing required command: ${cmd}"
-      missing=$((missing + 1))
+      MISSING_DEPS+=("$cmd")
     fi
   done
 
-  if [ "$missing" -gt 0 ]; then
-    log_error "Missing required commands. Install them and re-run."
+  if ! command -v jq > /dev/null 2>&1; then
+    MISSING_OPTIONAL+=("jq")
+  fi
+
+  if [ ${#MISSING_DEPS[@]} -gt 0 ]; then
+    log_error "Missing required dependencies: ${MISSING_DEPS[*]}"
+    return 1
+  fi
+
+  if [ ${#MISSING_OPTIONAL[@]} -gt 0 ]; then
+    log_warning "Optional dependencies missing: ${MISSING_OPTIONAL[*]}"
+  fi
+
+  return 0
+}
+
+check_optional_tools() {
+  log_info "Checking optional skill dependencies..."
+
+  if command -v gt > /dev/null 2>&1; then
+    local gt_version
+    gt_version=$(gt --version 2>/dev/null | head -1 || echo "unknown")
+    log_success "Graphite CLI found: ${gt_version}"
+  else
+    log_warning "Graphite CLI (gt) not found. use-graphite skill will not be functional."
+    echo "         Install with: npm install -g @withgraphite/graphite-cli"
+    echo "         Then run: gt auth login"
+  fi
+
+  if command -v coderabbit > /dev/null 2>&1; then
+    log_success "CodeRabbit CLI found"
+  else
+    log_warning "CodeRabbit CLI not found. code-review skill will not be functional."
+    echo "         Install with: npm install -g @coderabbitai/cli"
+  fi
+}
+
+verify_skill_structure() {
+  local skills_dir="${SOURCE_SKILLS_DIR}"
+  local skill_count=0
+  local valid_skills=()
+
+  for skill_dir in "${skills_dir}"/*; do
+    if [ ! -d "$skill_dir" ]; then
+      continue
+    fi
+
+    local skill_name
+    skill_name=$(basename "$skill_dir")
+
+    if [[ "$skill_name" =~ ^\. ]]; then
+      continue
+    fi
+
+    if [ -f "${skill_dir}/SKILL.md" ]; then
+      skill_count=$((skill_count + 1))
+      valid_skills+=("$skill_name")
+    else
+      log_warning "SKILL.md not found in ${skill_name} directory"
+    fi
+  done
+
+  if [ $skill_count -eq 0 ]; then
+    log_error "No valid skills found (no SKILL.md files)"
     exit 1
   fi
 
-  if ! command -v jq > /dev/null 2>&1; then
-    log_warning "jq not found. MCP configuration will be skipped."
-  fi
-
-
+  log_success "Found ${skill_count} valid skill(s): ${valid_skills[*]}"
 }
 
 check_write_access() {
@@ -308,7 +571,19 @@ check_write_access() {
 }
 
 preflight_checks() {
-  check_dependencies
+  check_dependencies || true
+
+  if [ ${#MISSING_DEPS[@]} -gt 0 ] || [ ${#MISSING_OPTIONAL[@]} -gt 0 ]; then
+    if install_missing_dependencies; then
+      check_dependencies || true
+    fi
+  fi
+
+  if [ ${#MISSING_DEPS[@]} -gt 0 ]; then
+    exit 1
+  fi
+
+  check_optional_tools
 
   local failed=0
   check_write_access "$OPENCODE_SKILLS_DIR" || failed=$((failed + 1))
@@ -959,7 +1234,7 @@ configure_opencode_agents() {
 # CLAUDE HOOKS CONFIGURATION
 # ============================================================================
 #
-# oh-my-opencode provides Claude Code compatibility, including hooks.
+# oh-my-opencode provides Agent Skills compatibility, including hooks.
 # Hooks are loaded from these locations and MERGED (not overwritten):
 #   1. ~/.claude/settings.json (global - we install here)
 #   2. ./.claude/settings.json (project-level)
@@ -970,8 +1245,8 @@ configure_opencode_agents() {
 # Source: https://github.com/code-yeongyu/oh-my-opencode
 #         src/hooks/claude-code-hooks/config.ts
 
-CLAUDE_CONFIG_DIR="${HOME}/.claude"
-CLAUDE_CONFIG="${CLAUDE_CONFIG_DIR}/settings.json"
+AGENT_CONFIG_DIR="${HOME}/.claude"
+AGENT_CONFIG="${AGENT_CONFIG_DIR}/settings.json"
 HOOKS_CONFIG="${ATELIER_DIR}/hooks.json"
 
 add_or_update_hook() {
@@ -981,21 +1256,21 @@ add_or_update_hook() {
   local full_command="bash ${hook_script}"
   
   local hook_exists
-  hook_exists=$(jq -r --arg cmd "$full_command" ".hooks.${hook_type}[] | select(.matcher == \"${tool_matcher}\") | .hooks[]? | select(.command == \$cmd) | .command" "$CLAUDE_CONFIG" 2>/dev/null | wc -l || echo "0")
+  hook_exists=$(jq -r --arg cmd "$full_command" ".hooks.${hook_type}[] | select(.matcher == \"${tool_matcher}\") | .hooks[]? | select(.command == \$cmd) | .command" "$AGENT_CONFIG" 2>/dev/null | wc -l || echo "0")
   
   if [ "$hook_exists" -gt 0 ]; then
     return 1
   else
     local matcher_exists
-    matcher_exists=$(jq -r ".hooks.${hook_type}[] | select(.matcher == \"${tool_matcher}\") | .matcher" "$CLAUDE_CONFIG" 2>/dev/null || true)
+    matcher_exists=$(jq -r ".hooks.${hook_type}[] | select(.matcher == \"${tool_matcher}\") | .matcher" "$AGENT_CONFIG" 2>/dev/null || true)
     
     if [ -n "$matcher_exists" ]; then
       jq --arg hook_script "$full_command" \
         --arg hook_type "$hook_type" \
         --arg tool_matcher "$tool_matcher" \
         '(.hooks[$hook_type][] | select(.matcher == $tool_matcher)).hooks += [{ type: "command", command: $hook_script }]' \
-        "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" && \
-        mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG"
+        "$AGENT_CONFIG" > "${AGENT_CONFIG}.tmp" && \
+        mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
     else
       local new_hook
       new_hook=$(jq -n --arg hook_script "$full_command" --arg tool_matcher "$tool_matcher" '{
@@ -1004,8 +1279,8 @@ add_or_update_hook() {
       }')
       jq --argjson new_hook "$new_hook" --arg hook_type "$hook_type" \
         '.hooks[$hook_type] += [$new_hook]' \
-        "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" && \
-        mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG"
+        "$AGENT_CONFIG" > "${AGENT_CONFIG}.tmp" && \
+        mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
     fi
     return 0
   fi
@@ -1014,27 +1289,27 @@ add_or_update_hook() {
 ensure_hook_array() {
   local hook_type="$1"
   
-  if ! jq -e ".hooks.${hook_type}" "$CLAUDE_CONFIG" > /dev/null 2>&1; then
-    if jq -e '.hooks' "$CLAUDE_CONFIG" > /dev/null 2>&1; then
-      jq --arg hook_type "$hook_type" '.hooks[$hook_type] = []' "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" && \
-        mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG"
+  if ! jq -e ".hooks.${hook_type}" "$AGENT_CONFIG" > /dev/null 2>&1; then
+    if jq -e '.hooks' "$AGENT_CONFIG" > /dev/null 2>&1; then
+      jq --arg hook_type "$hook_type" '.hooks[$hook_type] = []' "$AGENT_CONFIG" > "${AGENT_CONFIG}.tmp" && \
+        mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
     else
-      jq --arg hook_type "$hook_type" '.hooks = { ($hook_type): [] }' "$CLAUDE_CONFIG" > "${CLAUDE_CONFIG}.tmp" && \
-        mv "${CLAUDE_CONFIG}.tmp" "$CLAUDE_CONFIG"
+      jq --arg hook_type "$hook_type" '.hooks = { ($hook_type): [] }' "$AGENT_CONFIG" > "${AGENT_CONFIG}.tmp" && \
+        mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
     fi
   fi
 }
 
-configure_claude_hooks() {
-  log_info "Configuring oh-my-opencode hooks (Claude Code compatible)..."
+configure_agent_hooks() {
+  log_info "Configuring oh-my-opencode hooks (Agent Skills compatible)..."
   
   if ! command -v jq &> /dev/null; then
-    log_warning "jq not found. Skipping Claude hooks configuration."
+    log_warning "jq not found. Skipping agent hooks configuration."
     return 0
   fi
   
   if [ ! -f "$HOOKS_CONFIG" ]; then
-    log_info "No hooks.json found, skipping Claude hooks configuration"
+    log_info "No hooks.json found, skipping agent hooks configuration"
     return 0
   fi
   
@@ -1043,19 +1318,19 @@ configure_claude_hooks() {
     return 1
   fi
   
-  mkdir -p "$CLAUDE_CONFIG_DIR"
+  mkdir -p "$AGENT_CONFIG_DIR"
   
-  if [ -f "$CLAUDE_CONFIG" ]; then
-    if ! jq empty "$CLAUDE_CONFIG" 2>/dev/null; then
-      log_error "Existing Claude config is not valid JSON. Creating backup and starting fresh..."
-      mv "$CLAUDE_CONFIG" "${CLAUDE_CONFIG}.invalid.$(date +%s).backup"
-      echo '{}' > "$CLAUDE_CONFIG"
+  if [ -f "$AGENT_CONFIG" ]; then
+    if ! jq empty "$AGENT_CONFIG" 2>/dev/null; then
+      log_error "Existing agent config is not valid JSON. Creating backup and starting fresh..."
+      mv "$AGENT_CONFIG" "${AGENT_CONFIG}.invalid.$(date +%s).backup"
+      echo '{}' > "$AGENT_CONFIG"
     else
-      cp "$CLAUDE_CONFIG" "${CLAUDE_CONFIG}.backup"
-      log_info "Backup created: ${CLAUDE_CONFIG}.backup"
+      cp "$AGENT_CONFIG" "${AGENT_CONFIG}.backup"
+      log_info "Backup created: ${AGENT_CONFIG}.backup"
     fi
   else
-    echo '{}' > "$CLAUDE_CONFIG"
+    echo '{}' > "$AGENT_CONFIG"
   fi
   
   local added=0
@@ -1134,7 +1409,7 @@ configure_claude_hooks() {
   done
   
   if [ $added -gt 0 ] || [ $updated -gt 0 ]; then
-    log_success "Claude hooks configured: ${added} added, ${updated} updated, ${skipped} skipped"
+    log_success "agent hooks configured: ${added} added, ${updated} updated, ${skipped} skipped"
   fi
 }
 
@@ -1210,7 +1485,7 @@ cleanup_deprecated_skills() {
 # ----------------------------------------------------------------------------
 # Check if Skill Should Be Installed
 # ----------------------------------------------------------------------------
-# Checks skills-config.json to determine if a skill should be installed
+# Checks skills.json to determine if a skill should be installed
 # for a specific agent type.
 #
 # Parameters:
@@ -1228,7 +1503,7 @@ should_install_skill() {
     return 1
   fi
   
-  # If skills-config.json doesn't exist, install all skills
+  # If skills.json doesn't exist, install all skills
   if [ ! -f "$SKILLS_CONFIG" ]; then
     return 0
   fi
@@ -1263,7 +1538,7 @@ should_install_skill() {
 #
 # Behavior:
 #   - Validates skill name per OpenCode spec (for OpenCode)
-#   - Checks if skill should be installed (skills-config.json)
+#   - Checks if skill should be installed (skills.json)
 #   - Calculates diff if skill exists
 #   - Prompts for confirmation unless --yes flag
 #   - Preserves existing skills if identical
@@ -1294,7 +1569,7 @@ install_skill_to_agent() {
     return 1
   fi
   
-  # Validate SKILL.md exists (required per Anthropic Agent Skills standard)
+  # Validate SKILL.md exists (required per open Agent Skills standard)
   if [ ! -f "${source_skill}/SKILL.md" ]; then
     log_warning "SKILL.md not found in ${source_skill}, skipping"
     return 1
@@ -1359,7 +1634,7 @@ install_skill_to_agent() {
 # Install All Skills to Agent
 # ----------------------------------------------------------------------------
 # Installs all available skills to a specific agent's skills directory.
-# Respects skills-config.json for agent-specific filtering.
+# Respects skills.json for agent-specific filtering.
 #
 # Parameters:
 #   $1 - Agent type (opencode)
@@ -1502,18 +1777,38 @@ main() {
   # Parse arguments
   parse_args "$@"
 
+  if [ "$CHECK_ONLY" = true ]; then
+    check_dependencies || true
+    if [ ${#MISSING_DEPS[@]} -gt 0 ] || [ ${#MISSING_OPTIONAL[@]} -gt 0 ]; then
+      if install_missing_dependencies; then
+        check_dependencies || true
+      fi
+    fi
+
+    if [ ${#MISSING_DEPS[@]} -gt 0 ]; then
+      exit 1
+    fi
+
+    check_optional_tools
+    log_success "Dependency checks complete."
+    exit 0
+  fi
+
   log_info "Running preflight checks..."
   preflight_checks
   echo ""
+
+  ensure_repo_checkout "$@"
+  resolve_skills_config
 
   if [ -f "$SKILLS_CONFIG" ]; then
     log_info "Using skills configuration: ${SKILLS_CONFIG}"
   fi
   echo ""
-  
-  # Check source directory
+
   log_info "Checking source skills directory..."
   check_source_dir
+  verify_skill_structure
   echo ""
   
   # Ensure target directories exist
@@ -1540,7 +1835,7 @@ main() {
   echo ""
   
   # Install skills to OpenCode
-  # Skills may be filtered per agent via skills-config.json
+  # Skills may be filtered per agent via skills.json
   log_info "Installing skills to OpenCode..."
   echo ""
   
@@ -1553,8 +1848,8 @@ log_info "━━━ Cleaning Up Deprecated Skills ━━━"
   post_install_check "opencode" "$OPENCODE_SKILLS_DIR"
   
   echo ""
-  log_info "━━━ Configuring Claude Code Hooks (oh-my-opencode) ━━━"
-  configure_claude_hooks
+  log_info "━━━ Configuring Agent Skills Hooks (oh-my-opencode) ━━━"
+  configure_agent_hooks
   
   echo ""
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -1563,7 +1858,7 @@ log_info "━━━ Cleaning Up Deprecated Skills ━━━"
   echo "OpenCode:"
   echo "  Skills: ${OPENCODE_SKILLS_DIR}"
   echo "  MCPs: ${OPENCODE_CONFIG}"
-  echo "  Claude Hooks: ${CLAUDE_CONFIG} (for oh-my-opencode)"
+  echo "  Agent Hooks: ${AGENT_CONFIG} (for oh-my-opencode)"
   echo ""
   echo "To verify, ask your agent: 'What skills are available?'"
   echo ""

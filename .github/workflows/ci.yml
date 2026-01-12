@@ -21,5 +21,3 @@ jobs:
       - name: Lint shell scripts
         run: bash .test/scripts/lint-shell.sh
 
-      - name: Verify setup script
-        run: bash setup.sh

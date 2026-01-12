@@ -1,97 +1,111 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/banner.svg">
+  <img alt="AI Dev Atelier - Mastering the New Stack" src="assets/banner.svg">
+</picture>
+
 # AI Dev Atelier
 
-```text
-                 █████╗ ████████╗███████╗██╗     ██╗███████╗██████╗                     
-                ██╔══██╗╚══██╔══╝██╔════╝██║     ██║██╔════╝██╔══██╗                   
-                ███████║   ██║   █████╗  ██║     ██║█████╗  ██████╔╝                   
-                ██╔══██║   ██║   ██╔══╝  ██║     ██║██╔══╝  ██╔══██╗                    
-                ██║  ██║   ██║   ███████╗███████╗██║███████╗██║  ██║                    
-                ╚═╝  ╚═╝   ╚═╝   ╚══════╝╚══════╝╚═╝╚══════╝╚═╝  ╚═╝                    
+> **Mastering the New Stack.** A production-ready pack of 10 skills for code quality, documentation, code review, and research, built on the open [Agent Skills standard](https://agentskills.io/specification) and designed for OpenCode.
 
-                        🎨 A I   D E V   A T E L I E R 🎨                     
-                                                                                        
-                        🖌️ Where AI Agents Craft Quality Code                              
-                  🔍      📝     ✍️     🔬     💬      🔎       📚
-                quality  docs   docs   code    pr     search  research
-                check    check  write  review  review 
-```
+![Version](https://img.shields.io/badge/version-1.0.0-blue) ![License](https://img.shields.io/badge/license-BSL%201.1-blue) ![Agent Skills](https://img.shields.io/badge/Agent%20Skills-open-2ea043) ![OpenCode](https://img.shields.io/badge/OpenCode-supported-1f6feb)
 
+## Table of Contents
 
-![License](https://img.shields.io/badge/license-BSL%201.1-blue) ![Agent Skills](https://img.shields.io/badge/Agent%20Skills-Anthropic-orange) ![OpenCode](https://img.shields.io/badge/OpenCode-supported-1f6feb) ![MCP](https://img.shields.io/badge/MCP-enabled-2ea043)
+- [Overview](#overview)
+- [Quick Start](#quick-start)
+- [What You Get](#what-you-get)
+- [Skills Catalog](#skills-catalog)
+- [Docs Index](#docs-index)
+- [Prerequisites](#prerequisites)
+- [Contributing](#contributing)
+- [License](#license)
+- [Community](#community)
 
-Production-grade skill pack for AI-assisted development: code quality, documentation, code review, research, and orchestration via Agent Skills and MCP.
+## Overview
 
-Quick links: [My Agentic Dev Setup](./MY_AGENTIC_DEV_SETUP.md) | [SETUP.md](./SETUP.md) | [INSTALL.md](./INSTALL.md)
+AI Dev Atelier is a curated skill pack for OpenCode. Agent Skills are a simple, open format for giving agents portable capabilities and expertise through reusable instructions, scripts, and resources. This repo provides those skills, installs them to `~/.opencode/skill`, and configures MCP servers for usage.
 
 ## Quick Start
 
-Before install, copy `.env.example` to `.env` and set MCP API keys you plan to use.
+```bash
+# 1. Install AI Dev Atelier
+curl -fsSL https://raw.githubusercontent.com/LukasStrickler/ai-dev-atelier/main/install.sh | bash
+
+# 2. Verify installation
+# Ask OpenCode: "What skills are available?"
+
+# Prompt before overwriting skills
+# bash ~/ai-dev-atelier/install.sh --no
+```
+
+If you prefer a local checkout (recommended for dev work):
 
 ```bash
 git clone https://github.com/LukasStrickler/ai-dev-atelier.git ~/ai-dev-atelier
-bash ~/ai-dev-atelier/setup.sh
-bash ~/ai-dev-atelier/install.sh
+
+# Install local changes into OpenCode
+make -C ~/ai-dev-atelier install
+
+# Validate skill structure
+make -C ~/ai-dev-atelier validate
+
+# Prompt before overwriting skills
+bash ~/ai-dev-atelier/install.sh --no
 ```
-
-`install.sh` installs skills and MCPs for OpenCode, preserves existing configs, and supports agent-specific filtering via `skills-config.json`.
-
-Verify in your agent:
-- Ask: "What skills are available?"
-- Or check: `~/.opencode/skill`
 
 ## What You Get
 
-| Skill | Purpose | Entry Point |
-| --- | --- | --- |
-| `code-quality` | Typecheck, lint, format, markdown validation | `skills/code-quality/scripts/finalize.sh` |
-| `docs-check` | Detect documentation impact from git diffs | `skills/docs-check/scripts/check-docs.sh` |
-| `docs-write` | Write/update docs using standards | Workflow skill (no script) |
-| `git-commit` | Write clear commits with Conventional Commits format | Workflow skill (no script) |
-| `code-review` | CodeRabbit reviews (task/pr modes) | `skills/code-review/scripts/review-run.sh` |
-| `resolve-pr-comments` | Multi-agent PR comment resolution for bot reviews | `skills/resolve-pr-comments/scripts/pr-resolver*.sh` |
-| `search` | Web and library documentation search | MCP-based (no script) |
-| `research` | Academic research with evidence cards | `skills/research/scripts/research-*.sh` |
-| `ui-animation` | Guide tasteful UI animation implementation | Workflow skill (no script) |
+- 10 production-ready [Agent Skills](https://agentskills.io/specification) from `skills.json`
+- 9 MCP servers configured from `mcp.json`
+- PreToolUse guardrails defined in `hooks.json`
 
-## MCP Integration
+## Skills Catalog
 
-| MCP Server | Purpose | API Key / Env |
-| --- | --- | --- |
-| `tavily-remote-mcp` | Web search and research | `TAVILY_API_KEY` required |
-| `context7` | Library documentation | `CONTEXT7_API_KEY` (if used) |
-| `openalex-research` | Academic papers and citations | `OPENALEX_EMAIL` required |
-| `pdf-reader` | PDF extraction | None |
-| `paper-search` | Multi-platform paper search | Optional keys |
-| `grep` | GitHub code search | None |
-| `zai-zread` | GitHub repo semantic search (issues, PRs, docs) | `Z_AI_API_KEY` |
-| `zai-vision` | Image/video analysis, UI code gen, diagrams | `Z_AI_API_KEY` |
+- `code-quality` — Typecheck, lint, format, Markdown validation
+- `docs-check` — Detect docs needing updates from git diff
+- `docs-write` — Write/update docs with standards
+- `git-commit` — Write clear commits with Conventional Commits format
+- `code-review` — CodeRabbit reviews (task/pr modes)
+- `resolve-pr-comments` — Multi-agent PR comment resolution
+- `search` — Web + library docs + GitHub code search
+- `research` — Academic research with evidence cards
+- `ui-animation` — Tasteful UI animation & accessibility
+- `use-graphite` — Manage stacked PRs with Graphite CLI
 
-## Data and Outputs
+See `skills/README.md` for full usage details and scripts.
 
-| Output Type | Location |
-| --- | --- |
-| Code reviews | `.ada/data/reviews/` |
-| PR comment resolver | `.ada/data/pr-resolver/` |
-| Research evidence cards | `.ada/data/research/{topic}/` |
-| Research downloads (temp) | `.ada/temp/research/downloads/` |
+## Docs Index
 
-## Safety and Guardrails
+| Document | Purpose |
+|----------|---------|
+| [INSTALL.md](./INSTALL.md) | Dependencies and MCP setup |
+| [skills/README.md](./skills/README.md) | Skill catalog and usage reference |
+| [AGENTS.md](./AGENTS.md) | Developer workflow guide and MCP reference |
+| [MY_AGENTIC_DEV_SETUP.md](./MY_AGENTIC_DEV_SETUP.md) | OpenCode + Vibora + oh-my-opencode workflow |
 
-- Skills are driven by `SKILL.md` instructions and execute scripts via bash.
-- The installer preserves existing OpenCode configurations.
-- Outputs are written to `.ada/` directories; no hidden state.
-- Use `skills-config.json` to disable skills per agent.
-- **PreToolUse hooks** in `hooks.json` enforce workflow guardrails:
-  - `graphite-block`: Blocks `git push`, `git checkout -b`, `gh pr create` in Graphite-enabled repos
-  - `pr-comments-block`: Blocks wasteful `gh api` calls for PR comments (use `resolve-pr-comments` skill instead)
-  - `release-block`: Blocks AI agents from triggering releases without human approval (see [docs/RELEASING.md](./docs/RELEASING.md))
+## Prerequisites
 
-## Docs and Setup
+- **Git**
+- **Bash 4.0+**
+- **Node.js 18+** or **Bun** (for `code-quality` tooling)
+- **OpenCode** (skills runtime)
+- **jq** (optional, required for MCP config automation)
 
-- [SETUP.md](./SETUP.md): Verify the repository and skill structure before installing.
-- [INSTALL.md](./INSTALL.md): Full dependency and MCP setup across platforms.
-- [MY_AGENTIC_DEV_SETUP.md](./MY_AGENTIC_DEV_SETUP.md): Personal agentic development setup with Vibora, oh-my-opencode, and Tailscale.
+`install.sh` checks dependencies and prompts to install missing packages when possible.
+
+See [INSTALL.md](./INSTALL.md) for platform-specific installation commands and optional tools.
+
+## Contributing
+
+1. Run `make test` before committing.
+2. Keep instructions and scripts inside each skill directory.
+3. Update `skills/README.md` when the catalog changes.
+4. Keep outputs under `.ada/`.
 
 ## License
 
 Business Source License 1.1. Change License: Apache 2.0. See [LICENSE](./LICENSE).
+
+## Community
+
+- **Issues**: Report bugs or request features via [GitHub Issues](https://github.com/LukasStrickler/ai-dev-atelier/issues)

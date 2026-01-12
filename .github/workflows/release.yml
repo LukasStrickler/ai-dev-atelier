@@ -144,7 +144,7 @@ jobs:
           # Clone and install
           git clone https://github.com/${{ github.repository }}.git ~/ai-dev-atelier
           cd ~/ai-dev-atelier && git checkout v${{ inputs.version }}
-          bash setup.sh && bash install.sh
+          bash install.sh
           ```
 
           Or update an existing installation:

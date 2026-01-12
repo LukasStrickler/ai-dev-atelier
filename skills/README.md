@@ -4,7 +4,7 @@ Skills provide specialized capabilities for AI agents working with code quality,
 
 ## Overview
 
-Skills are organized directories containing `SKILL.md` files that follow the [Anthropic Agent Skills](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills) format. Each skill has YAML frontmatter with `name` and `description`, followed by detailed instructions.
+Skills are organized directories containing `SKILL.md` files that follow the open [Agent Skills standard](https://agentskills.io/specification). Each skill has YAML frontmatter with `name` and `description`, followed by detailed instructions.
 
 ## Available Skills
 
@@ -84,7 +84,7 @@ Skills are organized directories containing `SKILL.md` files that follow the [An
 
 ## How Agents Call Skills
 
-Skills follow the Anthropic Agent Skills standard:
+Skills follow the open [Agent Skills standard](https://agentskills.io/specification):
 
 1. **Discovery**: Agents scan skill directories (like `~/.opencode/skill`) for directories containing `SKILL.md` files
 2. **Loading**: Agents read `SKILL.md` files which contain:
@@ -117,12 +117,12 @@ Skills that check or update documentation reference `docs-write/references/docum
 Verify the integrity and structure of all skills:
 
 ```bash
-bash .test/scripts/validate-skills.sh
+make validate
 ```
 
 ## Skill Format
 
-Each skill follows the Anthropic Agent Skills standard:
+Each skill follows the open [Agent Skills standard](https://agentskills.io/specification):
 
 ```yaml
 ---
@@ -143,4 +143,4 @@ The body contains detailed instructions, workflows, examples, and references.
 ## See Also
 
 - `docs-write/references/documentation-guide.md` - Documentation standards
-- [Setup Guide](../SETUP.md) - Installation and setup
+- `../INSTALL.md` - Dependencies and MCP setup
