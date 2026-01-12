@@ -14,7 +14,6 @@
 - [Overview](#overview)
 - [Quick Start](#quick-start)
 - [What You Get](#what-you-get)
-- [Skills Catalog](#skills-catalog)
 - [Docs Index](#docs-index)
 - [Prerequisites](#prerequisites)
 - [Contributing](#contributing)
@@ -24,6 +23,25 @@
 ## Overview
 
 AI Dev Atelier is a curated skill pack for OpenCode. Agent Skills are a simple, open format for giving agents portable capabilities and expertise through reusable instructions, scripts, and resources. This repo provides those skills, installs them to `~/.opencode/skill`, and configures MCP servers for usage.
+
+## What You Get
+
+- 10 production-ready [Agent Skills](https://agentskills.io/specification) from `skills.json`
+- 9 MCP servers configured from `mcp.json`
+- PreToolUse guardrails defined in `hooks.json`
+
+- `code-quality` — Typecheck, lint, format, Markdown validation
+- `docs-check` — Detect docs needing updates from git diff
+- `docs-write` — Write/update docs with standards
+- `git-commit` — Write clear commits with Conventional Commits format
+- `code-review` — CodeRabbit reviews (task/pr modes)
+- `resolve-pr-comments` — Multi-agent PR comment resolution
+- `search` — Web + library docs + GitHub code search
+- `research` — Academic research with evidence cards
+- `ui-animation` — Tasteful UI animation & accessibility
+- `use-graphite` — Manage stacked PRs with Graphite CLI
+
+See `skills/README.md` for full usage details and scripts.
 
 ## Quick Start
 
@@ -52,27 +70,6 @@ make -C ~/ai-dev-atelier validate
 # Prompt before overwriting skills
 bash ~/ai-dev-atelier/install.sh --no
 ```
-
-## What You Get
-
-- 10 production-ready [Agent Skills](https://agentskills.io/specification) from `skills.json`
-- 9 MCP servers configured from `mcp.json`
-- PreToolUse guardrails defined in `hooks.json`
-
-## Skills Catalog
-
-- `code-quality` — Typecheck, lint, format, Markdown validation
-- `docs-check` — Detect docs needing updates from git diff
-- `docs-write` — Write/update docs with standards
-- `git-commit` — Write clear commits with Conventional Commits format
-- `code-review` — CodeRabbit reviews (task/pr modes)
-- `resolve-pr-comments` — Multi-agent PR comment resolution
-- `search` — Web + library docs + GitHub code search
-- `research` — Academic research with evidence cards
-- `ui-animation` — Tasteful UI animation & accessibility
-- `use-graphite` — Manage stacked PRs with Graphite CLI
-
-See `skills/README.md` for full usage details and scripts.
 
 ## Docs Index
 
