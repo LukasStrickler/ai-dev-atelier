@@ -135,28 +135,12 @@ jobs:
           echo "✅ Created and pushed tag v${{ inputs.version }}"
 
       - name: Generate release body
-        id: body
         shell: bash
         run: |
-          # Create release body file with proper markdown formatting
-          cat > release-body.md << 'ENDOFFILE'
-          ## Installation
-
-          ```bash
-          # Clone and install
-          git clone https://github.com/${{ github.repository }}.git ~/ai-dev-atelier
-          cd ~/ai-dev-atelier && git checkout v${{ inputs.version }}
-          bash install.sh
-          ```
-
-          Or update an existing installation:
-
-          ```bash
-          cd ~/ai-dev-atelier
-          git fetch --tags && git checkout v${{ inputs.version }}
-          bash install.sh
-          ```
-          ENDOFFILE
+          # Use dedicated script to generate clean release notes
+          REPO_NAME="${{ github.repository }}"
+          VERSION="${{ inputs.version }}"
+          bash scripts/generate-release-notes.sh
 
       - name: Create GitHub Release
         env:
