@@ -225,6 +225,7 @@ else
   fail "REPO_NAME should be substituted"
 fi
 
+# shellcheck disable=SC2088 # We're searching for literal "~/repo" string in output
 if grep -q "~/repo" release-body.md && grep -q "cd ~/repo" release-body.md; then
   pass "REPO_BASENAME derived from custom REPO_NAME"
 else
@@ -243,6 +244,7 @@ else
   fail "Default REPO_NAME should be LukasStrickler/ai-dev-atelier"
 fi
 
+# shellcheck disable=SC2088 # Searching for literal "~/ai-dev-atelier" in output
 if grep -q "~/ai-dev-atelier" release-body.md; then
   pass "REPO_BASENAME is derived correctly from REPO_NAME"
 else
