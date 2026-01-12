@@ -6,7 +6,7 @@
 # - Closed/merged PRs: ALLOWED (historical research)
 # - External repo queries: ALLOWED (for research, examples, etc.)
 #
-# Input: JSON via stdin (oh-my-opencode / Claude Code format)
+# Input: JSON via stdin (oh-my-opencode / Agent Skills format)
 # Output: Exit 0 = allow, Exit 2 + stderr = block
 
 set -euo pipefail

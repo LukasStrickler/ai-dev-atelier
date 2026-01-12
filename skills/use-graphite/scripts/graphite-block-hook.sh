@@ -2,7 +2,7 @@
 # PreToolUse hook for Graphite-enabled repos
 # Blocks git/gh commands that conflict with stacked PR workflow
 # 
-# Input: JSON via stdin (oh-my-opencode / Claude Code format)
+# Input: JSON via stdin (oh-my-opencode / Agent Skills format)
 # Output: Exit 0 = allow, Exit 2 + stderr = block
 
 set -euo pipefail

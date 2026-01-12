@@ -48,7 +48,7 @@ Write for your primary audience, but make it accessible. Use clear language and 
 ```text
 project-root/
 ├── README.md                    # Project overview, features, tech stack, quick start
-├── SETUP.md                     # Detailed setup instructions, configuration, environment variables
+├── AGENTS.md                   # AI agent workflow guidance
 ├── CONTRIBUTING.md              # Contribution guidelines and development workflow
 ├── CHANGELOG.md                 # Version history and release notes
 │

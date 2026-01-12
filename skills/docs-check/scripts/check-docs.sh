@@ -142,7 +142,7 @@ check_category() {
   find_doc_files "$doc_patterns" | sed 's/^/    - /'
   
   # Check common root docs
-  for doc in README.md SETUP.md IDEA.md; do
+  for doc in README.md AGENTS.md IDEA.md; do
     if [ -f "$doc" ]; then
       echo "    - $doc"
     fi

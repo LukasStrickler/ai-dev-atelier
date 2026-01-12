@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VALIDATOR="${SCRIPT_DIR}/validate-skills.sh"
+VALIDATOR="${SCRIPT_DIR}/../scripts/validate-skills.sh"
 
 TMP_DIR="$(mktemp -d)"
 cleanup() {

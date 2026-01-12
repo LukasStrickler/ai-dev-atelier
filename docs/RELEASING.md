@@ -12,7 +12,7 @@ Releases are **manual only**. There is no automatic release on push or merge. Th
 ## How It Works
 
 1. **PRs are merged** with descriptive titles and appropriate labels
-2. **Labels are auto-applied** based on file paths (via `.github/labeler.yml`)
+2. **Labels are auto-applied** based on file paths (workflow: `.github/workflows/labeler.yml`, config: `.github/labeler.yml`)
 3. **When ready**, a maintainer triggers the release workflow manually
 4. **Release notes are auto-generated** from merged PRs, grouped by label category
 
@@ -25,6 +25,8 @@ Releases are **manual only**. There is no automatic release on push or merge. Th
 - You've decided on a version number (see [Version Numbering](#version-numbering))
 
 ### Steps
+
+> Release notes use GitHub auto-generated notes with labels from `.github/release.yml`.
 
 1. **Dry run first** (optional but recommended for major releases):
 
@@ -94,7 +96,7 @@ Labels categorize PRs in release notes:
 | `documentation` | Documentation |
 | `chore` | Maintenance |
 
-**Auto-applied** based on file paths (via `.github/labeler.yml`):
+**Auto-applied** based on file paths (workflow: `.github/workflows/labeler.yml`, config: `.github/labeler.yml`):
 - `skills/**` → `skill`
 - `**/*.md`, `docs/**` → `documentation`
 - `.github/**`, `.test/**`, config files → `chore`
@@ -204,5 +206,5 @@ These are **architecturally unblockable** with static analysis. The hook provide
 The hook has 259 test cases covering security vectors:
 
 ```bash
-bash .test/scripts/test-release-block.sh
+bash .test/tests/test-release-block.sh
 ```

@@ -1,0 +1,361 @@
+<svg width="1200" height="400" viewBox="0 0 1200 400" xmlns="http://www.w3.org/2000/svg" shape-rendering="optimizeQuality" role="img" aria-labelledby="title desc">
+  <title id="title">AI Dev Atelier - Galactic Plane</title>
+  <desc id="desc">Dense starfield with drifting particles around a central core.</desc>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;600&amp;family=JetBrains+Mono:wght@400&amp;display=swap');
+    
+    /* === TYPOGRAPHY === */
+    .title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 300;
+      font-size: 80px;
+      fill: #FFFFFF;
+      text-anchor: middle;
+      dominant-baseline: middle;
+      letter-spacing: -2px;
+      filter: drop-shadow(0 0 20px rgba(255,255,255,0.1));
+    }
+    .title-highlight { font-weight: 600; color: #E2E8F0; }
+    .subtitle {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 400;
+      font-size: 14px;
+      fill: #94A3B8;
+      letter-spacing: 6px;
+      text-anchor: middle;
+      text-transform: uppercase;
+      opacity: 0.8;
+    }
+
+    /* === ANIMATIONS === */
+
+    @keyframes drift-up {
+      0% { opacity: 0; transform: translate(0, 15px) scale(0.5); }
+      20% { opacity: 0.8; transform: translate(-3px, 5px) scale(0.8); }
+      80% { opacity: 0.6; transform: translate(-8px, -15px) scale(0.8); }
+      100% { opacity: 0; transform: translate(-12px, -30px) scale(0); }
+    }
+    
+    @keyframes drift-side {
+      0% { opacity: 0; transform: translate(-10px, 10px) rotate(0deg); }
+      30% { opacity: 0.9; }
+      100% { opacity: 0; transform: translate(15px, -20px) rotate(45deg); }
+    }
+
+    /* NEW: Faster radial shoot out for energy sparks */
+    @keyframes shoot-out {
+      0% { opacity: 1; transform: scale(0.5) translate(0, 0); }
+      100% { opacity: 0; transform: scale(0) translate(var(--tx), var(--ty)); }
+    }
+
+    /* NEW: Orbital float for dust around core */
+    @keyframes orbit-float {
+      0% { transform: rotate(0deg) translateX(40px) rotate(0deg); opacity: 0.2; }
+      50% { opacity: 0.7; }
+      100% { transform: rotate(360deg) translateX(40px) rotate(-360deg); opacity: 0.2; }
+    }
+
+    @keyframes twinkle-particle {
+        0%, 100% { opacity: 0.2; transform: scale(0.8); }
+        50% { opacity: 0.6; transform: scale(1.2); }
+    }
+
+    @keyframes pulse-dust { 0%, 100% { opacity: 0.1; } 50% { opacity: 0.5; } }
+    @keyframes pulse-star { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.9; } }
+
+    @keyframes rotate-slow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* === CLASSES === */
+    .core-live { animation: breathe-core 6s ease-in-out infinite; transform-origin: center; }
+    .rotate-ring { animation: rotate-slow 120s linear infinite; transform-origin: center; }
+    .rotate-ring-fast { animation: rotate-slow 40s linear infinite; transform-origin: center; }
+    
+    .p-drift-1 { animation: drift-up 7s ease-out infinite; }
+    .p-drift-2 { animation: drift-side 9s ease-out infinite; }
+    .p-static { animation: twinkle-particle 4s ease-in-out infinite; }
+    
+    /* NEW Particle Classes */
+    .p-orbit { animation: orbit-float 12s linear infinite; }
+    .p-shoot { animation: shoot-out 3s ease-out infinite; }
+
+    /* Background Stars */
+    .s-dust { r: 0.8; fill: #6366f1; opacity: 0.3; animation: pulse-dust 5s ease-in-out infinite; }
+    .s-tiny { r: 1.0; fill: #A5B4FC; opacity: 0.4; animation: pulse-dust 4s ease-in-out infinite; }
+    .s-med  { r: 1.4; fill: #FFFFFF; opacity: 0.7; animation: pulse-star 3s ease-in-out infinite; }
+    .s-bright { r: 1.8; fill: #FFFFFF; opacity: 0.9; animation: pulse-star 4s ease-in-out infinite; }
+    
+    /* Delays */
+    .d-1 { animation-delay: -0.5s; }
+    .d-2 { animation-delay: -1.5s; }
+    .d-3 { animation-delay: -2.5s; }
+    .d-4 { animation-delay: -3.5s; }
+    .d-5 { animation-delay: -4.5s; }
+
+    /* Constellations */
+    .const-line {
+        stroke: #64748B;
+        stroke-width: 0.4;
+        opacity: 0.2;
+        fill: none;
+        stroke-dasharray: 400; 
+    }
+    .const-node { fill: #F8FAFC; r: 1.4; opacity: 0.8; }
+    .const-node-dim { fill: #CBD5E1; r: 1.0; opacity: 0.6; }
+    
+  </style>
+
+  <defs>
+    <linearGradient id="beam-v" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0" />
+      <stop offset="50%" stop-color="#FFFFFF" stop-opacity="1" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+    </linearGradient>
+
+    <linearGradient id="beam-h" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0" />
+      <stop offset="50%" stop-color="#FFFFFF" stop-opacity="1" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+    </linearGradient>
+
+    <linearGradient id="core-solid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0" />
+      <stop offset="50%" stop-color="#FFFFFF" stop-opacity="1" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+    </linearGradient>
+
+    <radialGradient id="center-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="1"/>
+      <stop offset="60%" stop-color="#A5B4FC" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#4F46E5" stop-opacity="0"/>
+    </radialGradient>
+    
+    <radialGradient id="blue-atmosphere" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#818CF8" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#030305" stop-opacity="0"/>
+    </radialGradient>
+
+    <filter id="soften-v"> <feGaussianBlur stdDeviation="1.5 0" /> </filter>
+    <filter id="soften-h"> <feGaussianBlur stdDeviation="0 1.5" /> </filter>
+    
+    <path id="diamond" d="M0,-2 L2,0 L0,2 L-2,0 Z" />
+    <path id="spark" d="M0,-3 L0.5,-0.5 L3,0 L0.5,0.5 L0,3 L-0.5,0.5 L-3,0 L-0.5,-0.5 Z" />
+  </defs>
+
+  <!-- Base Background -->
+  <rect width="1200" height="400" fill="#030305" />
+
+  <g transform="translate(600, 200)">
+
+    <!-- ========================================= -->
+    <!-- 0a. BOTTOM FILLER ("The Floor")           -->
+    <!-- ========================================= -->
+    <g id="bottom-carpet">
+        <circle cx="-580" cy="185" class="s-dust d-1" /> <circle cx="-550" cy="160" class="s-tiny d-3" />
+        <circle cx="-520" cy="190" class="s-dust d-2" /> <circle cx="-490" cy="140" class="s-dust d-5" />
+        <circle cx="-460" cy="175" class="s-tiny d-1" /> <circle cx="-430" cy="195" class="s-dust d-4" />
+
+        <circle cx="-380" cy="150" class="s-dust d-2" /> <circle cx="-350" cy="185" class="s-tiny d-1" />
+        <circle cx="-320" cy="130" class="s-dust d-5" /> <circle cx="-290" cy="170" class="s-dust d-3" />
+        <circle cx="-260" cy="190" class="s-tiny d-4" /> <circle cx="-230" cy="145" class="s-dust d-2" />
+        
+        <circle cx="-190" cy="180" class="s-dust d-1" /> <circle cx="-160" cy="155" class="s-tiny d-3" />
+        <circle cx="-130" cy="195" class="s-dust d-5" /> <circle cx="-100" cy="140" class="s-dust d-2" />
+        <circle cx="-70" cy="175" class="s-tiny d-4" />  <circle cx="-40" cy="190" class="s-dust d-1" />
+        <circle cx="-10" cy="150" class="s-dust d-3" />  <circle cx="20" cy="185" class="s-tiny d-5" />
+        <circle cx="50" cy="135" class="s-dust d-2" />   <circle cx="80" cy="170" class="s-dust d-4" />
+        <circle cx="110" cy="195" class="s-tiny d-1" />  <circle cx="140" cy="150" class="s-dust d-3" />
+        <circle cx="170" cy="180" class="s-dust d-5" />
+
+        <circle cx="210" cy="160" class="s-tiny d-2" /> <circle cx="240" cy="190" class="s-dust d-4" />
+        <circle cx="270" cy="145" class="s-dust d-1" /> <circle cx="300" cy="175" class="s-tiny d-3" />
+        <circle cx="330" cy="130" class="s-dust d-5" /> <circle cx="360" cy="185" class="s-dust d-2" />
+
+        <circle cx="400" cy="165" class="s-tiny d-1" /> <circle cx="430" cy="195" class="s-dust d-4" />
+        <circle cx="460" cy="140" class="s-dust d-3" /> <circle cx="490" cy="180" class="s-tiny d-5" />
+        <circle cx="520" cy="155" class="s-dust d-2" /> <circle cx="550" cy="190" class="s-dust d-1" />
+        <circle cx="580" cy="135" class="s-tiny d-4" />
+    </g>
+
+    <!-- ========================================= -->
+    <!-- 0b. NEW TOP CANOPY (To fix balance)       -->
+    <!-- ========================================= -->
+    <g id="top-canopy">
+        <!-- Far Left Top -->
+        <circle cx="-560" cy="-180" class="s-dust d-2" /> <circle cx="-510" cy="-150" class="s-tiny d-4" />
+        <circle cx="-480" cy="-190" class="s-dust d-1" /> <circle cx="-420" cy="-175" class="s-tiny d-3" />
+        
+        <!-- Mid Left Top -->
+        <circle cx="-350" cy="-160" class="s-tiny d-5" /> <circle cx="-290" cy="-190" class="s-dust d-2" />
+        <circle cx="-250" cy="-145" class="s-tiny d-1" /> <circle cx="-200" cy="-180" class="s-dust d-3" />
+
+        <!-- Center Top (Above Title) -->
+        <circle cx="-120" cy="-195" class="s-dust d-4" /> <circle cx="-50" cy="-170" class="s-tiny d-2" />
+        <circle cx="30" cy="-190" class="s-dust d-5" />  <circle cx="90" cy="-165" class="s-tiny d-1" />
+        
+        <!-- Mid Right Top -->
+        <circle cx="150" cy="-180" class="s-dust d-3" /> <circle cx="220" cy="-195" class="s-tiny d-4" />
+        <circle cx="280" cy="-155" class="s-dust d-2" /> <circle cx="340" cy="-185" class="s-tiny d-5" />
+
+        <!-- Far Right Top -->
+        <circle cx="410" cy="-170" class="s-dust d-1" /> <circle cx="470" cy="-190" class="s-tiny d-3" />
+        <circle cx="530" cy="-150" class="s-tiny d-2" /> <circle cx="590" cy="-185" class="s-dust d-4" />
+        
+        <!-- A few medium stars to break monotony -->
+        <circle cx="-380" cy="-130" class="s-med d-5" />
+        <circle cx="450" cy="-135" class="s-med d-2" />
+        <circle cx="100" cy="-125" class="s-med d-1" />
+    </g>
+
+    <!-- ========================================= -->
+    <!-- 1. STAR CLUSTERS (Rest of the sky)        -->
+    <!-- ========================================= -->
+    <g id="starfield">
+        <!-- Previous starfield groups preserved -->
+        <g transform="translate(-500, -150)">
+            <circle cx="10" cy="20" class="s-med d-1" /> <circle cx="-20" cy="-10" class="s-tiny" />
+            <circle cx="35" cy="40" class="s-tiny" />
+            <circle cx="-50" cy="50" class="s-med d-2" /> 
+            <circle cx="120" cy="-40" class="s-tiny" /> 
+            <circle cx="0" cy="80" class="s-tiny d-3" /> 
+        </g>
+        
+        <g transform="translate(-450, 100)">
+            <circle cx="0" cy="0" class="s-tiny" /> 
+            <circle cx="-40" cy="30" class="s-med d-4" /> <circle cx="60" cy="40" class="s-tiny" />
+            <circle cx="10" cy="60" class="s-tiny d-1" /> 
+            <circle cx="90" cy="0" class="s-med d-1" />
+            <circle cx="50" cy="80" class="s-tiny d-2" /> 
+            <circle cx="-20" cy="100" class="s-tiny d-5" />
+        </g>
+
+        <g transform="translate(480, -120)">
+            <circle cx="0" cy="0" class="s-med d-2" /> <circle cx="40" cy="-30" class="s-tiny" />
+            <circle cx="-30" cy="20" class="s-tiny" /> 
+            <circle cx="20" cy="50" class="s-tiny" /> 
+            <circle cx="50" cy="60" class="s-med d-4" /> <circle cx="-80" cy="40" class="s-tiny" />
+        </g>
+
+        <g transform="translate(450, 140)">
+             <circle cx="0" cy="0" class="s-tiny" /> <circle cx="-40" cy="-20" class="s-med d-3" />
+             <circle cx="30" cy="30" class="s-tiny d-1" /> 
+             <circle cx="60" cy="-40" class="s-tiny" /> 
+             <circle cx="80" cy="20" class="s-tiny d-4" /> 
+             <circle cx="10" cy="60" class="s-tiny d-2" />
+        </g>
+
+        <!-- General Scatter -->
+        <circle cx="-300" cy="-50" class="s-tiny d-3" /> <circle cx="-250" cy="120" class="s-tiny d-1" />
+        <circle cx="-200" cy="-140" class="s-tiny d-4" /> <circle cx="-150" cy="80" class="s-tiny d-2" />
+        <circle cx="200" cy="-80" class="s-tiny d-5" /> <circle cx="250" cy="100" class="s-tiny d-1" />
+        <circle cx="300" cy="-150" class="s-tiny d-3" /> <circle cx="350" cy="50" class="s-tiny d-2" />
+        
+        <!-- BRIGHT HERO STARS (Visual Anchors) -->
+        <circle cx="-550" cy="-100" class="s-bright d-1"/>
+        <circle cx="-420" cy="160" class="s-bright d-3"/>
+        <circle cx="520" cy="-160" class="s-bright d-2"/>
+        <circle cx="480" cy="120" class="s-bright d-4"/>
+        <circle cx="-280" cy="-120" class="s-bright d-5"/>
+        <circle cx="280" cy="150" class="s-bright d-1"/>
+    </g>
+
+
+    <!-- ========================================= -->
+    <!-- 2. CONSTELLATIONS                         -->
+    <!-- ========================================= -->
+    <g transform="translate(-420, -30)">
+        <g transform="rotate(-20)">
+            <path d="M0,0 L0,-70 L0,50 M-45,-15 L0,0 L45,-15" class="const-line" />
+            <circle cx="0" cy="0" class="const-node" />   
+            <circle cx="0" cy="-70" class="const-node" /> 
+            <circle cx="0" cy="50" class="const-node" style="fill:#FEF3C7"/> 
+            <circle cx="-45" cy="-15" class="const-node-dim" />
+            <circle cx="45" cy="-15" class="const-node-dim" />
+        </g>
+        <g transform="translate(-50, 150) rotate(10)">
+            <path d="M0,0 L40,-20 L10,-50 Z" class="const-line" />
+            <circle cx="0" cy="0" class="const-node-dim" />
+            <circle cx="40" cy="-20" class="const-node-dim" />
+            <circle cx="10" cy="-50" class="const-node-dim" />
+        </g>
+    </g>
+
+    <g transform="translate(380, 0)">
+        <g transform="translate(50, -100) rotate(-15)">
+             <path d="M-60,30 L-30,-20 L0,10 L30,-15 L60,0" class="const-line" />
+             <circle cx="-60" cy="30" class="const-node" />
+             <circle cx="-30" cy="-20" class="const-node" />
+             <circle cx="0" cy="10" class="const-node" />
+             <circle cx="30" cy="-15" class="const-node" />
+             <circle cx="60" cy="0" class="const-node" />
+        </g>
+        <g transform="translate(60, 80) scale(0.8)">
+             <path d="M0,0 L80,10 L70,80 L-10,70 Z M0,0 L-40,-30" class="const-line" />
+             <circle cx="0" cy="0" class="const-node" />       
+             <circle cx="80" cy="10" class="const-node" />     
+             <circle cx="70" cy="80" class="const-node" />     
+             <circle cx="-10" cy="70" class="const-node" />    
+             <circle cx="-40" cy="-30" class="const-node-dim" />
+        </g>
+    </g>
+
+
+    <!-- ========================================= -->
+    <!-- 3. CENTER FLARE (ENHANCED)                -->
+    <!-- ========================================= -->
+    <g transform="translate(0, -90)"> 
+        <circle r="90" fill="url(#blue-atmosphere)" class="core-live" />
+        
+        <!-- Rotators -->
+        <circle r="45" fill="none" stroke="#FFFFFF" stroke-width="0.5" opacity="0.1" class="rotate-ring" stroke-dasharray="2 4 2 40" />
+        <circle r="30" fill="none" stroke="#A5B4FC" stroke-width="0.3" opacity="0.15" class="rotate-ring-fast" stroke-dasharray="1 10" />
+
+        <g class="core-live">
+            <rect x="-1" y="-100" width="2" height="200" fill="url(#beam-v)" filter="url(#soften-v)" opacity="0.8" />
+            <rect x="-250" y="-1" width="500" height="2" fill="url(#beam-h)" filter="url(#soften-h)" opacity="0.8" />
+            <path d="M0,-60 L-3,0 L0,60 L3,0 Z" fill="url(#core-solid)" />
+            <g transform="rotate(90)">
+                <path d="M0,-90 L-3,0 L0,90 L3,0 Z" fill="url(#core-solid)" />
+            </g>
+            <circle r="12" fill="url(#center-glow)" />
+            <path d="M0,-10 L8,0 L0,10 L-8,0 Z" fill="#FFFFFF" />
+        </g>
+        
+        <!-- === ENHANCED PARTICLES === -->
+        <g fill="#FFFFFF">
+            <!-- 1. Original Drift -->
+            <g transform="translate(-40, 10)"> <use href="#diamond" class="p-drift-1 d-1" opacity="0.9" /> </g>
+            <g transform="translate(30, 20)"> <circle r="1" class="p-drift-1 d-2" opacity="0.7" /> </g>
+            <g transform="translate(50, -30)"> <use href="#spark" class="p-drift-2 d-3" opacity="0.8" /> </g>
+            <g transform="translate(-60, -10)"> <circle r="0.8" class="p-drift-2 d-1" opacity="0.5" /> </g>
+            <g transform="translate(10, -10)"> <use href="#diamond" class="p-drift-1 d-4" opacity="0.6" /> </g>
+            
+            <!-- 2. NEW: Energetic Sparks (Shoot-out) -->
+            <g style="--tx: 50px; --ty: -50px;" class="p-shoot d-1"> <circle r="0.8" opacity="0.8"/> </g>
+            <g style="--tx: -40px; --ty: 40px;" class="p-shoot d-3"> <use href="#spark" transform="scale(0.5)"/> </g>
+            <g style="--tx: 60px; --ty: 20px;" class="p-shoot d-2"> <circle r="0.6" opacity="0.6"/> </g>
+            <g style="--tx: -60px; --ty: -30px;" class="p-shoot d-4"> <use href="#diamond" transform="scale(0.5)"/> </g>
+
+            <!-- 3. NEW: Orbital Dust Ring -->
+            <circle cx="0" cy="0" r="1.5" fill="#A5B4FC" class="p-orbit" style="animation-direction: reverse;" />
+            <circle cx="0" cy="0" r="1.0" fill="#A5B4FC" class="p-orbit d-2" style="animation-duration: 7.5s; animation-direction: reverse;" />
+            <circle cx="0" cy="0" r="1.2" fill="#818CF8" class="p-orbit d-4" style="animation-duration: 15s;" />
+
+            <!-- Static Twinkle in Core -->
+            <circle cx="20" cy="30" r="1" fill="#818CF8" opacity="0.4" class="p-static" />
+            <circle cx="-45" cy="25" r="0.8" fill="#818CF8" opacity="0.3" class="p-static d-2" />
+            <circle cx="-40" cy="-25" r="0.9" fill="#818CF8" opacity="0.2" class="p-static d-3" />
+        </g>
+    </g>
+
+    <!-- Typography -->
+    <g>
+        <text x="0" y="10" class="title"><tspan class="title-highlight">AI</tspan> Dev <tspan class="title-highlight">Atelier</tspan></text>
+        <text x="0" y="100" class="subtitle">Mastering the New Stack</text>
+    </g>
+    
+  </g>
+</svg>

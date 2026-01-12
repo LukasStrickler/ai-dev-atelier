@@ -20,7 +20,10 @@
         "code-review": {
           "install": true
         },
-        "pr-review": {
+        "resolve-pr-comments": {
+          "install": true
+        },
+        "use-graphite": {
           "install": true
         },
         "search": {

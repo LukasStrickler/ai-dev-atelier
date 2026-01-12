@@ -82,7 +82,7 @@ curl -fsSL https://opencode.ai/install | bash
 # AI Dev Atelier
 git clone https://github.com/LukasStrickler/ai-dev-atelier.git ~/ai-dev-atelier
 cp ~/ai-dev-atelier/.env.example ~/ai-dev-atelier/.env  # add API keys
-bash ~/ai-dev-atelier/setup.sh && bash ~/ai-dev-atelier/install.sh
+bash ~/ai-dev-atelier/install.sh
 
 # oh-my-opencode
 bunx oh-my-opencode install
