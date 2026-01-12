@@ -1,10 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
-# Usage: REPO_NAME=owner/repo VERSION=1.0.0 bash generate-release-notes.sh
-# Or: bash generate-release-notes.sh [version]
+# Usage: VERSION=1.0.0 bash generate-release-notes.sh
+# Or: bash generate-release-notes.sh <version>
 
-VERSION="${VERSION:-${1:-1.0.0}}"
+VERSION="${VERSION:-${1:-}}"
+if [[ -z "$VERSION" ]]; then
+  echo "Error: VERSION is required. Set VERSION env var or pass as argument." >&2
+  exit 1
+fi
 REPO_NAME="${REPO_NAME:-${GITHUB_REPOSITORY:-LukasStrickler/ai-dev-atelier}}"
 
 cat > release-body.md <<EOF
