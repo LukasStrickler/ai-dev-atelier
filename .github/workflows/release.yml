@@ -138,19 +138,25 @@ jobs:
         id: body
         shell: bash
         run: |
-          printf '%s\n\n## Installation\n\n' >> release-body.md
-          printf '\`\`\`bash\n' >> release-body.md
-          printf '# Clone and install\n' >> release-body.md
-          printf 'git clone https://github.com/%s.git ~/ai-dev-atelier\n' "${{ github.repository }}" >> release-body.md
-          printf 'cd ~/ai-dev-atelier && git checkout v%s\n' "${{ inputs.version }}" >> release-body.md
-          printf 'bash install.sh\n' >> release-body.md
-          printf '\`\`\`\n\n' >> release-body.md
-          printf 'Or update an existing installation:\n\n' >> release-body.md
-          printf '\`\`\`bash\n' >> release-body.md
-          printf 'cd ~/ai-dev-atelier\n' >> release-body.md
-          printf 'git fetch --tags && git checkout v%s\n' "${{ inputs.version }}" >> release-body.md
-          printf 'bash install.sh\n' >> release-body.md
-          printf '\`\`\`\n' >> release-body.md
+          # Create release body file with proper markdown formatting
+          cat > release-body.md << 'ENDOFFILE'
+          ## Installation
+
+          ```bash
+          # Clone and install
+          git clone https://github.com/${{ github.repository }}.git ~/ai-dev-atelier
+          cd ~/ai-dev-atelier && git checkout v${{ inputs.version }}
+          bash install.sh
+          ```
+
+          Or update an existing installation:
+
+          ```bash
+          cd ~/ai-dev-atelier
+          git fetch --tags && git checkout v${{ inputs.version }}
+          bash install.sh
+          ```
+          ENDOFFILE
 
       - name: Create GitHub Release
         env:
