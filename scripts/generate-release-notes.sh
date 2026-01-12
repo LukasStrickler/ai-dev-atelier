@@ -10,21 +10,22 @@ if [[ -z "$VERSION" ]]; then
   exit 1
 fi
 REPO_NAME="${REPO_NAME:-${GITHUB_REPOSITORY:-LukasStrickler/ai-dev-atelier}}"
+REPO_BASENAME="${REPO_NAME##*/}"
 
 cat > release-body.md <<EOF
 ## Installation
 
 \`\`\`bash
 # Clone and install
-git clone https://github.com/${REPO_NAME}.git ~/ai-dev-atelier
-cd ~/ai-dev-atelier && git checkout v${VERSION}
+git clone https://github.com/${REPO_NAME}.git ~/${REPO_BASENAME}
+cd ~/${REPO_BASENAME} && git checkout v${VERSION}
 bash install.sh
 \`\`\`
 
 Or update an existing installation:
 
 \`\`\`bash
-cd ~/ai-dev-atelier
+cd ~/${REPO_BASENAME}
 git fetch --tags && git checkout v${VERSION}
 bash install.sh
 \`\`\`
