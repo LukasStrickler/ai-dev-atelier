@@ -136,11 +136,10 @@ jobs:
 
       - name: Generate release body
         shell: bash
-        run: |
-          # Use dedicated script to generate clean release notes
-          REPO_NAME="${{ github.repository }}"
-          VERSION="${{ inputs.version }}"
-          bash scripts/generate-release-notes.sh
+        env:
+          REPO_NAME: ${{ github.repository }}
+          VERSION: ${{ inputs.version }}
+        run: bash scripts/generate-release-notes.sh
 
       - name: Create GitHub Release
         env:
