@@ -1,7 +1,8 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/banner.svg">
-  <img alt="AI Dev Atelier - Mastering the New Stack" src="assets/banner.svg">
-</picture>
+   <source media="(prefers-color-scheme: dark)" srcset="assets/banner.svg">
+   <img alt="AI Dev Atelier - Mastering the New Stack" src="assets/banner.svg">
+ </picture>
+ 
 
 # AI Dev Atelier
 
