@@ -3,18 +3,27 @@
   <desc id="desc">Dense starfield with drifting particles around a central core.</desc>
 
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;600&amp;family=JetBrains+Mono:wght@400&amp;display=swap');
-    
     /* === TYPOGRAPHY === */
     .title {
-      font-family: 'Space Grotesk', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       font-weight: 300;
       font-size: 80px;
       fill: #FFFFFF;
       text-anchor: middle;
       dominant-baseline: middle;
       letter-spacing: -2px;
-      filter: drop-shadow(0 0 20px rgba(255,255,255,0.1));
+      filter: drop-shadow(0 0 20px rgba(255,255,255,255,0.1));
+    }
+    .title-highlight { font-weight: 600; color: #E2E8F0; }
+    .subtitle {
+      font-family: 'SF Mono', 'Consolas', 'Liberation Mono', monospace;
+      font-weight: 400;
+      font-size: 14px;
+      fill: #94A3B8;
+      letter-spacing: 6px;
+      text-anchor: middle;
+      text-transform: uppercase;
+      opacity: 0.8;
     }
     .title-highlight { font-weight: 600; color: #E2E8F0; }
     .subtitle {
