@@ -92,10 +92,10 @@
     .p-shoot { animation: shoot-out 3s ease-out infinite; }
 
     /* Background Stars */
-    .s-dust { r: 0.8; fill: #6366f1; opacity: 0.5; }
-    .s-tiny { r: 1.0; fill: #A5B4FC; opacity: 0.6; }
-    .s-med  { r: 1.4; fill: #FFFFFF; opacity: 0.7; }
-    .s-bright { r: 1.8; fill: #FFFFFF; opacity: 0.9; }
+    .s-dust { r: 0.8; fill: #6366f1; opacity: 0.5; animation: pulse-dust 5s ease-in-out infinite; }
+    .s-tiny { r: 1.0; fill: #A5B4FC; opacity: 0.6; animation: pulse-dust 4s ease-in-out infinite; }
+    .s-med  { r: 1.4; fill: #FFFFFF; opacity: 0.7; animation: pulse-star 3s ease-in-out infinite; }
+    .s-bright { r: 1.8; fill: #FFFFFF; opacity: 0.9; animation: pulse-star 4s ease-in-out infinite; }
     
     /* Delays */
     .d-1 { animation-delay: -0.5s; }
