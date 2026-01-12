@@ -295,7 +295,7 @@ Your project should have these commands available for the code-quality skill to 
 
 ## Installation Steps
 
-For quick start and install commands, follow [README.md](./README.md). For workflow guidance and usage examples, see [AGENTS.md](./AGENTS.md) and [skills/README.md](./skills/README.md). For local dev, run `make install` in your checkout to install local changes.
+Follow [README.md](./README.md) for quick start and install commands. See [AGENTS.md](./AGENTS.md) and [skills/README.md](./skills/README.md) for workflow guidance and usage examples. Local development uses `make install` to install changes from your checkout.
 
 ## Feature-Specific Requirements
 

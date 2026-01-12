@@ -21,10 +21,12 @@ lint: ## Lint all shell scripts with shellcheck
 	bash .test/scripts/lint-shell.sh
 
 test: validate lint ## Run all tests
+	@failed=0; \
 	for script in .test/tests/*.sh; do \
 		[ -f "$$script" ] || continue; \
-		bash "$$script"; \
-	done
+		bash "$$script" || failed=1; \
+	done; \
+	exit $$failed
 
 pre-commit: ## Install pre-commit hooks
 	pip install pre-commit && pre-commit install
