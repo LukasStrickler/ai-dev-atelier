@@ -97,7 +97,7 @@ See [INSTALL.md](./INSTALL.md) for platform-specific installation commands and o
 
 ## Contributing
 
-1. Run `make test` before commiting.
+1. Run `make test` before committing.
 2. Keep instructions and scripts inside each skill directory.
 3. Update `skills/README.md` when the catalog changes.
 4. Keep outputs under `.ada/`.

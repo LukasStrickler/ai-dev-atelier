@@ -146,11 +146,23 @@ detect_package_manager() {
 
 package_for_command() {
   case "$1" in
+    bash)
+      echo "bash"
+      ;;
     git)
       echo "git"
       ;;
     jq)
       echo "jq"
+      ;;
+    awk|gawk)
+      echo "gawk"
+      ;;
+    sed)
+      echo "sed"
+      ;;
+    diff)
+      echo "diffutils"
       ;;
     *)
       echo ""
