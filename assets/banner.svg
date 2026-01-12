@@ -353,7 +353,7 @@
 
     <!-- Typography -->
     <g>
-        <text x="0" y="10" class="title"><tspan class="title-highlight">AI</tspan> Dev <tspan class="title-highlight">Atelier</tspan></text>
+        <text x="0" y="10" class="title"><tspan class="title-highlight">AI Dev Atelier</tspan></text>
         <text x="0" y="100" class="subtitle">Mastering the New Stack</text>
     </g>
     
