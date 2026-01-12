@@ -3,27 +3,18 @@
   <desc id="desc">Dense starfield with drifting particles around a central core.</desc>
 
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;600&amp;family=JetBrains+Mono:wght@400&amp;display=swap');
+    
     /* === TYPOGRAPHY === */
     .title {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: 'Space Grotesk', sans-serif;
       font-weight: 300;
       font-size: 80px;
       fill: #FFFFFF;
       text-anchor: middle;
       dominant-baseline: middle;
       letter-spacing: -2px;
-      filter: drop-shadow(0 0 20px rgba(255,255,255,255,0.1));
-    }
-    .title-highlight { font-weight: 600; color: #E2E8F0; }
-    .subtitle {
-      font-family: 'SF Mono', 'Consolas', 'Liberation Mono', monospace;
-      font-weight: 400;
-      font-size: 14px;
-      fill: #94A3B8;
-      letter-spacing: 6px;
-      text-anchor: middle;
-      text-transform: uppercase;
-      opacity: 0.8;
+      filter: drop-shadow(0 0 20px rgba(255,255,255,0.1));
     }
     .title-highlight { font-weight: 600; color: #E2E8F0; }
     .subtitle {
@@ -70,8 +61,8 @@
         50% { opacity: 0.6; transform: scale(1.2); }
     }
 
-    @keyframes pulse-dust { 0%, 100% { opacity: 0.1; } 50% { opacity: 0.5; } }
-    @keyframes pulse-star { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.9; } }
+    @keyframes pulse-dust { 0%, 100% { opacity: 0.1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.3); } }
+    @keyframes pulse-star { 0%, 100% { opacity: 0.4; transform: scale(1); } 50% { opacity: 0.9; transform: scale(1.2); } }
 
     @keyframes rotate-slow {
       from { transform: rotate(0deg); }
@@ -92,10 +83,10 @@
     .p-shoot { animation: shoot-out 3s ease-out infinite; }
 
     /* Background Stars */
-    .s-dust { r: 0.8; fill: #6366f1; opacity: 0.5; animation: pulse-dust 5s ease-in-out infinite; }
-    .s-tiny { r: 1.0; fill: #A5B4FC; opacity: 0.6; animation: pulse-dust 4s ease-in-out infinite; }
-    .s-med  { r: 1.4; fill: #FFFFFF; opacity: 0.7; animation: pulse-star 3s ease-in-out infinite; }
-    .s-bright { r: 1.8; fill: #FFFFFF; opacity: 0.9; animation: pulse-star 4s ease-in-out infinite; }
+    .s-dust { r: 0.8; fill: #6366f1; opacity: 0.3; animation: pulse-dust 5s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+    .s-tiny { r: 1.0; fill: #A5B4FC; opacity: 0.4; animation: pulse-dust 4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+    .s-med  { r: 1.4; fill: #FFFFFF; opacity: 0.7; animation: pulse-star 3s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+    .s-bright { r: 1.8; fill: #FFFFFF; opacity: 0.9; animation: pulse-star 4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
     
     /* Delays */
     .d-1 { animation-delay: -0.5s; }
