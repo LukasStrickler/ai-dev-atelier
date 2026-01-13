@@ -512,6 +512,8 @@ echo ""
 
 test_hook "curl -X POST https://api.github.com/repos/owner/repo/releases" 2 "Blocks: curl POST releases"
 test_hook "curl -XPOST https://api.github.com/repos/owner/repo/releases" 2 "Blocks: curl -XPOST releases"
+test_hook "curl -X\"\"POST https://api.github.com/repos/owner/repo/releases" 2 "Blocks: curl empty quotes in -X"
+test_hook "curl -X''POST https://api.github.com/repos/owner/repo/releases" 2 "Blocks: curl empty single quotes in -X"
 test_hook "curl --request POST https://api.github.com/repos/owner/repo/releases" 2 "Blocks: curl --request POST releases"
 test_hook "curl --request=POST https://api.github.com/repos/owner/repo/releases" 2 "Blocks: curl --request=POST releases"
 test_hook "curl -X\\ POST https://api.github.com/repos/owner/repo/releases" 2 "Blocks: curl escaped-space -X"
@@ -550,6 +552,7 @@ test_hook "https POST https://api.github.com/repos/owner/repo/actions/workflows/
 test_hook "https api.github.com/repos/owner/repo/actions/workflows/release.yml/dispatches ref=main" 2 "Blocks: https implicit post dispatch"
 test_hook "https api.github.com/repos/owner/repo/actions/workflows/release.yml/dispatches ref=" 2 "Blocks: https implicit post empty value"
 test_hook "https api.github.com/repos/owner/repo/actions/workflows/release.yml/dispatches Authorization:token" 0 "Allows: https GET dispatches with header"
+test_hook "https api.github.com/repos/owner/repo/actions/workflows/release.yml/dispatches page==2" 0 "Allows: https GET dispatches with query param (==)"
 test_hook "curl -d@payload.json https://api.github.com/repos/owner/repo/releases" 2 "Blocks: curl -d@file releases"
 
 echo ""

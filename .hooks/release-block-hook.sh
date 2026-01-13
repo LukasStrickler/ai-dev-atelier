@@ -25,6 +25,8 @@ is_release_command() {
   cmd="${cmd//$'\uFEFF'/ }"
   cmd="${cmd//$'\u00A0'/ }"
   cmd="${cmd//\\ / }"
+  cmd="${cmd//$'\047\047'/}"
+  cmd="${cmd//$'\"\"'/}"
   
   [[ "$cmd" =~ --help ]] && return 1
   
