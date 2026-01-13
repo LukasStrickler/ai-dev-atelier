@@ -17,6 +17,7 @@ is_release_command() {
   local TEXT_CMDS="echo|printf|cat|grep|egrep|fgrep|awk|sed|less|more|head|tail|wc|cut|tr|sort|uniq|diff|cmp|file|strings|od|hexdump|xxd|base64"
   local END='([[:space:]]|$|[]"'"'"'`);|&><[])'
   local pattern line
+  local WRITE_INDICATORS='(-X[[:space:]]*([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])|--request([[:space:]]|=)*([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])|--method([[:space:]]|=)*([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])|--json([[:space:]]|=)|--data([[:space:]]|=|@)|--data-raw([[:space:]]|=|@)|--data-urlencode([[:space:]]|=|@)|--data-ascii([[:space:]]|=|@)|-d([[:space:]]|=|@|[^[:space:]])|--data-binary([[:space:]]|=|@)|--form([[:space:]]|=|@)|-F([[:space:]]|=|@|[^[:space:]])|--upload-file([[:space:]]|=|@)|-T([[:space:]]|=|@|[^[:space:]])|--post-data([[:space:]]|=|@)|--post-file([[:space:]]|=|@))'
   
   cmd="${cmd//$'\u200B'/ }"
   cmd="${cmd//$'\u200C'/ }"
@@ -44,24 +45,35 @@ is_release_command() {
   # curl/wget to releases endpoint - only block write operations
   if [[ "$cmd" =~ (curl|wget)[[:space:]].*api\.github\.com.*/releases ]]; then
     # Block if it has write indicators
-    if [[ "$cmd" =~ (-X[[:space:]]*([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])|--request([[:space:]]|=)*([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])|--method([[:space:]]|=)*([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])|--data([[:space:]]|=)|--data-raw([[:space:]]|=)|--data-urlencode([[:space:]]|=)|-d([[:space:]]|=)|--data-binary([[:space:]]|=)|--form([[:space:]]|=)|-F([[:space:]]|=)|--upload-file([[:space:]]|=)|-T([[:space:]]|=)|--post-data([[:space:]]|=)|--post-file([[:space:]]|=)) ]]; then
+    if [[ "$cmd" =~ $WRITE_INDICATORS ]]; then
       return 0
     fi
     # Allow GET requests (default behavior)
   fi
   if [[ "$cmd" =~ (curl|wget)[[:space:]].*api\.github\.com.*/dispatches ]]; then
     # Block if it has write indicators
-    if [[ "$cmd" =~ (-X[[:space:]]*([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])|--request([[:space:]]|=)*([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])|--method([[:space:]]|=)*([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])|--data([[:space:]]|=)|--data-raw([[:space:]]|=)|--data-urlencode([[:space:]]|=)|-d([[:space:]]|=)|--data-binary([[:space:]]|=)|--form([[:space:]]|=)|-F([[:space:]]|=)|--upload-file([[:space:]]|=)|-T([[:space:]]|=)|--post-data([[:space:]]|=)|--post-file([[:space:]]|=)) ]]; then
+    if [[ "$cmd" =~ $WRITE_INDICATORS ]]; then
       return 0
     fi
     # Allow GET requests (default behavior)
   fi
 
-  if [[ "$cmd" =~ (http|https)[[:space:]].*([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])[[:space:]]+(https?://)?api\.github\.com.*/releases ]]; then
-    return 0
+  # httpie to releases endpoint - block explicit methods or implicit POST with data fields
+  if [[ "$cmd" =~ (http|https)[[:space:]].*api\.github\.com.*/releases ]]; then
+    if [[ "$cmd" =~ ([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])[[:space:]]+(https?://)?api\.github\.com ]]; then
+      return 0
+    fi
+    if [[ "$cmd" =~ (http|https)[[:space:]]+[^[:space:]]*api\.github\.com[^[:space:]]*/releases[^[:space:]]*[[:space:]]+[a-zA-Z_][a-zA-Z0-9_]*[:=] ]]; then
+      return 0
+    fi
   fi
-  if [[ "$cmd" =~ (http|https)[[:space:]].*([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])[[:space:]]+(https?://)?api\.github\.com.*/dispatches ]]; then
-    return 0
+  if [[ "$cmd" =~ (http|https)[[:space:]].*api\.github\.com.*/dispatches ]]; then
+    if [[ "$cmd" =~ ([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])[[:space:]]+(https?://)?api\.github\.com ]]; then
+      return 0
+    fi
+    if [[ "$cmd" =~ (http|https)[[:space:]]+[^[:space:]]*api\.github\.com[^[:space:]]*/dispatches[^[:space:]]*[[:space:]]+[a-zA-Z_][a-zA-Z0-9_]*[:=] ]]; then
+      return 0
+    fi
   fi
   
   # gh api releases - only block write operations (POST, PUT, PATCH, DELETE, -f data)
