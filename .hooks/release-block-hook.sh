@@ -61,18 +61,24 @@ is_release_command() {
 
   # httpie to releases endpoint - block explicit methods or implicit POST with data fields
   if [[ "$cmd" =~ (http|https)[[:space:]].*api\.github\.com.*/releases ]]; then
+    if [[ "$cmd" =~ (http|https)[[:space:]].*(-f([[:space:]]|$)|--form([[:space:]]|=|$)|--multipart([[:space:]]|=|$)|--json([[:space:]]|=|$)) ]] || [[ "$cmd" =~ ([[:space:]]|^)-j([[:space:]]|$) ]]; then
+      return 0
+    fi
     if [[ "$cmd" =~ ([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])[[:space:]]+(https?://)?api\.github\.com ]]; then
       return 0
     fi
-    if [[ "$cmd" =~ (http|https)[[:space:]]+[^[:space:]]*api\.github\.com[^[:space:]]*/releases[^[:space:]]*[[:space:]]+[a-zA-Z_][a-zA-Z0-9_]*(:=|=[^=]) ]]; then
+    if [[ "$cmd" =~ (http|https)[[:space:]]+[^[:space:]]*api\.github\.com[^[:space:]]*/releases[^[:space:]]*[[:space:]]+[a-zA-Z_][a-zA-Z0-9_]*(:=|=([^=]|$)) ]]; then
       return 0
     fi
   fi
   if [[ "$cmd" =~ (http|https)[[:space:]].*api\.github\.com.*/dispatches ]]; then
+    if [[ "$cmd" =~ (http|https)[[:space:]].*(-f([[:space:]]|$)|--form([[:space:]]|=|$)|--multipart([[:space:]]|=|$)|--json([[:space:]]|=|$)) ]] || [[ "$cmd" =~ ([[:space:]]|^)-j([[:space:]]|$) ]]; then
+      return 0
+    fi
     if [[ "$cmd" =~ ([Pp][Oo][Ss][Tt]|[Pp][Uu][Tt]|[Pp][Aa][Tt][Cc][Hh]|[Dd][Ee][Ll][Ee][Tt][Ee])[[:space:]]+(https?://)?api\.github\.com ]]; then
       return 0
     fi
-    if [[ "$cmd" =~ (http|https)[[:space:]]+[^[:space:]]*api\.github\.com[^[:space:]]*/dispatches[^[:space:]]*[[:space:]]+[a-zA-Z_][a-zA-Z0-9_]*(:=|=[^=]) ]]; then
+    if [[ "$cmd" =~ (http|https)[[:space:]]+[^[:space:]]*api\.github\.com[^[:space:]]*/dispatches[^[:space:]]*[[:space:]]+[a-zA-Z_][a-zA-Z0-9_]*(:=|=([^=]|$)) ]]; then
       return 0
     fi
   fi
