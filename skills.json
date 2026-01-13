@@ -35,6 +35,11 @@
         "ui-animation": {
           "install": true
         }
+      },
+      "plugins": {
+        "skill-telemetry": {
+          "install": true
+        }
       }
     }
   }

@@ -14,12 +14,31 @@ Skills are organized directories containing `SKILL.md` files that follow the ope
 | [`docs-check`](./docs-check/SKILL.md) | Analyze git diff to identify code changes requiring documentation updates | `scripts/check-docs.sh` |
 | [`docs-write`](./docs-write/SKILL.md) | Write or update documentation with clear style, structure, visuals, API/ADR/runbook patterns | N/A (workflow skill) |
 | [`git-commit`](./git-commit/SKILL.md) | Write clear git commits with Conventional Commits format, detect project conventions | N/A (workflow skill) |
-| [`use-graphite`](./use-graphite/SKILL.md) | Manage stacked PRs with Graphite CLI, auto-detect Graphite repos, block conflicting git commands | `scripts/graphite-*.sh` |
-| [`code-review`](./code-review/SKILL.md) | Review code changes using CodeRabbit - uncommitted files (task mode) or all PR files vs main (pr mode) | `scripts/review-*.sh` |
+| [`use-graphite`](./use-graphite/SKILL.md) | Manage stacked PRs with Graphite CLI, auto-detect Graphite repos, block conflicting git commands | `scripts/graphite*.sh` |
+| [`code-review`](./code-review/SKILL.md) | Review code changes using CodeRabbit - uncommitted files (task mode) or all PR files vs main (pr mode) | `scripts/review-run.sh` |
 | [`resolve-pr-comments`](./resolve-pr-comments/SKILL.md) | Multi-agent PR comment resolution for bot reviews (CodeRabbit, Copilot, Gemini) | `scripts/pr-resolver*.sh` |
 | [`search`](./search/SKILL.md) | Search the web and library documentation using Tavily and Context7 MCPs | N/A (MCP-based skill) |
 | [`research`](./research/SKILL.md) | Conduct academic research using OpenAlex, PDF extraction, and paper search MCPs with evidence cards | `scripts/research-*.sh` |
 | [`ui-animation`](./ui-animation/SKILL.md) | Guide tasteful UI animation implementation with easing, springs, timing, and accessibility | N/A (workflow skill) |
+
+## Future Skills (Under Research)
+
+The following skills are proposed for future implementation based on research findings:
+
+| Skill | Priority | Description | Status |
+|-------|----------|---------|--------|
+| `autonomous-testing` | **HIGH** | Playwright Agent suite for E2E testing with self-healing selectors | Proposed |
+| `security-scan` | **HIGH** | SAST/SCA vulnerability scanning via Semgrep MCP | Proposed |
+| `cloud-deploy` | **MEDIUM-HIGH** | Full deployment automation (AWS/GCP/Azure) | Proposed |
+| `monitoring-setup` | **MEDIUM** | Prometheus/Grafana dashboards, alerts, SLO tracking | Proposed |
+| `db-migrate` | **MEDIUM** | Schema migration generation, declarative migrations | Proposed |
+| `api-contract-verify` | **MEDIUM** | REST/GraphQL testing, Pact/Prism verification | Proposed |
+| `perf-audit-web` | **MEDIUM** | Lighthouse CI, bundle analysis, Web Vitals | Proposed |
+| `incident-responder` | **MEDIUM** | RCA, log correlation, automated fix suggestions | Proposed |
+| `legacy-modernize` | **LOW-MEDIUM** | Multi-file migrations, automated refactoring | Proposed |
+| `accessibility-audit` | **LOW** | WCAG 2.1 AA compliance checking, axe-core audits | Proposed |
+
+See [`.ada/data/research/top-skills-recommendation.md`](../.ada/data/research/top-skills-recommendation.md) for detailed research findings and evidence.
 
 ## Quick Reference
 

@@ -46,6 +46,7 @@ SKILLS_CONFIG="${ATELIER_DIR}/skills.json"
 LEGACY_SKILLS_CONFIG="${ATELIER_DIR}/skills-config.json"
 MCP_CONFIG="${ATELIER_DIR}/mcp.json"
 AGENTS_CONFIG="${ATELIER_DIR}/agents.json"
+PLUGIN_CONFIG="${ATELIER_DIR}/.opencode/plugin/plugin.json"
 ENV_FILE="${ATELIER_DIR}/.env"
 ENV_EXAMPLE="${ATELIER_DIR}/.env.example"
 
@@ -1121,6 +1122,92 @@ configure_opencode_tool_filtering() {
   fi
 }
 
+configure_opencode_plugins() {
+  local plugin_source_dir="${ATELIER_DIR}/.opencode/plugin"
+  local plugin_config_source="${PLUGIN_CONFIG}"
+
+  if [ ! -d "$plugin_source_dir" ]; then
+    log_info "No local OpenCode plugins found, skipping plugin installation"
+    return 0
+  fi
+
+  local opencode_config_dir
+  opencode_config_dir=$(dirname "$OPENCODE_CONFIG")
+  local opencode_plugin_dir="${opencode_config_dir}/plugin"
+  mkdir -p "$opencode_plugin_dir"
+
+  local installed=0
+  local updated=0
+  local skipped=0
+
+  for plugin_file in "$plugin_source_dir"/*; do
+    [ -f "$plugin_file" ] || continue
+    local plugin_name
+    plugin_name=$(basename "$plugin_file")
+    local target_file="${opencode_plugin_dir}/${plugin_name}"
+
+    if [ -f "$target_file" ]; then
+      if diff -q "$plugin_file" "$target_file" >/dev/null 2>&1; then
+        skipped=$((skipped + 1))
+        continue
+      fi
+      if confirm_action "Overwrite OpenCode plugin ${plugin_name}?"; then
+        cp "$plugin_file" "$target_file"
+        updated=$((updated + 1))
+      else
+        skipped=$((skipped + 1))
+      fi
+    else
+      cp "$plugin_file" "$target_file"
+      installed=$((installed + 1))
+    fi
+  done
+
+  log_success "OpenCode plugins: ${installed} installed, ${updated} updated, ${skipped} skipped"
+
+  if [ ! -f "$plugin_config_source" ]; then
+    log_info "plugin.json not found, skipping plugin config merge"
+    return 0
+  fi
+
+  if ! command -v jq &> /dev/null; then
+    log_warning "jq not found. Skipping plugin.json merge."
+    if [ ! -f "${opencode_config_dir}/plugin.json" ]; then
+      cp "$plugin_config_source" "${opencode_config_dir}/plugin.json"
+      log_success "Copied plugin.json to ${opencode_config_dir}/plugin.json"
+    fi
+    return 0
+  fi
+
+  if ! jq empty "$plugin_config_source" 2>/dev/null; then
+    log_error "plugin.json is not valid JSON, skipping plugin config merge"
+    return 1
+  fi
+
+  local target_plugin_config="${opencode_config_dir}/plugin.json"
+  if [ -f "$target_plugin_config" ]; then
+    if ! jq empty "$target_plugin_config" 2>/dev/null; then
+      log_error "Existing plugin.json is not valid JSON. Creating backup and replacing."
+      mv "$target_plugin_config" "${target_plugin_config}.invalid.$(date +%s).backup"
+      cp "$plugin_config_source" "$target_plugin_config"
+      return 0
+    fi
+
+    cp "$target_plugin_config" "${target_plugin_config}.backup"
+    if jq -s '.[0] * .[1]' "$plugin_config_source" "$target_plugin_config" > "${target_plugin_config}.tmp" && \
+      mv "${target_plugin_config}.tmp" "$target_plugin_config"; then
+      log_success "Merged plugin.json into ${target_plugin_config} (preserved existing overrides)"
+    else
+      mv "$target_plugin_config" "${target_plugin_config}.backup"
+      log_error "Failed to merge plugin.json, restored backup"
+      return 1
+    fi
+  else
+    cp "$plugin_config_source" "$target_plugin_config"
+    log_success "Installed plugin.json to ${target_plugin_config}"
+  fi
+}
+
 # ----------------------------------------------------------------------------
 # Configure OpenCode Custom Agents
 # ----------------------------------------------------------------------------
@@ -1833,6 +1920,10 @@ main() {
   log_info "━━━ OpenCode Custom Agents ━━━"
   configure_opencode_agents
   echo ""
+
+  log_info "━━━ OpenCode Plugins ━━━"
+  configure_opencode_plugins
+  echo ""
   
   # Install skills to OpenCode
   # Skills may be filtered per agent via skills.json
@@ -1858,6 +1949,7 @@ log_info "━━━ Cleaning Up Deprecated Skills ━━━"
   echo "OpenCode:"
   echo "  Skills: ${OPENCODE_SKILLS_DIR}"
   echo "  MCPs: ${OPENCODE_CONFIG}"
+  echo "  Plugins: ${OPENCODE_CONFIG_DIR}/plugin"
   echo "  Agent Hooks: ${AGENT_CONFIG} (for oh-my-opencode)"
   echo ""
   echo "To verify, ask your agent: 'What skills are available?'"

@@ -4,7 +4,7 @@ This file defines how AI agents and contributors should work in this repository.
 
 ## Overview
 
-AI Dev Atelier: Production-grade skill pack for AI-assisted development. 10 skills following the open Agent Skills standard, with MCP integrations for search/research.
+AI Dev Atelier: Production-grade skill pack for AI-assisted development. 10 skills following the open Agent Skills standard, with MCP integrations for search/research. Includes skill telemetry plugin for tracking skill usage.
 
 ## For AI agents
 
