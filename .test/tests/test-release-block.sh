@@ -558,6 +558,9 @@ test_hook "https api.github.com/repos/owner/repo/actions/workflows/release.yml/d
 test_hook "https api.github.com/repos/owner/repo/actions/workflows/release.yml/dispatches Authorization:token" 0 "Allows: https GET dispatches with header"
 test_hook "https api.github.com/repos/owner/repo/actions/workflows/release.yml/dispatches page==2" 0 "Allows: https GET dispatches with query param (==)"
 test_hook "curl -d@payload.json https://api.github.com/repos/owner/repo/releases" 2 "Blocks: curl -d@file releases"
+test_hook "curl -ddata https://api.github.com/repos/owner/repo/releases" 2 "Blocks: curl -ddata (no space)"
+test_hook "http https://api.github.com/repos/owner/repo/releases" 0 "Allows: httpie GET releases (no args)"
+test_hook "https api.github.com/repos/owner/repo/releases" 0 "Allows: https GET releases (no args)"
 
 echo ""
 echo "--- gh api and GraphQL attacks ---"
