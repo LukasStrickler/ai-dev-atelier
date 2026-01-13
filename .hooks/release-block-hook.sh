@@ -41,11 +41,20 @@ is_release_command() {
     return 0
   fi
   
-  if [[ "$cmd" =~ (curl|wget|http|https)[[:space:]].*api\.github\.com.*/releases ]]; then
-    return 0
+  # curl/wget to releases endpoint - only block write operations
+  if [[ "$cmd" =~ (curl|wget)[[:space:]].*api\.github\.com.*/releases ]]; then
+    # Block if it has write indicators
+    if [[ "$cmd" =~ (-X[[:space:]]*(POST|PUT|PATCH|DELETE)|--method[[:space:]]*(POST|PUT|PATCH|DELETE)|--data[[:space:]]|-d[[:space:]]|--data-binary[[:space:]]|--form[[:space:]]|-F[[:space:]]|--upload-file[[:space:]]|-T[[:space:]]) ]]; then
+      return 0
+    fi
+    # Allow GET requests (default behavior)
   fi
-  if [[ "$cmd" =~ (curl|wget|http|https)[[:space:]].*api\.github\.com.*/dispatches ]]; then
-    return 0
+  if [[ "$cmd" =~ (curl|wget)[[:space:]].*api\.github\.com.*/dispatches ]]; then
+    # Block if it has write indicators
+    if [[ "$cmd" =~ (-X[[:space:]]*(POST|PUT|PATCH|DELETE)|--method[[:space:]]*(POST|PUT|PATCH|DELETE)|--data[[:space:]]|-d[[:space:]]|--data-binary[[:space:]]|--form[[:space:]]|-F[[:space:]]) ]]; then
+      return 0
+    fi
+    # Allow GET requests (default behavior)
   fi
   
   # gh api releases - only block write operations (POST, PUT, PATCH, DELETE, -f data)
