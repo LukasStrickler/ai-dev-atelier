@@ -129,7 +129,7 @@ test("extractSkillScript: returns null for git commands", () => {
 });
 
 test("extractSkillScript: matches skills/name/scripts/script.sh", () => {
-  expect(extractSkillScript("bash skills/code-quality/scripts/finalize.sh"))
+  expect(extractSkillScript("bash content/skills/code-quality/scripts/finalize.sh"))
     .toEqual({ skill: "code-quality", script: "finalize.sh" });
 });
 
@@ -139,17 +139,17 @@ test("extractSkillScript: matches content/skills/name/scripts/script.sh", () => 
 });
 
 test("extractSkillScript: matches absolute path with skills/", () => {
-  expect(extractSkillScript("bash /home/user/ai-dev-atelier/skills/docs-check/scripts/check-docs.sh"))
+  expect(extractSkillScript("bash /home/user/ai-dev-atelier/content/skills/docs-check/scripts/check-docs.sh"))
     .toEqual({ skill: "docs-check", script: "check-docs.sh" });
 });
 
 test("extractSkillScript: matches with arguments after script", () => {
-  expect(extractSkillScript("bash skills/code-review/scripts/review-run.sh --mode task"))
+  expect(extractSkillScript("bash content/skills/code-review/scripts/review-run.sh --mode task"))
     .toEqual({ skill: "code-review", script: "review-run.sh" });
 });
 
 test("extractSkillScript: handles script names with hyphens", () => {
-  expect(extractSkillScript("bash skills/resolve-pr-comments/scripts/pr-resolver-run.sh"))
+  expect(extractSkillScript("bash content/skills/resolve-pr-comments/scripts/pr-resolver-run.sh"))
     .toEqual({ skill: "resolve-pr-comments", script: "pr-resolver-run.sh" });
 });
 

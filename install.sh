@@ -936,13 +936,13 @@ configure_mcp_opencode() {
     log_info "Install jq to enable automatic MCP configuration:"
     log_info "  macOS: brew install jq"
     log_info "  Linux: sudo apt-get install jq"
-    log_info "  Or manually configure MCPs using mcp.json"
+    log_info "  Or manually configure MCPs using config/mcps.json"
     return
   fi
   
   # Check if mcp.json exists
   if [ ! -f "$MCP_CONFIG" ]; then
-    log_warning "mcp.json not found at ${MCP_CONFIG}"
+    log_warning "config/mcps.json not found at ${MCP_CONFIG}"
     log_info "Skipping OpenCode MCP configuration"
     return
   fi
@@ -953,7 +953,7 @@ configure_mcp_opencode() {
   
   # Validate config is valid JSON
   if ! jq empty "$MCP_CONFIG" 2>/dev/null; then
-    log_error "mcp.json is not valid JSON"
+    log_error "config/mcps.json is not valid JSON"
     return 1
   fi
   
@@ -963,7 +963,7 @@ configure_mcp_opencode() {
   # Extract MCP servers from config
   local mcp_servers=$(jq -c '.mcpServers' "$MCP_CONFIG")
   if [ -z "$mcp_servers" ] || [ "$mcp_servers" = "null" ]; then
-    log_error "No mcpServers found in mcp.json"
+    log_error "No mcpServers found in config/mcps.json"
     return 1
   fi
   
@@ -1016,7 +1016,7 @@ configure_mcp_opencode() {
       local server_config=$(jq -c ".mcpServers.\"${server_name}\"" "$MCP_CONFIG")
       
       if [ -z "$server_config" ] || [ "$server_config" = "null" ]; then
-        log_warning "  ${server_name}: not found in mcp.json, skipping"
+        log_warning "  ${server_name}: not found in config/mcps.json, skipping"
         continue
       fi
       
@@ -1054,7 +1054,7 @@ configure_mcp_opencode() {
     
   else
     # Config doesn't exist, create new one from mcp.json
-    log_info "Creating new OpenCode configuration from mcp.json..."
+    log_info "Creating new OpenCode configuration from config/mcps.json..."
     
     # Initialize OpenCode config structure with schema
     local opencode_base='{
@@ -1088,14 +1088,14 @@ configure_mcp_opencode() {
     log_info "Configured ${server_count} MCP server(s)"
   fi
   
-  # Configure tool filtering from _disabledTools metadata in mcp.json
+  # Configure tool filtering from _disabledTools metadata in config/mcps.json
   configure_opencode_tool_filtering
 }
 
 # ----------------------------------------------------------------------------
 # Configure OpenCode Tool Filtering
 # ----------------------------------------------------------------------------
-# Reads _disabledTools from mcp.json and adds them to the tools section
+# Reads _disabledTools from config/mcps.json and adds them to the tools section
 # of opencode.json. Format: "server-name_tool-name": false
 #
 # OpenCode uses a top-level tools section for filtering, not per-server.
