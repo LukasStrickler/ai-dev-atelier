@@ -28,7 +28,8 @@ AI Dev Atelier is a curated skill pack for OpenCode. Agent Skills are a simple, 
 
 * 10 production-ready [Agent Skills](https://agentskills.io/specification) from `config/skills.json`
 * 9 MCP servers configured from `config/mcps.json`
-+ PreToolUse guardrails defined in `config/hooks.json`
+* PreToolUse guardrails defined in `config/hooks.json`
+
 
 - `code-quality` — Typecheck, lint, format, Markdown validation
 - `docs-check` — Detect docs needing updates from git diff
