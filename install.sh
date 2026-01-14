@@ -811,7 +811,7 @@ substitute_api_keys() {
 #
 # Parameters:
 #   $1 - Server name
-#   $2 - Server config (JSON string from mcp.json)
+#   $2 - Server config (JSON string from config/mcps.json)
 #
 # Returns:
 #   OpenCode-formatted JSON config via stdout
@@ -899,7 +899,7 @@ convert_mcp_to_opencode() {
   fi
   
   # Unknown format
-  log_error "Unknown MCP server format for ${server_name} (must have 'url' or 'command' field, or type in mcp.json)"
+  log_error "Unknown MCP server format for ${server_name} (must have 'url' or 'command' field, or type in config/mcps.json)"
   return 1
 }
 
@@ -907,7 +907,7 @@ convert_mcp_to_opencode() {
 # Configure MCP Servers for OpenCode
 # ----------------------------------------------------------------------------
 # Configures MCP servers for OpenCode agent using OpenCode format.
-# Reads from mcp.json, converts to OpenCode format, and updates opencode.json.
+# Reads from config/mcps.json, converts to OpenCode format, and updates opencode.json.
 #
 # IMPORTANT: Preserves existing MCP configurations and only adds missing ones.
 # It will NEVER overwrite an existing MCP server configuration.
@@ -940,7 +940,7 @@ configure_mcp_opencode() {
     return
   fi
   
-  # Check if mcp.json exists
+  # Check if config/mcps.json exists
   if [ ! -f "$MCP_CONFIG" ]; then
     log_warning "config/mcps.json not found at ${MCP_CONFIG}"
     log_info "Skipping OpenCode MCP configuration"
@@ -1012,7 +1012,7 @@ configure_mcp_opencode() {
       fi
       
       # Server doesn't exist, safe to add from config
-      # Get server config from mcp.json
+      # Get server config from config/mcps.json
       local server_config=$(jq -c ".mcpServers.\"${server_name}\"" "$MCP_CONFIG")
       
       if [ -z "$server_config" ] || [ "$server_config" = "null" ]; then
@@ -1053,7 +1053,7 @@ configure_mcp_opencode() {
     fi
     
   else
-    # Config doesn't exist, create new one from mcp.json
+    # Config doesn't exist, create new one from config/mcps.json
     log_info "Creating new OpenCode configuration from config/mcps.json..."
     
     # Initialize OpenCode config structure with schema

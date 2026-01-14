@@ -199,7 +199,7 @@ For each comment, assign a classification:
 
 ```bash
 # For ALREADY_FIXED - always dismiss to prevent re-processing
-bash skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh {PR} {COMMENT_ID} "Already fixed: {description of fix} at line {N} / in commit {sha}"
+bash content/skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh {PR} {COMMENT_ID} "Already fixed: {description of fix} at line {N} / in commit {sha}"
 ```
 
 **Confidence Score** (0-100):
@@ -411,13 +411,13 @@ npm test || true  # ABSOLUTELY FORBIDDEN
 
 **After successful fix AND verification:**
 ```bash
-bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh {PR} {COMMENT_ID}
+bash content/skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh {PR} {COMMENT_ID}
 ```
 
 **For false positives (with evidence gathered):**
 
 ```bash
-bash skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh {PR} {COMMENT_ID} "False positive: {evidence}"
+bash content/skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh {PR} {COMMENT_ID} "False positive: {evidence}"
 ```
 
 **For deferred items (ONLY after 3+ fix attempts):** Do NOT run any resolve script. Leave thread open.
@@ -555,8 +555,8 @@ After processing all comments, provide this **exact format**:
     }
   ],
   "scripts_executed": [
-    "bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh 7 123456 → SUCCESS",
-    "bash skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh 7 789012 '...' → SUCCESS"
+    "bash content/skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh 7 123456 → SUCCESS",
+    "bash content/skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh 7 789012 '...' → SUCCESS"
   ],
   "verification_summary": {
     "all_diagnostics_pass": true,
@@ -599,8 +599,8 @@ After processing all comments, provide this **exact format**:
 **Resolution Scripts:**
 | Script | Purpose |
 |--------|---------|
-| `bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh {PR} {ID}` | Resolve after fix |
-| `bash skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh {PR} {ID} "reason"` | Dismiss with reason |
+| `bash content/skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh {PR} {ID}` | Resolve after fix |
+| `bash content/skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh {PR} {ID} "reason"` | Dismiss with reason |
 
 **Blocked:** `write` tool (use `edit` only), tools outside your cluster's file scope.
 
@@ -674,15 +674,15 @@ Use these skills via their trigger phrases or scripts:
 
 | Skill | Purpose | How to Invoke |
 |-------|---------|---------------|
-| **docs-check** | Detect if your changes need doc updates | `bash skills/docs-check/scripts/check-docs.sh` |
-| **docs-write** | Write/update documentation | Follow `skills/docs-write/SKILL.md` workflow |
-| **git-commit** | Commit with proper message format | Follow `skills/git-commit/SKILL.md` workflow |
+| **docs-check** | Detect if your changes need doc updates | `bash content/skills/docs-check/scripts/check-docs.sh` |
+| **docs-write** | Write/update documentation | Follow `content/skills/docs-write/SKILL.md` workflow |
+| **git-commit** | Commit with proper message format | Follow `content/skills/git-commit/SKILL.md` workflow |
 
 ### Workflow After Code Fixes
 
 1. **After applying fixes**, run docs-check to see if documentation needs updating:
    ```bash
-   bash skills/docs-check/scripts/check-docs.sh
+   bash content/skills/docs-check/scripts/check-docs.sh
    ```
 
 2. **If docs-check reports changes needed**:
@@ -725,7 +725,7 @@ Before completing, ask yourself:
 2. GREP for 'useEffect' usage in file
 3. FIND: useEffect IS used at line 45
 4. CLASSIFY: FALSE_POSITIVE (confidence: 95)
-5. EXECUTE: bash skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh 7 123456 "False positive: useEffect is used at line 45 in the cleanup effect"
+5. EXECUTE: bash content/skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh 7 123456 "False positive: useEffect is used at line 45 in the cleanup effect"
 6. VERIFY script output shows success
 ```
 
@@ -742,7 +742,7 @@ Before completing, ask yourself:
 5. EDIT: Change import path
 6. VERIFY: lsp_diagnostics - PASS
 7. VERIFY: Related tests - PASS
-8. EXECUTE: bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh 7 789012
+8. EXECUTE: bash content/skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh 7 789012
 9. VERIFY script output shows success
 ```
 
@@ -782,7 +782,7 @@ Before completing, ask yourself:
 2. GREP for reassignment patterns
 3. FIND: Variable IS reassigned at line 52
 4. CLASSIFY: FALSE_POSITIVE (confidence: 92)
-5. EXECUTE: bash skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh 7 345678 "False positive: Variable is reassigned at line 52, 'let' is correct"
+5. EXECUTE: bash content/skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh 7 345678 "False positive: Variable is reassigned at line 52, 'let' is correct"
 6. VERIFY script output shows success
 ```
 
@@ -796,12 +796,12 @@ Before completing, ask yourself:
 
 1. **For each VALID_FIX comment:**
    - [ ] Code fix applied and verified (diagnostics pass)
-   - [ ] **EXECUTED**: `bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh {PR} {COMMENT_ID}`
+   - [ ] **EXECUTED**: `bash content/skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh {PR} {COMMENT_ID}`
    - [ ] Confirmed script output shows success
 
 2. **For each FALSE_POSITIVE / ALREADY_FIXED / STYLE_CHOICE comment:**
    - [ ] Evidence gathered and documented
-   - [ ] **EXECUTED**: `bash skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh {PR} {COMMENT_ID} "{reason}"`
+   - [ ] **EXECUTED**: `bash content/skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh {PR} {COMMENT_ID} "{reason}"`
    - [ ] Confirmed script output shows success
    - [ ] **ALREADY_FIXED is NOT exempt** - you must still dismiss to close the thread!
 
@@ -825,7 +825,7 @@ Before completing, ask yourself:
 
 If you made code changes (VALID_FIX actions):
 - [ ] Considered if changes affect public API, configuration, or behavior
-- [ ] Ran `bash skills/docs-check/scripts/check-docs.sh` if changes might need docs
+- [ ] Ran `bash content/skills/docs-check/scripts/check-docs.sh` if changes might need docs
 - [ ] Either updated affected docs OR noted in deferred_items that docs need updating
 
 ### Script Execution Log

@@ -159,11 +159,11 @@ test("extractSkillScript: handles content/ prefix with absolute path", () => {
 });
 
 test("extractSkillScript: does not match without .sh extension", () => {
-  expect(extractSkillScript("node skills/test/scripts/run.js")).toBeNull();
+  expect(extractSkillScript("node content/skills/test/scripts/run.js")).toBeNull();
 });
 
 test("extractSkillScript: does not match malformed paths", () => {
-  expect(extractSkillScript("skills/scripts/run.sh")).toBeNull();
+  expect(extractSkillScript("content/skills/scripts/run.sh")).toBeNull();
 });
 
 // ============================================================================

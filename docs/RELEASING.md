@@ -161,7 +161,7 @@ Release notes are generated from PRs, not commits. If a change was committed dir
 
 ## Security: Release Block Hook
 
-A PreToolUse hook (`.hooks/release-block-hook.sh`) prevents AI agents from triggering releases without human approval.
+A PreToolUse hook (`content/hooks/release-block-hook.sh`) prevents AI agents from triggering releases without human approval.
 
 ### What It Blocks
 
