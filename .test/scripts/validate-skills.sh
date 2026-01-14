@@ -8,7 +8,7 @@ set -euo pipefail
 set -o errtrace
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEFAULT_SKILLS_DIR="$(cd "$SCRIPT_DIR/../../skills" && pwd)"
+DEFAULT_SKILLS_DIR="$(cd "$SCRIPT_DIR/../../content/skills" && pwd)"
 SKILLS_DIR="${SKILLS_DIR_OVERRIDE:-$DEFAULT_SKILLS_DIR}"
 
 # Colors for output

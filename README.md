@@ -26,9 +26,9 @@ AI Dev Atelier is a curated skill pack for OpenCode. Agent Skills are a simple, 
 
 ## What You Get
 
-- 10 production-ready [Agent Skills](https://agentskills.io/specification) from `skills.json`
-- 9 MCP servers configured from `mcp.json`
-- PreToolUse guardrails defined in `hooks.json`
+- 10 production-ready [Agent Skills](https://agentskills.io/specification) from `config/skills.json`
+- 9 MCP servers configured from `config/mcps.json`
+- PreToolUse guardrails defined in `config/hooks.json`
 
 - `code-quality` — Typecheck, lint, format, Markdown validation
 - `docs-check` — Detect docs needing updates from git diff
@@ -41,7 +41,7 @@ AI Dev Atelier is a curated skill pack for OpenCode. Agent Skills are a simple, 
 - `ui-animation` — Tasteful UI animation & accessibility
 - `use-graphite` — Manage stacked PRs with Graphite CLI
 
-See `skills/README.md` for full usage details and scripts.
+See `content/skills/README.md` for full usage details and scripts.
 
 ## Quick Start
 
@@ -76,7 +76,7 @@ bash ~/ai-dev-atelier/install.sh --no
 | Document | Purpose |
 |----------|---------|
 | [INSTALL.md](./INSTALL.md) | Dependencies and MCP setup |
-| [skills/README.md](./skills/README.md) | Skill catalog and usage reference |
+| [content/skills/README.md](./content/skills/README.md) | Skill catalog and usage reference |
 | [AGENTS.md](./AGENTS.md) | Developer workflow guide and MCP reference |
 | [MY_AGENTIC_DEV_SETUP.md](./MY_AGENTIC_DEV_SETUP.md) | OpenCode + Vibora + oh-my-opencode workflow |
 
@@ -95,8 +95,8 @@ See [INSTALL.md](./INSTALL.md) for platform-specific installation commands and o
 ## Contributing
 
 1. Run `make test` before committing.
-2. Keep instructions and scripts inside each skill directory.
-3. Update `skills/README.md` when the catalog changes.
+2. Keep instructions and scripts inside `content/skills/`.
+3. Update `content/skills/README.md` when the catalog changes.
 4. Keep outputs under `.ada/`.
 
 ## License

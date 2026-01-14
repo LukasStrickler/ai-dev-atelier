@@ -41,12 +41,20 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ATELIER_DIR="$SCRIPT_DIR"
 REPO_URL="https://github.com/LukasStrickler/ai-dev-atelier.git"
 DEFAULT_INSTALL_DIR="${AI_DEV_ATELIER_DIR:-${HOME}/ai-dev-atelier}"
-SOURCE_SKILLS_DIR="${ATELIER_DIR}/skills"
-SKILLS_CONFIG="${ATELIER_DIR}/skills.json"
-LEGACY_SKILLS_CONFIG="${ATELIER_DIR}/skills-config.json"
-MCP_CONFIG="${ATELIER_DIR}/mcp.json"
-AGENTS_CONFIG="${ATELIER_DIR}/agents.json"
-PLUGIN_CONFIG="${ATELIER_DIR}/.opencode/plugin/plugin.json"
+# Content directories (where actual skill/hook/plugin/agent content lives)
+CONTENT_DIR="${ATELIER_DIR}/content"
+SOURCE_SKILLS_DIR="${CONTENT_DIR}/skills"
+SOURCE_HOOKS_DIR="${CONTENT_DIR}/hooks"
+SOURCE_PLUGINS_DIR="${CONTENT_DIR}/plugins"
+SOURCE_AGENTS_DIR="${CONTENT_DIR}/agents"
+
+# Config files (JSON configuration)
+CONFIG_DIR="${ATELIER_DIR}/config"
+SKILLS_CONFIG="${CONFIG_DIR}/skills.json"
+LEGACY_SKILLS_CONFIG="${CONFIG_DIR}/skills-config.json"
+MCP_CONFIG="${CONFIG_DIR}/mcps.json"
+AGENTS_CONFIG="${CONFIG_DIR}/agents.json"
+PLUGIN_CONFIG="${CONFIG_DIR}/plugins.json"
 ENV_FILE="${ATELIER_DIR}/.env"
 ENV_EXAMPLE="${ATELIER_DIR}/.env.example"
 
@@ -1123,7 +1131,7 @@ configure_opencode_tool_filtering() {
 }
 
 configure_opencode_plugins() {
-  local plugin_source_dir="${ATELIER_DIR}/.opencode/plugin"
+  local plugin_source_dir="${SOURCE_PLUGINS_DIR}"
   local plugin_config_source="${PLUGIN_CONFIG}"
 
   if [ ! -d "$plugin_source_dir" ]; then
@@ -1334,7 +1342,7 @@ configure_opencode_agents() {
 
 AGENT_CONFIG_DIR="${HOME}/.claude"
 AGENT_CONFIG="${AGENT_CONFIG_DIR}/settings.json"
-HOOKS_CONFIG="${ATELIER_DIR}/hooks.json"
+HOOKS_CONFIG="${CONFIG_DIR}/hooks.json"
 
 add_or_update_hook() {
   local hook_script="$1"
@@ -1447,10 +1455,10 @@ configure_agent_hooks() {
         continue
       fi
       
-      # Hook scripts can be in skills/ (skill-specific) or project root (standalone)
+      # Hook scripts can be in content/hooks/, content/skills/, or project root
       local full_path=""
       local candidate
-      for candidate in "${SOURCE_SKILLS_DIR}/${hook_script}" "${ATELIER_DIR}/${hook_script}"; do
+      for candidate in "${SOURCE_HOOKS_DIR}/${hook_script}" "${SOURCE_SKILLS_DIR}/${hook_script}" "${CONTENT_DIR}/${hook_script}"; do
         if [ -f "$candidate" ]; then
           # Canonicalize to prevent ../ escaping and symlink tricks
           local resolved_dir resolved_path
@@ -1459,20 +1467,22 @@ configure_agent_hooks() {
           fi
           resolved_path="${resolved_dir}/$(basename "$candidate")"
 
-          local canonical_skills_dir canonical_atelier_dir
+          local canonical_skills_dir canonical_hooks_dir canonical_content_dir
           canonical_skills_dir=$(cd "$SOURCE_SKILLS_DIR" 2>/dev/null && pwd -P)
-          canonical_atelier_dir=$(cd "$ATELIER_DIR" 2>/dev/null && pwd -P)
+          canonical_hooks_dir=$(cd "$SOURCE_HOOKS_DIR" 2>/dev/null && pwd -P)
+          canonical_content_dir=$(cd "$CONTENT_DIR" 2>/dev/null && pwd -P)
 
-          # Security: ensure at least one canonical path is non-empty
-          if [ -z "$canonical_skills_dir" ] && [ -z "$canonical_atelier_dir" ]; then
+          if [ -z "$canonical_skills_dir" ] && [ -z "$canonical_hooks_dir" ] && [ -z "$canonical_content_dir" ]; then
             continue
           fi
 
-          # Security: validate resolved path is within allowed directories
-          if [ -n "$canonical_skills_dir" ] && [[ "$resolved_path/" == "$canonical_skills_dir/"* ]]; then
+          if [ -n "$canonical_hooks_dir" ] && [[ "$resolved_path/" == "$canonical_hooks_dir/"* ]]; then
             full_path="$resolved_path"
             break
-          elif [ -n "$canonical_atelier_dir" ] && [[ "$resolved_path/" == "$canonical_atelier_dir/"* ]]; then
+          elif [ -n "$canonical_skills_dir" ] && [[ "$resolved_path/" == "$canonical_skills_dir/"* ]]; then
+            full_path="$resolved_path"
+            break
+          elif [ -n "$canonical_content_dir" ] && [[ "$resolved_path/" == "$canonical_content_dir/"* ]]; then
             full_path="$resolved_path"
             break
           fi
