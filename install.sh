@@ -37,10 +37,16 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Script directory (where this script is located)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_SOURCE="${BASH_SOURCE[0]-${0}}"
+if [ -n "$SCRIPT_SOURCE" ] && [ -f "$SCRIPT_SOURCE" ]; then
+  SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
+else
+  SCRIPT_DIR="$(pwd)"
+fi
 ATELIER_DIR="$SCRIPT_DIR"
 REPO_URL="https://github.com/LukasStrickler/ai-dev-atelier.git"
-DEFAULT_INSTALL_DIR="${AI_DEV_ATELIER_DIR:-${HOME}/ai-dev-atelier}"
+REPO_REF="${AI_DEV_ATELIER_REF:-main}"
+DEFAULT_INSTALL_DIR="${AI_DEV_ATELIER_DIR:-${HOME}/ai-dev-atelier}"  # Reserved for backward compatibility; not used in current implementation
 # Content directories (where actual skill/hook/plugin/agent content lives)
 CONTENT_DIR="${ATELIER_DIR}/content"
 SOURCE_SKILLS_DIR="${CONTENT_DIR}/skills"
@@ -55,6 +61,7 @@ LEGACY_SKILLS_CONFIG="${CONFIG_DIR}/skills-config.json"
 MCP_CONFIG="${CONFIG_DIR}/mcps.json"
 AGENTS_CONFIG="${CONFIG_DIR}/agents.json"
 PLUGIN_CONFIG="${CONFIG_DIR}/plugins.json"
+HOOKS_CONFIG="${CONFIG_DIR}/hooks.json"
 ENV_FILE="${ATELIER_DIR}/.env"
 ENV_EXAMPLE="${ATELIER_DIR}/.env.example"
 
@@ -81,6 +88,10 @@ if [ -f "${ATELIER_DIR}/opencode.json" ]; then
   OPENCODE_CONFIG="${ATELIER_DIR}/opencode.json"
 fi
 
+ATELIER_STATE_DIR="${OPENCODE_CONFIG_DIR}/atelier"
+ATELIER_CACHE_DIR="${ATELIER_STATE_DIR}/cache"
+ATELIER_REPO_DIR="${ATELIER_CACHE_DIR}/repo"
+
 # ============================================================================
 # GLOBAL VARIABLES
 # ============================================================================
@@ -89,6 +100,9 @@ SKIP_CONFIRM=true  # Skip confirmation prompts when true
 CHECK_ONLY=false
 MISSING_DEPS=()
 MISSING_OPTIONAL=()
+
+# Temporary hook file IDs (for cleanup when hooks.json is absent)
+TEMP_HOOK_IDS=("graphite-block" "pr-comments-block" "release-block")
 
 # ============================================================================
 # UTILITY FUNCTIONS
@@ -260,19 +274,36 @@ ensure_repo_checkout() {
   fi
 
   log_warning "Skills directory not found in ${ATELIER_DIR}."
-  local target_dir="$DEFAULT_INSTALL_DIR"
+  local target_dir="$ATELIER_REPO_DIR"
 
   if [ -d "${target_dir}/content/skills" ] && [ -f "${target_dir}/install.sh" ]; then
-    log_info "Using existing checkout at ${target_dir}"
+    log_info "Using cached checkout at ${target_dir}"
+    if git -C "$target_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+      if ! git -C "$target_dir" diff --quiet || ! git -C "$target_dir" diff --cached --quiet; then
+        log_warning "Local changes detected in cached checkout; resetting to ${REPO_REF}"
+      fi
+      if git -C "$target_dir" fetch --depth=1 origin "$REPO_REF" >/dev/null 2>&1; then
+        if ! git -C "$target_dir" checkout -B "$REPO_REF" FETCH_HEAD >/dev/null 2>&1; then
+          log_warning "Failed to update cached checkout"
+        fi
+      else
+        log_warning "Failed to fetch updates for cached checkout"
+      fi
+    fi
     exec bash "${target_dir}/install.sh" "$@"
   fi
 
-  if ! confirm_action "Clone AI Dev Atelier into ${target_dir}?"; then
+  if ! confirm_action "Download AI Dev Atelier into ${target_dir}?"; then
     log_error "Cannot continue without a local checkout."
     exit 1
   fi
 
-  if ! git clone "$REPO_URL" "$target_dir"; then
+  if ! mkdir -p "$ATELIER_CACHE_DIR"; then
+    log_error "Failed to create cache directory: ${ATELIER_CACHE_DIR}"
+    exit 1
+  fi
+
+  if ! git clone --depth=1 --branch "$REPO_REF" "$REPO_URL" "$target_dir"; then
     log_error "Failed to clone ${REPO_URL}"
     exit 1
   fi
@@ -302,18 +333,20 @@ resolve_skills_config() {
 # ----------------------------------------------------------------------------
 # Loads API keys and configuration from .env file if it exists.
 # Falls back to .env.example for reference if .env doesn't exist.
+# This function is non-fatal: it always returns 0 (success) to allow
+# installation to proceed even when .env is missing (users can configure
+# MCP servers later via OpenCode settings).
 #
 # Returns:
-#   0 if .env loaded successfully, 1 if not found (non-fatal)
+#   0 (always) - success whether or not .env file exists
 load_env_file() {
   if [ -f "$ENV_FILE" ]; then
     # Source .env file (export variables)
     set -a
-    source "$ENV_FILE" 2>/dev/null || return 1
+    source "$ENV_FILE" 2>/dev/null || { set +a; return 1; }
     set +a
-    return 0
   fi
-  return 1
+  return 0
 }
 
 # ----------------------------------------------------------------------------
@@ -594,9 +627,16 @@ preflight_checks() {
 
   check_optional_tools
 
+  # Create ATELIER_STATE_DIR before checking write access
+  if ! mkdir -p "$ATELIER_STATE_DIR"; then
+    log_error "Failed to create state directory: ${ATELIER_STATE_DIR}"
+    exit 1
+  fi
+
   local failed=0
   check_write_access "$OPENCODE_SKILLS_DIR" || failed=$((failed + 1))
   check_write_access "$(dirname "$OPENCODE_CONFIG")" || failed=$((failed + 1))
+  check_write_access "$ATELIER_STATE_DIR" || failed=$((failed + 1))
 
   if [ "$failed" -gt 0 ]; then
     log_error "Preflight checks failed. Fix permissions and re-run."
@@ -958,7 +998,7 @@ configure_mcp_opencode() {
   fi
   
   # Load .env file for API keys
-  load_env_file
+  load_env_file || true
   
   # Extract MCP servers from config
   local mcp_servers=$(jq -c '.mcpServers' "$MCP_CONFIG")
@@ -1342,23 +1382,19 @@ configure_opencode_agents() {
 
 AGENT_CONFIG_DIR="${HOME}/.claude"
 AGENT_CONFIG="${AGENT_CONFIG_DIR}/settings.json"
-HOOKS_CONFIG="${CONFIG_DIR}/hooks.json"
+HOOKS_SOURCE="$HOOKS_CONFIG"
 
 add_or_update_hook() {
   local hook_script="$1"
   local hook_type="$2"     # e.g., PreToolUse
   local tool_matcher="$3"  # e.g., Bash
   local full_command="bash ${hook_script}"
-  
-  local hook_exists
+
   hook_exists=$(jq -r --arg cmd "$full_command" ".hooks.${hook_type}[] | select(.matcher == \"${tool_matcher}\") | .hooks[]? | select(.command == \$cmd) | .command" "$AGENT_CONFIG" 2>/dev/null | wc -l || echo "0")
-  
   if [ "$hook_exists" -gt 0 ]; then
     return 1
   else
-    local matcher_exists
     matcher_exists=$(jq -r ".hooks.${hook_type}[] | select(.matcher == \"${tool_matcher}\") | .matcher" "$AGENT_CONFIG" 2>/dev/null || true)
-    
     if [ -n "$matcher_exists" ]; then
       jq --arg hook_script "$full_command" \
         --arg hook_type "$hook_type" \
@@ -1367,7 +1403,6 @@ add_or_update_hook() {
         "$AGENT_CONFIG" > "${AGENT_CONFIG}.tmp" && \
         mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
     else
-      local new_hook
       new_hook=$(jq -n --arg hook_script "$full_command" --arg tool_matcher "$tool_matcher" '{
         matcher: $tool_matcher,
         hooks: [{ type: "command", command: $hook_script }]
@@ -1403,12 +1438,14 @@ configure_agent_hooks() {
     return 0
   fi
   
-  if [ ! -f "$HOOKS_CONFIG" ]; then
+  if [ ! -f "$HOOKS_SOURCE" ]; then
     log_info "No hooks.json found, skipping agent hooks configuration"
     return 0
   fi
+
+  log_info "Using hooks configuration from config/hooks.json"
   
-  if ! jq empty "$HOOKS_CONFIG" 2>/dev/null; then
+  if ! jq empty "$HOOKS_SOURCE" 2>/dev/null; then
     log_error "hooks.json is not valid JSON. Skipping hook configuration."
     return 1
   fi
@@ -1433,21 +1470,21 @@ configure_agent_hooks() {
   local skipped=0
   
   local hook_types
-  hook_types=$(jq -r '.hooks | keys[]' "$HOOKS_CONFIG" 2>/dev/null)
+  hook_types=$(jq -r '.hooks | keys[]' "$HOOKS_SOURCE" 2>/dev/null)
   
   for hook_type in $hook_types; do
     ensure_hook_array "$hook_type"
     
     local hook_count
-    hook_count=$(jq -r ".hooks.${hook_type} | length" "$HOOKS_CONFIG")
+    hook_count=$(jq -r ".hooks.${hook_type} | length" "$HOOKS_SOURCE")
     
     for ((i=0; i<hook_count; i++)); do
       local hook_id hook_desc hook_matcher hook_script hook_enabled
-      hook_id=$(jq -r ".hooks.${hook_type}[$i].id" "$HOOKS_CONFIG")
-      hook_desc=$(jq -r ".hooks.${hook_type}[$i].description" "$HOOKS_CONFIG")
-      hook_matcher=$(jq -r ".hooks.${hook_type}[$i].matcher" "$HOOKS_CONFIG")
-      hook_script=$(jq -r ".hooks.${hook_type}[$i].script" "$HOOKS_CONFIG")
-      hook_enabled=$(jq -r ".hooks.${hook_type}[$i].enabled" "$HOOKS_CONFIG")
+      hook_id=$(jq -r ".hooks.${hook_type}[$i].id" "$HOOKS_SOURCE")
+      hook_desc=$(jq -r ".hooks.${hook_type}[$i].description" "$HOOKS_SOURCE")
+      hook_matcher=$(jq -r ".hooks.${hook_type}[$i].matcher" "$HOOKS_SOURCE")
+      hook_script=$(jq -r ".hooks.${hook_type}[$i].script" "$HOOKS_SOURCE")
+      hook_enabled=$(jq -r ".hooks.${hook_type}[$i].enabled" "$HOOKS_SOURCE")
       
       if [ "$hook_enabled" != "true" ]; then
         log_info "Skipped disabled hook: ${hook_id}"
@@ -1455,45 +1492,75 @@ configure_agent_hooks() {
         continue
       fi
       
-      # Hook scripts can be in content/hooks/, content/skills/, or project root
+      # Hook scripts can be project-root-relative (content/...) or directory-relative
       local full_path=""
       local candidate
-      for candidate in "${SOURCE_HOOKS_DIR}/${hook_script}" "${SOURCE_SKILLS_DIR}/${hook_script}" "${CONTENT_DIR}/${hook_script}"; do
+      
+      # Local install: use project-root-relative paths
+      if [[ "$hook_script" == content/* ]]; then
+        candidate="${ATELIER_DIR}/${hook_script}"
         if [ -f "$candidate" ]; then
-          # Canonicalize to prevent ../ escaping and symlink tricks
-          local resolved_dir resolved_path
-          if ! resolved_dir=$(cd "$(dirname "$candidate")" 2>/dev/null && pwd -P); then
-            continue
-          fi
-          resolved_path="${resolved_dir}/$(basename "$candidate")"
-
-          local canonical_skills_dir canonical_hooks_dir canonical_content_dir
-          canonical_skills_dir=$(cd "$SOURCE_SKILLS_DIR" 2>/dev/null && pwd -P)
-          canonical_hooks_dir=$(cd "$SOURCE_HOOKS_DIR" 2>/dev/null && pwd -P)
-          canonical_content_dir=$(cd "$CONTENT_DIR" 2>/dev/null && pwd -P)
-
-          if [ -z "$canonical_skills_dir" ] && [ -z "$canonical_hooks_dir" ] && [ -z "$canonical_content_dir" ]; then
-            continue
-          fi
-
-          if [ -n "$canonical_hooks_dir" ] && [[ "$resolved_path/" == "$canonical_hooks_dir/"* ]]; then
-            full_path="$resolved_path"
-            break
-          elif [ -n "$canonical_skills_dir" ] && [[ "$resolved_path/" == "$canonical_skills_dir/"* ]]; then
-            full_path="$resolved_path"
-            break
-          elif [ -n "$canonical_content_dir" ] && [[ "$resolved_path/" == "$canonical_content_dir/"* ]]; then
-            full_path="$resolved_path"
-            break
+          # Canonicalize to prevent symlink tricks and path traversal
+          local resolved_dir
+          if resolved_dir=$(cd "$(dirname "$candidate")" 2>/dev/null && pwd -P); then
+            local resolved_path="${resolved_dir}/$(basename "$candidate")"
+            local canonical_atelier_dir
+            canonical_atelier_dir=$(cd "$ATELIER_DIR" 2>/dev/null && pwd -P)
+            if [ -n "$canonical_atelier_dir" ] && [[ "$resolved_path/" == "${canonical_atelier_dir}/"* ]]; then
+              full_path="$resolved_path"
+            else
+              log_warning "Hook '${hook_id}': path traversal detected for script '${hook_script}'. Skipping."
+            fi
+          else
+            log_warning "Hook '${hook_id}': directory for script not found or is invalid: $(dirname "$candidate")"
           fi
         fi
-      done
+      fi
+      
+      # If not found, try directory-relative paths for backward compatibility
+      if [ -z "$full_path" ]; then
+        for candidate in "${SOURCE_HOOKS_DIR}/${hook_script}" "${SOURCE_SKILLS_DIR}/${hook_script}" "${CONTENT_DIR}/${hook_script}"; do
+          if [ -f "$candidate" ]; then
+            # Canonicalize to prevent ../ escaping and symlink tricks
+            local resolved_dir resolved_path
+            if ! resolved_dir=$(cd "$(dirname "$candidate")" 2>/dev/null && pwd -P); then
+              continue
+            fi
+            resolved_path="${resolved_dir}/$(basename "$candidate")"
+
+            local canonical_skills_dir canonical_hooks_dir canonical_content_dir
+            canonical_skills_dir=$(cd "$SOURCE_SKILLS_DIR" 2>/dev/null && pwd -P)
+            canonical_hooks_dir=$(cd "$SOURCE_HOOKS_DIR" 2>/dev/null && pwd -P)
+            canonical_content_dir=$(cd "$CONTENT_DIR" 2>/dev/null && pwd -P)
+
+            if [ -z "$canonical_skills_dir" ] && [ -z "$canonical_hooks_dir" ] && [ -z "$canonical_content_dir" ]; then
+              continue
+            fi
+
+            if [ -n "$canonical_hooks_dir" ] && [[ "$resolved_path/" == "$canonical_hooks_dir/"* ]]; then
+              full_path="$resolved_path"
+              break
+            elif [ -n "$canonical_skills_dir" ] && [[ "$resolved_path/" == "$canonical_skills_dir/"* ]]; then
+              full_path="$resolved_path"
+              break
+            elif [ -n "$canonical_content_dir" ] && [[ "$resolved_path/" == "$canonical_content_dir/"* ]]; then
+              full_path="$resolved_path"
+              break
+            fi
+          fi
+        done
+      fi
       
       if [ ! -f "$full_path" ]; then
         log_warning "Hook script not found: ${hook_script}"
         skipped=$((skipped + 1))
         continue
       fi
+      
+      jq --arg hook_type "$hook_type" --arg hook_script "${full_path}" \
+        '.hooks[$hook_type] |= map(.hooks |= map(select((.command // "") | endswith($hook_script) | not)))' \
+        "$AGENT_CONFIG" > "${AGENT_CONFIG}.tmp" && \
+        mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
       
       if add_or_update_hook "$full_path" "$hook_type" "$hook_matcher"; then
         log_success "Added hook: ${hook_desc}"
@@ -1921,9 +1988,8 @@ main() {
   echo ""
   
   log_info "━━━ OpenCode MCP Configuration ━━━"
-  configure_mcp_opencode
-  if [ $? -ne 0 ]; then
-    log_warning "OpenCode MCP configuration had issues (check errors above)"
+  if ! configure_mcp_opencode; then
+    log_warning "OpenCode MCP configuration failed"
   fi
   echo ""
   
@@ -1940,7 +2006,7 @@ main() {
   log_info "Installing skills to OpenCode..."
   echo ""
   
-log_info "━━━ Cleaning Up Deprecated Skills ━━━"
+  log_info "━━━ Cleaning Up Deprecated Skills ━━━"
   cleanup_deprecated_skills "opencode" "$OPENCODE_SKILLS_DIR"
   echo ""
   
@@ -1951,6 +2017,16 @@ log_info "━━━ Cleaning Up Deprecated Skills ━━━"
   echo ""
   log_info "━━━ Configuring Agent Skills Hooks (oh-my-opencode) ━━━"
   configure_agent_hooks
+  
+  # Clean up temporary hook files downloaded from GitHub
+  # These files are only created when HOOKS_CONFIG is missing during initial
+  # curl-based installation (not local installs). When hooks.json exists in
+  # the repo, hooks are installed from local paths instead of temp downloads.
+  if [ ! -f "$HOOKS_CONFIG" ]; then
+    for hook_id in "${TEMP_HOOK_IDS[@]}"; do
+      rm -f "${AGENT_CONFIG_DIR}/hook-${hook_id}.sh" 2>/dev/null || true
+    done
+  fi
   
   echo ""
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
