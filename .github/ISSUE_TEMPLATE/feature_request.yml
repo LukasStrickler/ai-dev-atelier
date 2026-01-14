@@ -58,11 +58,13 @@ body:
         - "code-quality"
         - "docs-check"
         - "docs-write"
+        - "git-commit"
         - "code-review"
-        - "pr-review"
+        - "resolve-pr-comments"
         - "search"
         - "research"
-        - "agent-orchestration"
+        - "ui-animation"
+        - "use-graphite"
 
   - type: textarea
     id: alternatives
