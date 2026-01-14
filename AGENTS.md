@@ -58,6 +58,12 @@ Disable redundant Z.AI tools in `~/.opencode/opencode.json` to save quota:
 | **Plugin Logic** | `content/plugins/` | See `content/plugins/AGENTS.md` |
 | **Data Outputs** | `.ada/data/` | Reviews, research cards, PR data |
 
+## SKILL UPDATE CHECKLIST
+- Update `config/skills.json` and `content/skills/README.md` for the catalog.
+- Update `content/skills/AGENTS.md` and any skill-specific `SKILL.md` references.
+- Update `.github/ISSUE_TEMPLATE/bug_report.yml` and `.github/ISSUE_TEMPLATE/feature_request.yml` dropdowns.
+- Verify any docs listing skills (README/INSTALL) remain accurate.
+
 ## CONVENTIONS
 - **Language**: Bash for logic, JSON for config, TypeScript for plugins.
 - **No Build**: `install.sh` deploys directly to `~/.opencode`.
