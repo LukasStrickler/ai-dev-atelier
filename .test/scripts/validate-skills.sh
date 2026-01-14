@@ -244,6 +244,19 @@ validate_skill() {
       echo -e "${GREEN}✓${NC} All referenced files exist"
     fi
   fi
+
+  # Check for incorrect path prefixes before "skills/" in agent-facing files
+  # GOOD: "bash skills/..." or "skills/..." (skills/ at start of path)
+  # BAD: "content/skills/", "/skills/", "foo/skills/" (has / before skills/)
+  local bad_path_count=0
+  bad_path_count=$(grep -cE '/skills/' "$skill_md" 2>/dev/null) || bad_path_count=0
+  if [ "$bad_path_count" -gt 0 ]; then
+    echo -e "${RED}❌ Found path with prefix before 'skills/' (e.g., 'content/skills/', '/skills/')${NC}"
+    echo -e "${RED}   Use 'skills/...' without path prefix (e.g., 'bash skills/foo/scripts/bar.sh')${NC}"
+    ((++errors))
+  else
+    echo -e "${GREEN}✓${NC} No incorrect '/skills/' paths"
+  fi
   
   # Summary for this skill
   echo ""
