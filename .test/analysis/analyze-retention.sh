@@ -49,7 +49,8 @@ echo ""
 # Repeat usage: skills used multiple times in same session
 echo "--- Skill Depth (Avg Uses Per Session When Used) ---"
 echo "$DATA" | jq -rs '
-  group_by(.skill)
+  sort_by(.skill)
+  | group_by(.skill)
   | map({
       skill: .[0].skill,
       total_uses: length,

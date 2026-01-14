@@ -48,10 +48,11 @@ echo ""
 # Version distribution per skill
 echo "--- Version Distribution by Skill ---"
 echo "$DATA" | jq -rs '
-  group_by(.skill) 
+  sort_by(.skill)
+  | group_by(.skill) 
   | map({
       skill: .[0].skill, 
-      versions: (group_by(.version) | map({version: (.[0].version // "null"), count: length}))
+      versions: (sort_by(.version // "") | group_by(.version) | map({version: (.[0].version // "null"), count: length}))
     }) 
   | sort_by(.skill)
   | .[] 
@@ -82,12 +83,13 @@ echo ""
 # Version changes over time (for upgrades)
 echo "--- Version Adoption Timeline ---"
 echo "$DATA" | jq -rs '
-  sort_by(.timestamp)
+  sort_by(.skill, .timestamp)
   | group_by(.skill)
   | map({
       skill: .[0].skill,
       timeline: (
-        group_by(.version)
+        sort_by(.version // "")
+        | group_by(.version)
         | map({
             version: .[0].version,
             first_seen: (sort_by(.timestamp) | .[0].timestamp | split("T")[0])

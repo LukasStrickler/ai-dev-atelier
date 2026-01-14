@@ -20,7 +20,7 @@
         "id": "release-block",
         "description": "Blocks AI from triggering releases (requires human approval)",
         "matcher": "Bash",
-        "script": "hooks/release-block-hook.sh",
+        "script": "content/hooks/release-block-hook.sh",
         "enabled": true
       }
     ]

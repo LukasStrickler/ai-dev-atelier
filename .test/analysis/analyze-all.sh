@@ -9,8 +9,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-INPUT_FILE="${1:-${HOME}/.ada/skill-events.jsonl}"
 OUTPUT_JSON=false
+INPUT_FILE=""
 
 # Parse args
 for arg in "$@"; do
@@ -18,8 +18,19 @@ for arg in "$@"; do
     --json)
       OUTPUT_JSON=true
       ;;
+    -*)
+      echo "Unknown option: $arg" >&2
+      exit 1
+      ;;
+    *)
+      if [[ -z "$INPUT_FILE" ]]; then
+        INPUT_FILE="$arg"
+      fi
+      ;;
   esac
 done
+
+INPUT_FILE="${INPUT_FILE:-${HOME}/.ada/skill-events.jsonl}"
 
 if [[ ! -f "$INPUT_FILE" ]]; then
   echo "Error: File not found: $INPUT_FILE" >&2

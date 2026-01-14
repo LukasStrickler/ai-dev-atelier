@@ -41,7 +41,12 @@ let logDirReady: Promise<void> | null = null;
 
 const ensureLogDir = (): Promise<void> => {
   if (!logDirReady) {
-    logDirReady = mkdir(LOG_DIR, { recursive: true }).then(() => undefined);
+    logDirReady = mkdir(LOG_DIR, { recursive: true })
+      .then(() => undefined)
+      .catch((err) => {
+        logDirReady = null;
+        throw err;
+      });
   }
   return logDirReady;
 };

@@ -36,7 +36,7 @@ echo ""
 
 # Get unique skills per session
 TMPFILE=$(mktemp)
-trap "rm -f $TMPFILE" EXIT
+trap 'rm -f "$TMPFILE"' EXIT
 
 # Create session-skill pairs
 echo "$DATA" | jq -r '[.sessionID, .skill] | @tsv' | sort | uniq > "$TMPFILE"
@@ -91,7 +91,8 @@ echo ""
 # Skills most often followed by another skill (sequences)
 echo "--- Skill Sequences (A -> B) ---"
 echo "$DATA" | jq -rs '
-  group_by(.sessionID) 
+  sort_by(.sessionID)
+  | group_by(.sessionID) 
   | map(sort_by(.timestamp) | [.[].skill])
   | map(
       . as $arr 
@@ -99,6 +100,7 @@ echo "$DATA" | jq -rs '
       | "\($arr[.]) -> \($arr[. + 1])"
     )
   | flatten
+  | sort
   | group_by(.) 
   | map({seq: .[0], count: length}) 
   | sort_by(-.count) 

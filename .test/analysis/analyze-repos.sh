@@ -50,11 +50,12 @@ echo ""
 # Skills per repository
 echo "--- Top Skills by Repository ---"
 echo "$DATA" | jq -rs '
-  group_by(.repo)
+  sort_by(.repo)
+  | group_by(.repo)
   | map({
       repo: .[0].repo,
       total: length,
-      skills: (group_by(.skill) | map({skill: .[0].skill, count: length}) | sort_by(-.count) | .[0:3])
+      skills: (sort_by(.skill) | group_by(.skill) | map({skill: .[0].skill, count: length}) | sort_by(-.count) | .[0:3])
     })
   | sort_by(-.total)
   | .[0:10]

@@ -46,7 +46,11 @@ echo "--- Daily Usage (Last 14 Days) ---"
 echo "$DATA" | jq -r '.timestamp | split("T")[0]' | sort | uniq -c | tail -14 | while read -r count date; do
   # Create simple bar chart
   bar_len=$((count / 5))
-  bar=$(printf '█%.0s' $(seq 1 "$bar_len") 2>/dev/null || printf '#%.0s' $(seq 1 "$bar_len"))
+  if (( bar_len > 0 )); then
+    bar=$(printf '█%.0s' $(seq 1 "$bar_len") 2>/dev/null || printf '#%.0s' $(seq 1 "$bar_len"))
+  else
+    bar=""
+  fi
   printf "  %s: %4d %s\n" "$date" "$count" "$bar"
 done
 echo ""
@@ -69,7 +73,11 @@ echo ""
 echo "--- Hour of Day Patterns ---"
 echo "$DATA" | jq -r '.timestamp | split("T")[1] | split(":")[0]' | sort | uniq -c | sort -k2 -n | while read -r count hour; do
   bar_len=$((count / 3))
-  bar=$(printf '█%.0s' $(seq 1 "$bar_len") 2>/dev/null || printf '#%.0s' $(seq 1 "$bar_len"))
+  if (( bar_len > 0 )); then
+    bar=$(printf '█%.0s' $(seq 1 "$bar_len") 2>/dev/null || printf '#%.0s' $(seq 1 "$bar_len"))
+  else
+    bar=""
+  fi
   printf "  %sh: %4d %s\n" "$hour" "$count" "$bar"
 done
 echo ""

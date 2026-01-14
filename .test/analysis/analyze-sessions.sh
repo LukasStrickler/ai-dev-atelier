@@ -60,7 +60,7 @@ echo ""
 
 # Session depth: unique skills per session
 echo "--- Skills Per Session Distribution ---"
-echo "$DATA" | jq -rs 'group_by(.sessionID) | map({session: .[0].sessionID, skills: ([.[].skill] | unique | length)}) | group_by(.skills) | map({depth: .[0].skills, count: length}) | sort_by(.depth) | .[] | "  \(.depth) skill(s): \(.count) session(s)"' 2>/dev/null || {
+echo "$DATA" | jq -rs 'sort_by(.sessionID) | group_by(.sessionID) | map({session: .[0].sessionID, skills: ([.[].skill] | unique | length)}) | sort_by(.skills) | group_by(.skills) | map({depth: .[0].skills, count: length}) | sort_by(.depth) | .[] | "  \(.depth) skill(s): \(.count) session(s)"' 2>/dev/null || {
   # Fallback for older jq versions
   echo "$DATA" | jq -r '[.sessionID, .skill] | @tsv' | sort | uniq | cut -f1 | uniq -c | awk '{print $1}' | sort -n | uniq -c | while read -r count depth; do
     printf "  %d skill(s): %d session(s)\n" "$depth" "$count"
@@ -70,7 +70,7 @@ echo ""
 
 # Entry points: first skill loaded in each session
 echo "--- Session Entry Points (First Skill) ---"
-echo "$DATA" | jq -rs 'group_by(.sessionID) | map(sort_by(.timestamp) | .[0]) | group_by(.skill) | map({skill: .[0].skill, count: length}) | sort_by(-.count) | .[] | "  \(.skill): \(.count)"' 2>/dev/null || {
+echo "$DATA" | jq -rs 'sort_by(.sessionID) | group_by(.sessionID) | map(sort_by(.timestamp) | .[0]) | sort_by(.skill) | group_by(.skill) | map({skill: .[0].skill, count: length}) | sort_by(-.count) | .[] | "  \(.skill): \(.count)"' 2>/dev/null || {
   # Fallback
   echo "  (requires jq with -rs support)"
 }

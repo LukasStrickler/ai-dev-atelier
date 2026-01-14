@@ -1204,7 +1204,7 @@ configure_opencode_plugins() {
     cp "$target_plugin_config" "${target_plugin_config}.backup"
     if jq -s '.[0] * .[1]' "$plugin_config_source" "$target_plugin_config" > "${target_plugin_config}.tmp" && \
       mv "${target_plugin_config}.tmp" "$target_plugin_config"; then
-      log_success "Merged plugin.json into ${target_plugin_config} (preserved existing overrides)"
+      log_success "Merged plugin.json into ${target_plugin_config} (source values override existing)"
     else
       mv "$target_plugin_config" "${target_plugin_config}.backup"
       log_error "Failed to merge plugin.json, restored backup"
