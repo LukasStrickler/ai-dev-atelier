@@ -5,7 +5,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-HOOK_SCRIPT="$REPO_ROOT/skills/resolve-pr-comments/scripts/pr-comments-block-hook.sh"
+HOOK_SCRIPT="$REPO_ROOT/content/skills/resolve-pr-comments/scripts/pr-comments-block-hook.sh"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -312,7 +312,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "Testing: Fork/Upstream Support (--repo parameter)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-UTILS_SCRIPT="$REPO_ROOT/skills/resolve-pr-comments/scripts/lib/pr-resolver-utils.sh"
+UTILS_SCRIPT="$REPO_ROOT/content/skills/resolve-pr-comments/scripts/lib/pr-resolver-utils.sh"
 
 echo ""
 echo "--- get_effective_repo tests ---"
@@ -359,9 +359,9 @@ echo ""
 echo "--- --repo parameter parsing tests ---"
 echo ""
 
-PR_RESOLVER="$REPO_ROOT/skills/resolve-pr-comments/scripts/pr-resolver.sh"
-PR_RESOLVE="$REPO_ROOT/skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh"
-PR_DISMISS="$REPO_ROOT/skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh"
+PR_RESOLVER="$REPO_ROOT/content/skills/resolve-pr-comments/scripts/pr-resolver.sh"
+PR_RESOLVE="$REPO_ROOT/content/skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh"
+PR_DISMISS="$REPO_ROOT/content/skills/resolve-pr-comments/scripts/pr-resolver-dismiss.sh"
 
 test_script_help() {
   local script="$1"

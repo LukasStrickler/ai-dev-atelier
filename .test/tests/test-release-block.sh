@@ -30,7 +30,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-HOOK_SCRIPT="$REPO_ROOT/.hooks/release-block-hook.sh"
+HOOK_SCRIPT="$REPO_ROOT/content/hooks/release-block-hook.sh"
 
 PASS_COUNT=0
 FAIL_COUNT=0

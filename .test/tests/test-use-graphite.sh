@@ -5,8 +5,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-DETECT_SCRIPT="$REPO_ROOT/skills/use-graphite/scripts/graphite-detect.sh"
-HOOK_SCRIPT="$REPO_ROOT/skills/use-graphite/scripts/graphite-block-hook.sh"
+DETECT_SCRIPT="$REPO_ROOT/content/skills/use-graphite/scripts/graphite-detect.sh"
+HOOK_SCRIPT="$REPO_ROOT/content/skills/use-graphite/scripts/graphite-block-hook.sh"
 
 PASS_COUNT=0
 FAIL_COUNT=0

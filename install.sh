@@ -41,11 +41,20 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ATELIER_DIR="$SCRIPT_DIR"
 REPO_URL="https://github.com/LukasStrickler/ai-dev-atelier.git"
 DEFAULT_INSTALL_DIR="${AI_DEV_ATELIER_DIR:-${HOME}/ai-dev-atelier}"
-SOURCE_SKILLS_DIR="${ATELIER_DIR}/skills"
-SKILLS_CONFIG="${ATELIER_DIR}/skills.json"
-LEGACY_SKILLS_CONFIG="${ATELIER_DIR}/skills-config.json"
-MCP_CONFIG="${ATELIER_DIR}/mcp.json"
-AGENTS_CONFIG="${ATELIER_DIR}/agents.json"
+# Content directories (where actual skill/hook/plugin/agent content lives)
+CONTENT_DIR="${ATELIER_DIR}/content"
+SOURCE_SKILLS_DIR="${CONTENT_DIR}/skills"
+SOURCE_HOOKS_DIR="${CONTENT_DIR}/hooks"
+SOURCE_PLUGINS_DIR="${CONTENT_DIR}/plugins"
+SOURCE_AGENTS_DIR="${CONTENT_DIR}/agents"
+
+# Config files (JSON configuration)
+CONFIG_DIR="${ATELIER_DIR}/config"
+SKILLS_CONFIG="${CONFIG_DIR}/skills.json"
+LEGACY_SKILLS_CONFIG="${CONFIG_DIR}/skills-config.json"
+MCP_CONFIG="${CONFIG_DIR}/mcps.json"
+AGENTS_CONFIG="${CONFIG_DIR}/agents.json"
+PLUGIN_CONFIG="${CONFIG_DIR}/plugins.json"
 ENV_FILE="${ATELIER_DIR}/.env"
 ENV_EXAMPLE="${ATELIER_DIR}/.env.example"
 
@@ -253,7 +262,7 @@ ensure_repo_checkout() {
   log_warning "Skills directory not found in ${ATELIER_DIR}."
   local target_dir="$DEFAULT_INSTALL_DIR"
 
-  if [ -d "${target_dir}/skills" ] && [ -f "${target_dir}/install.sh" ]; then
+  if [ -d "${target_dir}/content/skills" ] && [ -f "${target_dir}/install.sh" ]; then
     log_info "Using existing checkout at ${target_dir}"
     exec bash "${target_dir}/install.sh" "$@"
   fi
@@ -802,7 +811,7 @@ substitute_api_keys() {
 #
 # Parameters:
 #   $1 - Server name
-#   $2 - Server config (JSON string from mcp.json)
+#   $2 - Server config (JSON string from config/mcps.json)
 #
 # Returns:
 #   OpenCode-formatted JSON config via stdout
@@ -890,7 +899,7 @@ convert_mcp_to_opencode() {
   fi
   
   # Unknown format
-  log_error "Unknown MCP server format for ${server_name} (must have 'url' or 'command' field, or type in mcp.json)"
+  log_error "Unknown MCP server format for ${server_name} (must have 'url' or 'command' field, or type in config/mcps.json)"
   return 1
 }
 
@@ -898,7 +907,7 @@ convert_mcp_to_opencode() {
 # Configure MCP Servers for OpenCode
 # ----------------------------------------------------------------------------
 # Configures MCP servers for OpenCode agent using OpenCode format.
-# Reads from mcp.json, converts to OpenCode format, and updates opencode.json.
+# Reads from config/mcps.json, converts to OpenCode format, and updates opencode.json.
 #
 # IMPORTANT: Preserves existing MCP configurations and only adds missing ones.
 # It will NEVER overwrite an existing MCP server configuration.
@@ -927,13 +936,13 @@ configure_mcp_opencode() {
     log_info "Install jq to enable automatic MCP configuration:"
     log_info "  macOS: brew install jq"
     log_info "  Linux: sudo apt-get install jq"
-    log_info "  Or manually configure MCPs using mcp.json"
+    log_info "  Or manually configure MCPs using config/mcps.json"
     return
   fi
   
-  # Check if mcp.json exists
+  # Check if config/mcps.json exists
   if [ ! -f "$MCP_CONFIG" ]; then
-    log_warning "mcp.json not found at ${MCP_CONFIG}"
+    log_warning "config/mcps.json not found at ${MCP_CONFIG}"
     log_info "Skipping OpenCode MCP configuration"
     return
   fi
@@ -944,7 +953,7 @@ configure_mcp_opencode() {
   
   # Validate config is valid JSON
   if ! jq empty "$MCP_CONFIG" 2>/dev/null; then
-    log_error "mcp.json is not valid JSON"
+    log_error "config/mcps.json is not valid JSON"
     return 1
   fi
   
@@ -954,7 +963,7 @@ configure_mcp_opencode() {
   # Extract MCP servers from config
   local mcp_servers=$(jq -c '.mcpServers' "$MCP_CONFIG")
   if [ -z "$mcp_servers" ] || [ "$mcp_servers" = "null" ]; then
-    log_error "No mcpServers found in mcp.json"
+    log_error "No mcpServers found in config/mcps.json"
     return 1
   fi
   
@@ -1003,11 +1012,11 @@ configure_mcp_opencode() {
       fi
       
       # Server doesn't exist, safe to add from config
-      # Get server config from mcp.json
+      # Get server config from config/mcps.json
       local server_config=$(jq -c ".mcpServers.\"${server_name}\"" "$MCP_CONFIG")
       
       if [ -z "$server_config" ] || [ "$server_config" = "null" ]; then
-        log_warning "  ${server_name}: not found in mcp.json, skipping"
+        log_warning "  ${server_name}: not found in config/mcps.json, skipping"
         continue
       fi
       
@@ -1044,8 +1053,8 @@ configure_mcp_opencode() {
     fi
     
   else
-    # Config doesn't exist, create new one from mcp.json
-    log_info "Creating new OpenCode configuration from mcp.json..."
+    # Config doesn't exist, create new one from config/mcps.json
+    log_info "Creating new OpenCode configuration from config/mcps.json..."
     
     # Initialize OpenCode config structure with schema
     local opencode_base='{
@@ -1079,14 +1088,14 @@ configure_mcp_opencode() {
     log_info "Configured ${server_count} MCP server(s)"
   fi
   
-  # Configure tool filtering from _disabledTools metadata in mcp.json
+  # Configure tool filtering from _disabledTools metadata in config/mcps.json
   configure_opencode_tool_filtering
 }
 
 # ----------------------------------------------------------------------------
 # Configure OpenCode Tool Filtering
 # ----------------------------------------------------------------------------
-# Reads _disabledTools from mcp.json and adds them to the tools section
+# Reads _disabledTools from config/mcps.json and adds them to the tools section
 # of opencode.json. Format: "server-name_tool-name": false
 #
 # OpenCode uses a top-level tools section for filtering, not per-server.
@@ -1118,6 +1127,92 @@ configure_opencode_tool_filtering() {
     fi
     local disabled_count=$(echo "$tools_config" | jq 'length')
     log_info "Configured ${disabled_count} disabled tool(s) in OpenCode"
+  fi
+}
+
+configure_opencode_plugins() {
+  local plugin_source_dir="${SOURCE_PLUGINS_DIR}"
+  local plugin_config_source="${PLUGIN_CONFIG}"
+
+  if [ ! -d "$plugin_source_dir" ]; then
+    log_info "No local OpenCode plugins found, skipping plugin installation"
+    return 0
+  fi
+
+  local opencode_config_dir
+  opencode_config_dir=$(dirname "$OPENCODE_CONFIG")
+  local opencode_plugin_dir="${opencode_config_dir}/plugin"
+  mkdir -p "$opencode_plugin_dir"
+
+  local installed=0
+  local updated=0
+  local skipped=0
+
+  for plugin_file in "$plugin_source_dir"/*; do
+    [ -f "$plugin_file" ] || continue
+    local plugin_name
+    plugin_name=$(basename "$plugin_file")
+    local target_file="${opencode_plugin_dir}/${plugin_name}"
+
+    if [ -f "$target_file" ]; then
+      if diff -q "$plugin_file" "$target_file" >/dev/null 2>&1; then
+        skipped=$((skipped + 1))
+        continue
+      fi
+      if confirm_action "Overwrite OpenCode plugin ${plugin_name}?"; then
+        cp "$plugin_file" "$target_file"
+        updated=$((updated + 1))
+      else
+        skipped=$((skipped + 1))
+      fi
+    else
+      cp "$plugin_file" "$target_file"
+      installed=$((installed + 1))
+    fi
+  done
+
+  log_success "OpenCode plugins: ${installed} installed, ${updated} updated, ${skipped} skipped"
+
+  if [ ! -f "$plugin_config_source" ]; then
+    log_info "plugin.json not found, skipping plugin config merge"
+    return 0
+  fi
+
+  if ! command -v jq &> /dev/null; then
+    log_warning "jq not found. Skipping plugin.json merge."
+    if [ ! -f "${opencode_config_dir}/plugin.json" ]; then
+      cp "$plugin_config_source" "${opencode_config_dir}/plugin.json"
+      log_success "Copied plugin.json to ${opencode_config_dir}/plugin.json"
+    fi
+    return 0
+  fi
+
+  if ! jq empty "$plugin_config_source" 2>/dev/null; then
+    log_error "plugin.json is not valid JSON, skipping plugin config merge"
+    return 1
+  fi
+
+  local target_plugin_config="${opencode_config_dir}/plugin.json"
+  if [ -f "$target_plugin_config" ]; then
+    if ! jq empty "$target_plugin_config" 2>/dev/null; then
+      log_error "Existing plugin.json is not valid JSON. Creating backup and replacing."
+      mv "$target_plugin_config" "${target_plugin_config}.invalid.$(date +%s).backup"
+      cp "$plugin_config_source" "$target_plugin_config"
+      return 0
+    fi
+
+    cp "$target_plugin_config" "${target_plugin_config}.backup"
+    if jq -s '.[0] * .[1]' "$plugin_config_source" "$target_plugin_config" > "${target_plugin_config}.tmp" && \
+      mv "${target_plugin_config}.tmp" "$target_plugin_config"; then
+      log_success "Merged plugin.json into ${target_plugin_config} (source values override existing)"
+    else
+      mv "$target_plugin_config" "${target_plugin_config}.backup"
+      log_error "Failed to merge plugin.json, restored backup"
+      return 1
+    fi
+  else
+    cp "$plugin_config_source" "$target_plugin_config"
+    log_success "Installed plugin.json to ${target_plugin_config}"
   fi
 }
 
@@ -1247,7 +1342,7 @@ configure_opencode_agents() {
 
 AGENT_CONFIG_DIR="${HOME}/.claude"
 AGENT_CONFIG="${AGENT_CONFIG_DIR}/settings.json"
-HOOKS_CONFIG="${ATELIER_DIR}/hooks.json"
+HOOKS_CONFIG="${CONFIG_DIR}/hooks.json"
 
 add_or_update_hook() {
   local hook_script="$1"
@@ -1360,10 +1455,10 @@ configure_agent_hooks() {
         continue
       fi
       
-      # Hook scripts can be in skills/ (skill-specific) or project root (standalone)
+      # Hook scripts can be in content/hooks/, content/skills/, or project root
       local full_path=""
       local candidate
-      for candidate in "${SOURCE_SKILLS_DIR}/${hook_script}" "${ATELIER_DIR}/${hook_script}"; do
+      for candidate in "${SOURCE_HOOKS_DIR}/${hook_script}" "${SOURCE_SKILLS_DIR}/${hook_script}" "${CONTENT_DIR}/${hook_script}"; do
         if [ -f "$candidate" ]; then
           # Canonicalize to prevent ../ escaping and symlink tricks
           local resolved_dir resolved_path
@@ -1372,20 +1467,22 @@ configure_agent_hooks() {
           fi
           resolved_path="${resolved_dir}/$(basename "$candidate")"
 
-          local canonical_skills_dir canonical_atelier_dir
+          local canonical_skills_dir canonical_hooks_dir canonical_content_dir
           canonical_skills_dir=$(cd "$SOURCE_SKILLS_DIR" 2>/dev/null && pwd -P)
-          canonical_atelier_dir=$(cd "$ATELIER_DIR" 2>/dev/null && pwd -P)
+          canonical_hooks_dir=$(cd "$SOURCE_HOOKS_DIR" 2>/dev/null && pwd -P)
+          canonical_content_dir=$(cd "$CONTENT_DIR" 2>/dev/null && pwd -P)
 
-          # Security: ensure at least one canonical path is non-empty
-          if [ -z "$canonical_skills_dir" ] && [ -z "$canonical_atelier_dir" ]; then
+          if [ -z "$canonical_skills_dir" ] && [ -z "$canonical_hooks_dir" ] && [ -z "$canonical_content_dir" ]; then
             continue
           fi
 
-          # Security: validate resolved path is within allowed directories
-          if [ -n "$canonical_skills_dir" ] && [[ "$resolved_path/" == "$canonical_skills_dir/"* ]]; then
+          if [ -n "$canonical_hooks_dir" ] && [[ "$resolved_path/" == "$canonical_hooks_dir/"* ]]; then
             full_path="$resolved_path"
             break
-          elif [ -n "$canonical_atelier_dir" ] && [[ "$resolved_path/" == "$canonical_atelier_dir/"* ]]; then
+          elif [ -n "$canonical_skills_dir" ] && [[ "$resolved_path/" == "$canonical_skills_dir/"* ]]; then
+            full_path="$resolved_path"
+            break
+          elif [ -n "$canonical_content_dir" ] && [[ "$resolved_path/" == "$canonical_content_dir/"* ]]; then
             full_path="$resolved_path"
             break
           fi
@@ -1833,6 +1930,10 @@ main() {
   log_info "━━━ OpenCode Custom Agents ━━━"
   configure_opencode_agents
   echo ""
+
+  log_info "━━━ OpenCode Plugins ━━━"
+  configure_opencode_plugins
+  echo ""
   
   # Install skills to OpenCode
   # Skills may be filtered per agent via skills.json
@@ -1858,6 +1959,7 @@ log_info "━━━ Cleaning Up Deprecated Skills ━━━"
   echo "OpenCode:"
   echo "  Skills: ${OPENCODE_SKILLS_DIR}"
   echo "  MCPs: ${OPENCODE_CONFIG}"
+  echo "  Plugins: ${OPENCODE_CONFIG_DIR}/plugin"
   echo "  Agent Hooks: ${AGENT_CONFIG} (for oh-my-opencode)"
   echo ""
   echo "To verify, ask your agent: 'What skills are available?'"

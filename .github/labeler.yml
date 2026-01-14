@@ -1,6 +1,6 @@
 skill:
   - changed-files:
-      - any-glob-to-any-file: 'skills/**/*'
+      - any-glob-to-any-file: 'content/skills/**/*'
 
 documentation:
   - changed-files:
@@ -13,9 +13,9 @@ chore:
       - any-glob-to-any-file:
           - '.github/**/*'
           - '.test/**/*'
-          - '.hooks/**/*'
+          - 'content/hooks/**/*'
           - '.gitignore'
           - '.env.example'
           - 'Makefile'
-          - '*.json'
+          - 'config/*.json'
           - '*.sh'

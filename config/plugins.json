@@ -1,0 +1,8 @@
+{
+  "plugins": {
+    "skill-telemetry": {
+      "enabled": true
+    }
+  },
+  "agents": {}
+}
