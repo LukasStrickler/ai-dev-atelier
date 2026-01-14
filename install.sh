@@ -262,7 +262,7 @@ ensure_repo_checkout() {
   log_warning "Skills directory not found in ${ATELIER_DIR}."
   local target_dir="$DEFAULT_INSTALL_DIR"
 
-  if [ -d "${target_dir}/skills" ] && [ -f "${target_dir}/install.sh" ]; then
+  if [ -d "${target_dir}/content/skills" ] && [ -f "${target_dir}/install.sh" ]; then
     log_info "Using existing checkout at ${target_dir}"
     exec bash "${target_dir}/install.sh" "$@"
   fi

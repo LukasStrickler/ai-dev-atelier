@@ -133,8 +133,18 @@ test("extractSkillScript: matches content/skills/name/scripts/script.sh", () => 
     .toEqual({ skill: "code-quality", script: "finalize.sh" });
 });
 
+test("extractSkillScript: matches skills/name/scripts/script.sh", () => {
+  expect(extractSkillScript("bash skills/code-quality/scripts/finalize.sh"))
+    .toEqual({ skill: "code-quality", script: "finalize.sh" });
+});
+
 test("extractSkillScript: matches content/skills/name/scripts/script.sh", () => {
   expect(extractSkillScript("bash content/skills/research/scripts/research-run.sh"))
+    .toEqual({ skill: "research", script: "research-run.sh" });
+});
+
+test("extractSkillScript: matches skills/name/scripts/script.sh", () => {
+  expect(extractSkillScript("bash skills/research/scripts/research-run.sh"))
     .toEqual({ skill: "research", script: "research-run.sh" });
 });
 
