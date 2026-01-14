@@ -32,7 +32,7 @@ body:
       label: Steps to Reproduce
       description: Minimal steps to reproduce the behavior.
       placeholder: |
-        1. Run `bash skills/code-quality/scripts/finalize.sh agent`
+        1. Run `bash content/skills/code-quality/scripts/finalize.sh agent`
         2. Observe error message...
     validations:
       required: true
