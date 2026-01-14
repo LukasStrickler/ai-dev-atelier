@@ -128,7 +128,7 @@ test("extractSkillScript: returns null for git commands", () => {
   expect(extractSkillScript("git status")).toBeNull();
 });
 
-test("extractSkillScript: matches skills/name/scripts/script.sh", () => {
+test("extractSkillScript: matches content/skills/name/scripts/script.sh", () => {
   expect(extractSkillScript("bash content/skills/code-quality/scripts/finalize.sh"))
     .toEqual({ skill: "code-quality", script: "finalize.sh" });
 });
@@ -138,7 +138,7 @@ test("extractSkillScript: matches content/skills/name/scripts/script.sh", () => 
     .toEqual({ skill: "research", script: "research-run.sh" });
 });
 
-test("extractSkillScript: matches absolute path with skills/", () => {
+test("extractSkillScript: matches absolute path with content/skills/", () => {
   expect(extractSkillScript("bash /home/user/ai-dev-atelier/content/skills/docs-check/scripts/check-docs.sh"))
     .toEqual({ skill: "docs-check", script: "check-docs.sh" });
 });
