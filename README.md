@@ -57,6 +57,19 @@ curl -fsSL https://raw.githubusercontent.com/LukasStrickler/ai-dev-atelier/main/
 # bash ~/ai-dev-atelier/install.sh --no
 ```
 
+Curl install notes:
+
+- Cache location: `~/.config/opencode/atelier/cache/repo` (or `~/.opencode/atelier/cache/repo` if OpenCode uses `~/.opencode`).
+- Add API keys in `.env` at that path (copy from `.env.example` once).
+- Update by re-running the same curl command; it refreshes tracked files while keeping your `.env` and updating `.env.example`.
+
+Install a specific ref:
+
+```bash
+AI_DEV_ATELIER_REF=<branch-or-tag> curl -fsSL \
+  https://raw.githubusercontent.com/LukasStrickler/ai-dev-atelier/<branch-or-tag>/install.sh | bash
+```
+
 If you prefer a local checkout (recommended for dev work):
 
 ```bash
