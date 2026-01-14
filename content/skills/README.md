@@ -68,14 +68,14 @@ Skills are organized directories containing `SKILL.md` files that follow the ope
 - **When to use**: Looking up documentation, code examples, API references, troubleshooting guides, best practices
 - **How agents use it**: Agents read `SKILL.md` and use MCP tools (Tavily, Context7)
 - **MCPs**: Tavily (web search), Context7 (library documentation)
-- **Setup**: Configure MCP servers in `mcp.json`
+- **Setup**: Configure MCP servers in `config/mcps.json`
 
 ### Research
 - **When to use**: Researching software architecture patterns, finding academic papers, conducting literature reviews, building evidence cards
 - **How agents use it**: Agents read `SKILL.md` and execute scripts in `scripts/research-*.sh` or use MCP tools
 - **Scripts**: Embedded in `skills/research/scripts/research-*.sh`
 - **MCPs**: OpenAlex (paper discovery), PDF extractor (text extraction), Paper-search (optional, multi-platform download)
-- **Setup**: Configure MCP servers in `mcp.json`
+- **Setup**: Configure MCP servers in `config/mcps.json`
 
 ### UI Animation
 - **When to use**: Implementing enter/exit animations, choosing easing curves, configuring springs, setting durations, ensuring accessibility

@@ -295,7 +295,7 @@ Your project should have these commands available for the code-quality skill to 
 
 ## Installation Steps
 
-Follow [README.md](./README.md) for quick start and install commands. See [AGENTS.md](./AGENTS.md) and [skills/README.md](./skills/README.md) for workflow guidance and usage examples. Local development uses `make install` to install changes from your checkout.
+Follow [README.md](./README.md) for quick start and install commands. See [AGENTS.md](./AGENTS.md) and [content/skills/README.md](./content/skills/README.md) for workflow guidance and usage examples. Local development uses `make install` to install changes from your checkout.
 
 ## Feature-Specific Requirements
 
@@ -309,7 +309,7 @@ Follow [README.md](./README.md) for quick start and install commands. See [AGENT
 
 **Usage:**
 - Ask OpenCode: "Run code quality checks" (triggers `code-quality` skill)
-- The skill will execute scripts embedded in `skills/code-quality/scripts/finalize.sh`
+- The skill will execute scripts embedded in `content/skills/code-quality/scripts/finalize.sh`
 
 ### Documentation Check
 
@@ -319,7 +319,7 @@ Follow [README.md](./README.md) for quick start and install commands. See [AGENT
 
 **Usage:**
 - Ask OpenCode: "Check if documentation needs updates" (triggers `docs-check` skill)
-- The skill will execute scripts embedded in `skills/docs-check/scripts/check-docs.sh`
+- The skill will execute scripts embedded in `content/skills/docs-check/scripts/check-docs.sh`
 
 ### Code Review (CodeRabbit)
 
@@ -329,7 +329,7 @@ Follow [README.md](./README.md) for quick start and install commands. See [AGENT
 
 **Usage:**
 - Ask OpenCode: "Review my code changes" (triggers `code-review` skill)
-- The skill will execute scripts embedded in `skills/code-review/scripts/review-run.sh`
+- The skill will execute scripts embedded in `content/skills/code-review/scripts/review-run.sh`
 
 ### PR Review Tools
 
@@ -340,7 +340,7 @@ Follow [README.md](./README.md) for quick start and install commands. See [AGENT
 
 **Usage:**
 - Ask OpenCode: "Fetch PR comments" (triggers `resolve-pr-comments` skill)
-- The skill will execute scripts embedded in `skills/resolve-pr-comments/scripts/pr-resolver*.sh`
+- The skill will execute scripts embedded in `content/skills/resolve-pr-comments/scripts/pr-resolver*.sh`
 
 ### MCP Dependencies (for Search and Research Skills)
 
@@ -349,7 +349,7 @@ Follow [README.md](./README.md) for quick start and install commands. See [AGENT
 - **Tavily MCP** - Web search for general information, tutorials, and current content
   - **Installation:** `npm install -g @tavily/mcp-server-tavily` or use `npx -y @tavily/mcp-server-tavily`
   - **API Key Required:** Get from https://tavily.com
-  - **Configuration:** Add to `mcp.json` with `TAVILY_API_KEY` environment variable
+  - **Configuration:** Add to `config/mcps.json` with `TAVILY_API_KEY` environment variable
   - **Usage:** General web searches, tutorials, error messages, best practices
 
 - **Context7 MCP** - Library documentation and API references
@@ -362,7 +362,7 @@ Follow [README.md](./README.md) for quick start and install commands. See [AGENT
   - **API Key Required:** No
   - **Configuration:** Automatically added to OpenCode MCP config
   - **Usage:** Finding real-world code examples, implementation patterns, API usage, error handling patterns
-  - **Note:** All MCPs from `mcp.json` are automatically configured by the installer. Update API keys after installation.
+  - **Note:** All MCPs from `config/mcps.json` are automatically configured by the installer. Update API keys after installation.
 
 **Optional for Search/Research:**
 
@@ -394,7 +394,7 @@ Follow [README.md](./README.md) for quick start and install commands. See [AGENT
 **Configuration:**
 
 **For OpenCode (Automatic):**
-- The `install.sh` script automatically configures all MCPs from `mcp.json` for OpenCode
+- The `install.sh` script automatically configures all MCPs from `config/mcps.json` for OpenCode
 - MCP configuration is created/updated at `~/.opencode/opencode.json` (or `$XDG_CONFIG_HOME/opencode/opencode.json`)
 - Existing MCP configurations are preserved; only missing MCPs are added
 - All MCPs from the example file are configured: Tavily, Context7, OpenAlex, PDF Reader, Paper-search, Grep, Z.AI, and Graphite
@@ -402,15 +402,15 @@ Follow [README.md](./README.md) for quick start and install commands. See [AGENT
 - **Important:** After installation, update API keys in the `.env` file or directly in the config.
 
 **For Other Agents (Manual):**
-1. Copy `mcp.json` to your MCP configuration location (typically `~/.opencode/opencode.json` or your agent's MCP config)
+1. Copy `config/mcps.json` to your MCP configuration location (typically `~/.opencode/opencode.json` or your agent's MCP config)
 2. Update API keys in the configuration file
 3. Restart your AI agent to load MCP servers
 
-See `mcp.json` for complete configuration format.
+See `config/mcps.json` for complete configuration format.
 
 ## How Agents Use Skills
 
-See [skills/README.md](./skills/README.md) for the skill loading model, scripts, and usage details.
+See [content/skills/README.md](./content/skills/README.md) for the skill loading model, scripts, and usage details.
 
 ### Test skill triggering:
    - Try: "Run code quality checks" (should trigger `code-quality` skill)
@@ -467,10 +467,10 @@ make validate
 
 After installation, see:
 - [AGENTS.md](./AGENTS.md) for workflow guidance and MCP references
-- [skills/README.md](./skills/README.md) for usage examples and scripts
+- [content/skills/README.md](./content/skills/README.md) for usage examples and scripts
 
 ## Support
 
-- **Documentation:** `~/ai-dev-atelier/skills/README.md`
+- **Documentation:** `~/ai-dev-atelier/content/skills/README.md`
 - **Workflow:** `~/ai-dev-atelier/AGENTS.md`
-- **Script help:** See individual skill documentation in `skills/*/SKILL.md`
+- **Script help:** See individual skill documentation in `content/skills/*/SKILL.md`

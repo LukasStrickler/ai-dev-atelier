@@ -97,7 +97,7 @@ Labels categorize PRs in release notes:
 | `chore` | Maintenance |
 
 **Auto-applied** based on file paths (workflow: `.github/workflows/labeler.yml`, config: `.github/labeler.yml`):
-- `skills/**` → `skill`
+- `content/skills/**` → `skill`
 - `**/*.md`, `docs/**` → `documentation`
 - `.github/**`, `.test/**`, config files → `chore`
 
