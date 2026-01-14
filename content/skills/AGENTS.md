@@ -8,13 +8,15 @@ Detailed catalog of 10 specialized agent skills implementing the OpenCode Skill 
 
 ## STRUCTURE
 ```
-content/skills/
+skills/
 ├── [skill-name]/      # e.g., git-commit, research
 │   ├── SKILL.md       # YAML frontmatter + Prompt logic
 │   ├── references/    # Static context documentation
 │   └── scripts/       # (Optional) Bash/Python executables
 └── README.md          # Full usage documentation
 ```
+
+**Note**: Skills are installed to `~/.opencode/skill/`. When agents reference scripts, they use `skills/<name>/scripts/<script>.sh` (relative paths from the skill installation directory).
 
 ## WHERE TO LOOK
 | Component | Path | Purpose |

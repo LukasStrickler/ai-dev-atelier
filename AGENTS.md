@@ -64,6 +64,30 @@ Disable redundant Z.AI tools in `~/.opencode/opencode.json` to save quota:
 - **Formatting**: `shfmt` (2 spaces), `prettier` (Markdown/JSON).
 - **Skill Standard**: Must have `SKILL.md` (YAML frontmatter) + `references/`.
 
+## SKILL INVOCATION GUIDELINES (IMPORTANT)
+
+**Installation Path**: Skills are installed to `~/.opencode/skill/<name>/`
+
+**Agent-Facing Paths**: When referencing skills in agent prompts, SKILL.md files, or custom agents:
+- ✅ Use: `skills/<name>/scripts/<script>.sh` (relative from skill directory)
+- ✅ Use: `scripts/<script>.sh` (relative from within the skill)
+- ❌ Avoid: `content/skills/<name>/...` (repo structure, not installed path)
+
+**Developer Paths**: In documentation for humans (README, INSTALL.md):
+- ✅ Use: `content/skills/<name>/...` (matches repo layout)
+
+**Examples**:
+```bash
+# Agent executing skill script (installed context)
+bash skills/resolve-pr-comments/scripts/pr-resolver.sh 26
+
+# Within a SKILL.md referencing its own scripts
+bash scripts/finalize.sh agent
+
+# Developer referring to source files
+See `content/skills/code-quality/SKILL.md` for details
+```
+
 ## ANTI-PATTERNS (THIS PROJECT)
 - **Releases**: NEVER trigger `gh release` or `release.yml` without explicit user permission.
 - **Secrets**: NEVER commit secrets. Use placeholders in `config/mcps.json`.
