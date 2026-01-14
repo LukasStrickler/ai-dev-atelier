@@ -64,12 +64,13 @@ body:
         - "code-quality"
         - "docs-check"
         - "docs-write"
+        - "git-commit"
         - "code-review"
-        - "pr-review"
+        - "resolve-pr-comments"
         - "search"
         - "research"
-        - "agent-orchestration"
-        - "git-commit"
+        - "ui-animation"
+        - "use-graphite"
         - "Install/Setup scripts"
     validations:
       required: true
