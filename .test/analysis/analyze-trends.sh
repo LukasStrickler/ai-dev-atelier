@@ -84,7 +84,7 @@ echo ""
 
 # Skill adoption: first seen dates
 echo "--- Skill First Seen Dates ---"
-echo "$DATA" | jq -rs 'group_by(.skill) | map({skill: .[0].skill, first_seen: (sort_by(.timestamp) | .[0].timestamp | split("T")[0])}) | sort_by(.first_seen) | .[] | "  \(.first_seen): \(.skill)"' 2>/dev/null || {
+echo "$DATA" | jq -rs 'sort_by(.skill) | group_by(.skill) | map({skill: .[0].skill, first_seen: (sort_by(.timestamp) | .[0].timestamp | split("T")[0])}) | sort_by(.first_seen) | .[] | "  \(.first_seen): \(.skill)"' 2>/dev/null || {
   echo "  (requires jq with -rs support)"
 }
 echo ""

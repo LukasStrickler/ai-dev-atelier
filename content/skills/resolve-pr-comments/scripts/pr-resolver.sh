@@ -342,14 +342,20 @@ ACTIONABLE_CLUSTERS=$(echo "$CLUSTERS_JSON" | jq '[.[] | select(.actionable == t
 
 GENERATED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 ACTIONABLE_OUTPUT_FILE="${PR_DIR}/actionable.json"
+CLUSTERS_JSON_FILE="$TMP_DIR/clusters.json"
+DUPLICATES_JSON_FILE="$TMP_DIR/duplicates.json"
+ACTIONABLE_CLUSTERS_FILE="$TMP_DIR/actionable_clusters.json"
+
+printf '%s\n' "$CLUSTERS_JSON" > "$CLUSTERS_JSON_FILE"
+printf '%s\n' "$DUPLICATES_ARRAY" > "$DUPLICATES_JSON_FILE"
 
 # Full data.json (all clusters, for historical context)
 jq -n \
   --arg generated_at "$GENERATED_AT" \
   --argjson pr_number "$PR_NUMBER" \
   --arg repository "${OWNER}/${REPO}" \
-  --argjson clusters "$CLUSTERS_JSON" \
-  --argjson duplicates "$DUPLICATES_ARRAY" \
+  --slurpfile clusters "$CLUSTERS_JSON_FILE" \
+  --slurpfile duplicates "$DUPLICATES_JSON_FILE" \
   --argjson total_comments "$TOTAL_COMMENTS" \
   --argjson resolved_comments "$TOTAL_RESOLVED" \
   --argjson unresolved_comments "$TOTAL_UNRESOLVED" \
@@ -370,8 +376,8 @@ jq -n \
       clusters_created: $clusters_created,
       actionable_clusters: $actionable_clusters
     },
-    clusters: $clusters,
-    duplicates: $duplicates,
+    clusters: $clusters[0],
+    duplicates: $duplicates[0],
     results: []
   }' > "$OUTPUT_FILE"
 
@@ -380,13 +386,13 @@ log_success "PR #${PR_NUMBER} data saved to $OUTPUT_FILE"
 # Actionable-only output (token-efficient for orchestrator)
 # Contains only clusters with unresolved_count > 0
 # Includes resolved comments within those clusters for context
-ACTIONABLE_CLUSTERS_JSON=$(echo "$CLUSTERS_JSON" | jq '[.[] | select(.actionable == true)]')
+jq '[.[] | select(.actionable == true)]' "$CLUSTERS_JSON_FILE" > "$ACTIONABLE_CLUSTERS_FILE"
 
 jq -n \
   --arg generated_at "$GENERATED_AT" \
   --argjson pr_number "$PR_NUMBER" \
   --arg repository "${OWNER}/${REPO}" \
-  --argjson clusters "$ACTIONABLE_CLUSTERS_JSON" \
+  --slurpfile clusters "$ACTIONABLE_CLUSTERS_FILE" \
   --argjson total_comments "$TOTAL_COMMENTS" \
   --argjson resolved_comments "$TOTAL_RESOLVED" \
   --argjson unresolved_comments "$TOTAL_UNRESOLVED" \
@@ -402,7 +408,7 @@ jq -n \
       unresolved_comments: $unresolved_comments,
       actionable_clusters: $actionable_clusters
     },
-    clusters: $clusters
+    clusters: $clusters[0]
   }' > "$ACTIONABLE_OUTPUT_FILE"
 
 log_success "Actionable-only data saved to $ACTIONABLE_OUTPUT_FILE"

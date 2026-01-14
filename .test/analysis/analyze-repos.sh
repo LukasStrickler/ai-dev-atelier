@@ -82,7 +82,7 @@ echo ""
 
 # Cross-repository patterns: skills used across many repos
 echo "--- Skills Used Across Most Repositories ---"
-echo "$DATA" | jq -r '[.repo, .skill] | @tsv' | sort | uniq | cut -f2 | sort | uniq -c | sort -rn | while read -r count skill; do
+echo "$DATA" | jq -r '[.repo, .skill] | @tsv' | sort | uniq | cut -f2 | sort | uniq -c | sort -rn | head -15 | while read -r count skill; do
   pct=$(awk "BEGIN {printf \"%.1f\", ($count / $REPOS) * 100}")
   printf "  %-25s %3d repos (%5s%%)\n" "$skill" "$count" "$pct"
 done
