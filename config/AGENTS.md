@@ -27,5 +27,5 @@ Central registry defining active skills, MCP server endpoints, lifecycle guardra
 ## ANTI-PATTERNS
 - **Hardcoding**: Creating `config/secrets.json` or committing real API keys.
 - **Formatting**: Using trailing commas (breaks `jq`).
-- **Logic**: Putting shell scripts inside JSON values (use reference paths to `hooks/` instead).
+- **Logic**: Putting shell scripts inside JSON values (use reference paths to `content/hooks/` instead).
 - **Redundancy**: Redefining standard MCPs defined in the parent runtime config.
