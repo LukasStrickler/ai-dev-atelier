@@ -49,10 +49,22 @@ is_ignored_job() {
   return 1
 }
 
+get_required_checks() {
+  local repo="$1" pr="$2" base_ref
+  base_ref=$(gh pr view "$pr" --repo "$repo" --json baseRefName -q '.baseRefName' 2>/dev/null || echo "")
+  [ -z "$base_ref" ] && return 0
+
+  {
+    gh api "repos/${repo}/rules/branches/${base_ref}" 2>/dev/null | jq -r '.[] | select(.type == "required_status_checks") | .parameters.required_status_checks[]? | .context' || true
+    gh api "repos/${repo}/branches/${base_ref}/protection/required_status_checks" 2>/dev/null | jq -r '.contexts[]?, .checks[]?.context' || true
+  } | awk 'NF' | sort -u
+}
+
 get_ci_status() {
   local repo="$1" pr="$2"
   local rollup failed_jobs="" pending_jobs="" sha=""
   local pending=0 passed=0
+  local missing_required=()
   
   declare -A check_state
   declare -A check_name
@@ -144,6 +156,16 @@ get_ci_status() {
       0) passed=$((passed + 1)) ;;
     esac
   done
+  
+  while IFS= read -r required_check; do
+    [ -z "$required_check" ] && continue
+    is_ignored_job "$required_check" && continue
+    if [ -z "${check_state["${required_check,,}"]+x}" ]; then
+      pending=$((pending + 1))
+      pending_jobs="${pending_jobs}${required_check}, "
+      missing_required+=("$required_check")
+    fi
+  done < <(get_required_checks "$repo" "$pr")
   
   [ -n "$failed_jobs" ] && echo "failed|$passed|$pending|${failed_jobs%, }|${pending_jobs%, }" && return
   [ "$pending" -eq 0 ] && echo "passed|$passed|0||" && return

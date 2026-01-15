@@ -623,11 +623,14 @@ cmd="$*"
 case "$cmd" in
   *"pr view"*"--json"*"statusCheckRollup"*) printf '%s\n' "${GH_STATUS_ROLLUP_JSON:-{"statusCheckRollup":[]}}" ;;
   *"pr view"*"--json"*"headRefOid"*) printf '%s\n' "${GH_HEAD_SHA:-}" ;;
+  *"pr view"*"--json"*"baseRefName"*) printf '%s\n' "${GH_BASE_REF:-main}" ;;
   *"pr checks"*"--json"*"name,bucket"*) printf '%s\n' "${GH_PR_CHECKS_JSON:-[]}" ;;
   *"api repos/"*"/commits/"*"/check-runs"*) printf '%s\n' "${GH_CHECK_RUNS_JSON:-{\"check_runs\":[]}}" ;;
   *"api repos/"*"/commits/"*"/status"*) printf '%s\n' "${GH_COMMIT_STATUS_JSON:-{\"statuses\":[]}}" ;;
   *"api repos/"*"/pulls/"*"/requested_reviewers"*) printf '%s\n' "${GH_REQUESTED_REVIEWERS_JSON:-{\"users\":[],\"teams\":[]}}" ;;
   *"api repos/"*"/actions/runs?head_sha="*) printf '%s\n' "${GH_ACTIONS_RUNS_JSON:-{\"workflow_runs\":[]}}" ;;
+  *"api repos/"*"/rules/branches/"*) printf '%s\n' "${GH_RULES_BRANCH_JSON:-[]}" ;;
+  *"api repos/"*"/branches/"*"/protection/required_status_checks"*) printf '%s\n' "${GH_REQUIRED_STATUS_JSON:-{\"contexts\":[],\"checks\":[]}}" ;;
   *) exit 1 ;;
 esac
 MOCK_EOF_WAIT
@@ -698,15 +701,46 @@ test_bot_review_request_pending() {
 test_ci_pending_from_pr_checks
  test_bot_review_request_pending
 
+ test_required_check_missing_is_pending() {
+   local tmp output
+   export GH_STATUS_ROLLUP_JSON='{"statusCheckRollup":[]}'
+   export GH_PR_CHECKS_JSON='[]'
+   export GH_CHECK_RUNS_JSON='{"check_runs":[]}'
+   export GH_COMMIT_STATUS_JSON='{"statuses":[]}'
+   export GH_RULES_BRANCH_JSON='[{"type":"required_status_checks","parameters":{"required_status_checks":[{"context":"required-ci"}]}}]'
+   export GH_REQUIRED_STATUS_JSON='{"contexts":[],"checks":[]}'
+   export GH_HEAD_SHA="abc"
+   export GH_BASE_REF="main"
+   tmp=$(make_wait_harness 'get_ci_status "owner/repo" "28"')
+   output=$(PATH="$MOCK_GH_WAIT:$PATH" bash "$tmp" 2>/dev/null)
+   rm -f "$tmp"
+   if echo "$output" | grep -q '^pending|'; then
+     pass "Required checks missing are treated as pending"
+   else
+     fail "Missing required checks should cause pending"
+   fi
+   if echo "$output" | grep -qi "required-ci"; then
+     pass "Missing required check name is listed"
+   else
+     fail "Missing required check name should be listed"
+   fi
+ }
+
+ test_required_check_missing_is_pending
+
  test_ci_failure_does_not_abort() {
    local tmp output
    export GH_STATUS_ROLLUP_JSON='{"statusCheckRollup":[{"name":"validate","status":"COMPLETED","conclusion":"FAILURE"}]}'
    export GH_PR_CHECKS_JSON='[]'
    export GH_CHECK_RUNS_JSON='{"check_runs":[]}'
    export GH_COMMIT_STATUS_JSON='{"statuses":[]}'
-   export GH_ACTIONS_RUNS_JSON='{"workflow_runs":[]}'
-   export GH_REQUESTED_REVIEWERS_JSON='{"users":[],"teams":[]}'
-   export GH_HEAD_SHA="abc"
+  export GH_ACTIONS_RUNS_JSON='{"workflow_runs":[]}'
+  export GH_REQUESTED_REVIEWERS_JSON='{"users":[],"teams":[]}'
+  export GH_RULES_BRANCH_JSON='[]'
+  export GH_REQUIRED_STATUS_JSON='{"contexts":[],"checks":[]}'
+  export GH_BASE_REF="main"
+  export GH_HEAD_SHA="abc"
+
    tmp=$(make_wait_harness 'wait_for_all "owner/repo" "28"')
    output=$(PATH="$MOCK_GH_WAIT:$PATH" bash "$tmp" 2>&1 || true)
    rm -f "$tmp"
