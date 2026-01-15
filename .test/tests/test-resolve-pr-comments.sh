@@ -528,7 +528,8 @@ test_filter_NOT_exists() {
   local pattern="$1"
   local description="$2"
   
-  if grep -qi "$pattern" "$CI_FILTERS" 2>/dev/null; then
+  # Only check non-comment lines (actual filter patterns)
+  if grep -v '^[[:space:]]*#' "$CI_FILTERS" 2>/dev/null | grep -qi "$pattern"; then
     fail "$description (pattern should NOT be in filters: $pattern)"
   else
     pass "$description"

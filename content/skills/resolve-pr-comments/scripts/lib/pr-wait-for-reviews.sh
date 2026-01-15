@@ -69,7 +69,7 @@ get_ci_status() {
           *) passed=$((passed + 1)) ;;
         esac
         ;;
-      PENDING|QUEUED|IN_PROGRESS|WAITING|REQUESTED)
+      PENDING|QUEUED|IN_PROGRESS|WAITING|REQUESTED|"")
         pending=$((pending + 1))
         pending_jobs="${pending_jobs}${name}, "
         ;;
