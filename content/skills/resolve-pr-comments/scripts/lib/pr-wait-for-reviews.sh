@@ -13,16 +13,16 @@ MAX_WAIT_SECONDS=600
 POLL_INTERVAL=15
 LOG_INTERVAL=60
 START_TIME=$(date +%s)
-LAST_LOG_TIME=0
+LAST_LOG_TIME=$START_TIME
 
 log() { echo "$1" >&2; }
 log_progress() {
-  local now elapsed
+  local now remaining
   now=$(date +%s)
-  elapsed=$((now - LAST_LOG_TIME))
-  if [ "$elapsed" -ge "$LOG_INTERVAL" ] || [ "$LAST_LOG_TIME" -eq 0 ]; then
+  remaining=$(time_remaining)
+  if [ $((now - LAST_LOG_TIME)) -ge "$LOG_INTERVAL" ]; then
     LAST_LOG_TIME=$now
-    log "[WAIT] $1"
+    log "[WAIT] ${remaining}s | $1"
   fi
 }
 
@@ -101,9 +101,9 @@ get_ai_review_status() {
 
 wait_for_all() {
   local repo="$1" pr="$2"
-  local phase="ci" ci_done=false last_pending_jobs=""
+  local phase="ci" last_pending_jobs=""
   
-  log "[WAIT] PR #${pr}: Waiting for CI + AI reviews (max 10 min)..."
+  log "[WAIT] PR #${pr}: Waiting for CI + AI reviews (max 10 min)"
   
   while ! is_timed_out; do
     if [ "$phase" = "ci" ]; then
@@ -112,23 +112,21 @@ wait_for_all() {
       
       case "$ci_result" in
         none)
-          log_progress "No CI checks configured"
           phase="ai"
           continue
           ;;
         failed)
-          log "✗ CI failed: $failed_jobs"
+          log "[FAIL] CI failed: $failed_jobs"
           return 1
           ;;
         passed)
-          log "✓ CI passed ($passed checks)"
+          log "[OK] CI passed ($passed checks)"
           phase="ai"
-          ci_done=true
           continue
           ;;
         pending)
           last_pending_jobs="$pending_jobs"
-          log_progress "CI: $pending pending, $passed passed ($(time_remaining)s left)"
+          log_progress "CI: $pending pending, $passed passed"
           ;;
       esac
     else
@@ -136,26 +134,21 @@ wait_for_all() {
       IFS='|' read -r running requested running_names <<< "$(get_ai_review_status "$repo" "$pr")"
       
       if [ "$running" -eq 0 ] && [ "$requested" -eq 0 ]; then
-        log "✓ Ready to fetch comments"
+        log "[OK] Ready to fetch comments"
         return 0
       fi
-      log_progress "AI reviews: $running running, $requested requested ($(time_remaining)s left)"
+      log_progress "AI: $running running, $requested requested"
     fi
     
     sleep "$POLL_INTERVAL"
   done
   
   log ""
-  log "⚠ TIMEOUT after 10 minutes"
+  log "[TIMEOUT] 10 minutes exceeded"
   log ""
-  log "ACTION REQUIRED: Check what's still running and decide:"
-  log "  gh pr checks $pr --repo $repo"
-  log "  gh api repos/$repo/actions/runs?head_sha=HEAD --jq '.workflow_runs[] | select(.status != \"completed\") | .name'"
-  log ""
-  log "Then either:"
-  log "  1. Wait longer manually, OR"
-  log "  2. Re-run with --skip-wait \"<reason>\" if reviews aren't needed"
-  [ -n "$last_pending_jobs" ] && log "" && log "Last seen pending: $last_pending_jobs"
+  log "Check status:  gh pr checks $pr --repo $repo"
+  log "Then either:   wait longer, OR re-run with --skip-wait \"<reason>\""
+  [ -n "$last_pending_jobs" ] && log "Last pending:  $last_pending_jobs"
   return 2
 }
 

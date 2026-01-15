@@ -673,12 +673,6 @@ test_timeout_message_content() {
     fail "Timeout message should include 'gh pr checks' command"
   fi
   
-  if echo "$script_content" | grep -q "gh api.*actions/runs"; then
-    pass "Timeout message includes 'gh api' actions command"
-  else
-    fail "Timeout message should include 'gh api' actions command"
-  fi
-  
   if echo "$script_content" | grep -q "skip-wait"; then
     pass "Timeout message mentions --skip-wait option"
   else
