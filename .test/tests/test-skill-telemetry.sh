@@ -44,15 +44,16 @@ fi
 # Create test harness that extracts and tests pure functions
 cat > "$TMP_DIR/test-harness.ts" << 'HARNESS_EOF'
 // Extract pure functions from the plugin for testing
+// NOTE: This must match the implementation in skill-telemetry.ts
 const extractSkillScript = (command?: string) => {
   if (!command) {
     return null;
   }
-  const match = command.match(/\b(?:content\/)?skills\/([^/\s]+)\/scripts\/([^\s]+\.sh)\b/);
+  const match = command.match(/\b(?:content\/)?skills\/([^/\s]+)\/scripts\/([^\s]+\.sh)(?:\s+(.*))?/);
   if (!match) {
     return null;
   }
-  return { skill: match[1], script: match[2] };
+  return { skill: match[1], script: match[2], arguments: match[3]?.trim() || null };
 };
 
 const getRepoName = (project?: { name?: string }, worktree?: string, directory?: string) => {
@@ -130,42 +131,52 @@ test("extractSkillScript: returns null for git commands", () => {
 
 test("extractSkillScript: matches content/skills/name/scripts/script.sh", () => {
   expect(extractSkillScript("bash content/skills/code-quality/scripts/finalize.sh"))
-    .toEqual({ skill: "code-quality", script: "finalize.sh" });
+    .toEqual({ skill: "code-quality", script: "finalize.sh", arguments: null });
 });
 
 test("extractSkillScript: matches skills/name/scripts/script.sh", () => {
   expect(extractSkillScript("bash skills/code-quality/scripts/finalize.sh"))
-    .toEqual({ skill: "code-quality", script: "finalize.sh" });
+    .toEqual({ skill: "code-quality", script: "finalize.sh", arguments: null });
 });
 
 test("extractSkillScript: matches content/skills/name/scripts/script.sh", () => {
   expect(extractSkillScript("bash content/skills/research/scripts/research-run.sh"))
-    .toEqual({ skill: "research", script: "research-run.sh" });
+    .toEqual({ skill: "research", script: "research-run.sh", arguments: null });
 });
 
 test("extractSkillScript: matches skills/name/scripts/script.sh", () => {
   expect(extractSkillScript("bash skills/research/scripts/research-run.sh"))
-    .toEqual({ skill: "research", script: "research-run.sh" });
+    .toEqual({ skill: "research", script: "research-run.sh", arguments: null });
 });
 
 test("extractSkillScript: matches absolute path with content/skills/", () => {
   expect(extractSkillScript("bash /home/user/ai-dev-atelier/content/skills/docs-check/scripts/check-docs.sh"))
-    .toEqual({ skill: "docs-check", script: "check-docs.sh" });
+    .toEqual({ skill: "docs-check", script: "check-docs.sh", arguments: null });
 });
 
-test("extractSkillScript: matches with arguments after script", () => {
+test("extractSkillScript: captures arguments after script", () => {
   expect(extractSkillScript("bash content/skills/code-review/scripts/review-run.sh --mode task"))
-    .toEqual({ skill: "code-review", script: "review-run.sh" });
+    .toEqual({ skill: "code-review", script: "review-run.sh", arguments: "--mode task" });
+});
+
+test("extractSkillScript: captures PR number as argument", () => {
+  expect(extractSkillScript("bash skills/resolve-pr-comments/scripts/pr-resolver.sh 26"))
+    .toEqual({ skill: "resolve-pr-comments", script: "pr-resolver.sh", arguments: "26" });
+});
+
+test("extractSkillScript: captures skip-wait with reason", () => {
+  expect(extractSkillScript("bash skills/resolve-pr-comments/scripts/pr-resolver.sh 42 --skip-wait 'CI confirmed passed'"))
+    .toEqual({ skill: "resolve-pr-comments", script: "pr-resolver.sh", arguments: "42 --skip-wait 'CI confirmed passed'" });
 });
 
 test("extractSkillScript: handles script names with hyphens", () => {
   expect(extractSkillScript("bash content/skills/resolve-pr-comments/scripts/pr-resolver-run.sh"))
-    .toEqual({ skill: "resolve-pr-comments", script: "pr-resolver-run.sh" });
+    .toEqual({ skill: "resolve-pr-comments", script: "pr-resolver-run.sh", arguments: null });
 });
 
 test("extractSkillScript: handles content/ prefix with absolute path", () => {
   expect(extractSkillScript("/opt/atelier/content/skills/ui-animation/scripts/run.sh"))
-    .toEqual({ skill: "ui-animation", script: "run.sh" });
+    .toEqual({ skill: "ui-animation", script: "run.sh", arguments: null });
 });
 
 test("extractSkillScript: does not match without .sh extension", () => {

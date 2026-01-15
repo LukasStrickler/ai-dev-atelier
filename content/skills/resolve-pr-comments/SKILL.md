@@ -66,9 +66,15 @@ Orchestrator (You)
 
 ## Quick Start
 
+> **⚠️ WAIT BY DEFAULT**: The script waits for CI and AI reviews (max 10 min) to ensure all bot comments are available before clustering. **DO NOT use `--skip-wait` unless the user explicitly requests it** or CI is confirmed to have already passed. Skip reasons are logged for audit.
+
 ```bash
-# 1. Fetch and cluster all comments (script does ALL the API work)
-bash skills/resolve-pr-comments/scripts/pr-resolver.sh 7
+# 1. Fetch and cluster all comments (waits for CI/AI reviews by default)
+bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER>
+
+# ONLY use --skip-wait when explicitly asked or CI confirmed passed
+# Reason is REQUIRED and logged for audit trail
+bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER> --skip-wait "user requested immediate fetch"
 
 # Output: .ada/data/pr-resolver/pr-7/
 #   ├── data.json       (full data, all clusters)
@@ -347,7 +353,8 @@ The `@pr-comment-reviewer` subagent (defined in `agents/pr-comment-reviewer.md`)
 
 | Script | Purpose | Usage |
 |--------|---------|-------|
-| `pr-resolver.sh <PR>` | Fetch + cluster + generate outputs | Main entry point |
+| `pr-resolver.sh <PR>` | Fetch + cluster + generate outputs | Main entry point (waits for CI by default) |
+| `pr-resolver.sh <PR> --skip-wait "reason"` | Skip CI/review wait | When CI already passed |
 | `pr-resolver-resolve.sh <PR> <ID> [ID2...]` | Resolve thread(s) after fixing | Post-fix cleanup |
 | `pr-resolver-dismiss.sh <PR> <ID> "reason"` | Dismiss with reply | False positive handling |
 

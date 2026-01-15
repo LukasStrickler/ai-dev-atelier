@@ -1,6 +1,6 @@
 #!/bin/bash
 # Fetch and cluster PR review comments in one call
-# Usage: bash pr-resolver.sh [PR_NUMBER] [--repo owner/repo]
+# Usage: bash pr-resolver.sh [PR_NUMBER] [--repo owner/repo] [--skip-wait "reason"]
 # Output: .ada/data/pr-resolver/pr-{N}/data.json (encapsulated per PR)
 #
 # Clusters include BOTH resolved and unresolved comments for context.
@@ -9,6 +9,11 @@
 # Fork/Upstream Support:
 #   For PRs from forks to upstream repos, use --repo to specify the upstream:
 #   bash pr-resolver.sh 123 --repo upstream-owner/upstream-repo
+#
+# Wait Behavior (DEFAULT):
+#   By default, waits for CI jobs and AI reviews to complete before fetching.
+#   This ensures all bot comments are available before clustering.
+#   Use --skip-wait "reason" to skip waiting (reason is required for audit trail).
 
 set -euo pipefail
 
@@ -29,21 +34,31 @@ fi
 # Parse arguments
 PR_NUMBER=""
 TARGET_REPO=""
+SKIP_WAIT=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     --repo)
       if [[ $# -lt 2 || "$2" == -* ]]; then
         log_error "--repo requires a value (owner/repo)"
-        echo "Usage: $0 [PR_NUMBER] [--repo owner/repo]" >&2
+        echo "Usage: $0 [PR_NUMBER] [--repo owner/repo] [--skip-wait \"reason\"]" >&2
         exit 1
       fi
       TARGET_REPO="$2"
       shift 2
       ;;
+    --skip-wait)
+      if [[ $# -lt 2 || "$2" == -* ]]; then
+        log_error "--skip-wait requires a reason"
+        echo "Usage: $0 [PR_NUMBER] [--repo owner/repo] [--skip-wait \"reason\"]" >&2
+        exit 1
+      fi
+      SKIP_WAIT="$2"
+      shift 2
+      ;;
     -*)
       log_error "Unknown option: $1"
-      echo "Usage: $0 [PR_NUMBER] [--repo owner/repo]" >&2
+      echo "Usage: $0 [PR_NUMBER] [--repo owner/repo] [--skip-wait \"reason\"]" >&2
       exit 1
       ;;
     *)
@@ -77,6 +92,23 @@ if [ -z "$OWNER_REPO" ]; then
   exit 1
 fi
 read -r OWNER REPO <<< "$(parse_owner_repo "$OWNER_REPO")"
+
+# ============================================================================
+# PHASE 0: Wait for CI and AI reviews (unless --skip-wait)
+# ============================================================================
+
+if [ -n "$SKIP_WAIT" ]; then
+  log_info "Skipping wait: $SKIP_WAIT"
+else
+  WAIT_SCRIPT="${SCRIPT_DIR}/lib/pr-wait-for-reviews.sh"
+  if [ -f "$WAIT_SCRIPT" ]; then
+    log_info "Waiting for CI and AI reviews (use --skip-wait \"reason\" to skip)..."
+    if ! bash "$WAIT_SCRIPT" "$PR_NUMBER" --repo "$OWNER_REPO"; then
+      log_error "CI/review wait failed - fix CI issues or use --skip-wait \"reason\" to proceed anyway"
+      exit 1
+    fi
+  fi
+fi
 
 # Determine if we should show --repo in examples
 # Show when: explicit --repo provided, OR get_effective_repo detected upstream (fork)

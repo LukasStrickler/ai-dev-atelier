@@ -26,6 +26,7 @@ type SkillEvent = {
   version: string | null;
   event: string;
   sessionID: string;
+  arguments?: string;
 };
 
 type PluginConfig = {
@@ -101,11 +102,11 @@ const extractSkillScript = (command?: string) => {
   if (!command) {
     return null;
   }
-  const match = command.match(/\b(?:content\/)?skills\/([^/\s]+)\/scripts\/([^\s]+\.sh)\b/);
+  const match = command.match(/\b(?:content\/)?skills\/([^/\s]+)\/scripts\/([^\s]+\.sh)(?:\s+(.*))?/);
   if (!match) {
     return null;
   }
-  return { skill: match[1], script: match[2] };
+  return { skill: match[1], script: match[2], arguments: match[3]?.trim() || null };
 };
 
 const skillVersionCache = new Map<string, string | null>();
@@ -200,21 +201,23 @@ export const SkillTelemetryPlugin: Plugin = async ({ project, directory, worktre
       }
 
       if (tool === "bash") {
-        const match = extractSkillScript(args.command);
-        if (!match) {
-          return;
+        const command = args.command;
+        const match = extractSkillScript(command);
+
+        if (match) {
+          await logEvent(
+            {
+              timestamp: new Date().toISOString(),
+              repo,
+              skill: match.skill,
+              version: extractSkillVersion(match.skill),
+              event: match.script,
+              sessionID: input.sessionID,
+              ...(match.arguments && { arguments: match.arguments }),
+            },
+            reportError,
+          );
         }
-        await logEvent(
-          {
-            timestamp: new Date().toISOString(),
-            repo,
-            skill: match.skill,
-            version: extractSkillVersion(match.skill),
-            event: match.script,
-            sessionID: input.sessionID,
-          },
-          reportError,
-        );
       }
     },
   };

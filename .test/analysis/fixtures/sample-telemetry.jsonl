@@ -3,12 +3,12 @@
 {"timestamp":"2026-01-06T09:20:00.000Z","repo":"my-webapp","skill":"git-commit","version":"1.0","event":"load","sessionID":"ses_abc001"}
 {"timestamp":"2026-01-06T14:30:00.000Z","repo":"api-service","skill":"search","version":"1.0","event":"load","sessionID":"ses_abc002"}
 {"timestamp":"2026-01-06T14:35:00.000Z","repo":"api-service","skill":"code-review","version":"1.0","event":"load","sessionID":"ses_abc002"}
-{"timestamp":"2026-01-06T14:40:00.000Z","repo":"api-service","skill":"code-review","version":"1.0","event":"review-run.sh","sessionID":"ses_abc002"}
+{"timestamp":"2026-01-06T14:40:00.000Z","repo":"api-service","skill":"code-review","version":"1.0","event":"review-run.sh","sessionID":"ses_abc002","arguments":"pr 42"}
 {"timestamp":"2026-01-07T10:00:00.000Z","repo":"my-webapp","skill":"docs-check","version":"1.0","event":"load","sessionID":"ses_abc003"}
 {"timestamp":"2026-01-07T10:05:00.000Z","repo":"my-webapp","skill":"docs-check","version":"1.0","event":"check-docs.sh","sessionID":"ses_abc003"}
 {"timestamp":"2026-01-07T10:10:00.000Z","repo":"my-webapp","skill":"docs-write","version":"1.0","event":"load","sessionID":"ses_abc003"}
 {"timestamp":"2026-01-07T11:00:00.000Z","repo":"my-webapp","skill":"code-quality","version":"1.0","event":"load","sessionID":"ses_abc003"}
-{"timestamp":"2026-01-07T11:05:00.000Z","repo":"my-webapp","skill":"code-quality","version":"1.0","event":"finalize.sh","sessionID":"ses_abc003"}
+{"timestamp":"2026-01-07T11:05:00.000Z","repo":"my-webapp","skill":"code-quality","version":"1.0","event":"finalize.sh","sessionID":"ses_abc003","arguments":"agent"}
 {"timestamp":"2026-01-07T11:10:00.000Z","repo":"my-webapp","skill":"git-commit","version":"1.0","event":"load","sessionID":"ses_abc003"}
 {"timestamp":"2026-01-08T08:45:00.000Z","repo":"cli-tool","skill":"use-graphite","version":"1.0","event":"load","sessionID":"ses_abc004"}
 {"timestamp":"2026-01-08T09:00:00.000Z","repo":"cli-tool","skill":"code-quality","version":"1.0","event":"load","sessionID":"ses_abc004"}
@@ -21,7 +21,7 @@
 {"timestamp":"2026-01-09T14:00:00.000Z","repo":"shared-lib","skill":"code-review","version":"1.0","event":"load","sessionID":"ses_abc007"}
 {"timestamp":"2026-01-09T14:05:00.000Z","repo":"shared-lib","skill":"code-review","version":"1.0","event":"review-run.sh","sessionID":"ses_abc007"}
 {"timestamp":"2026-01-09T14:30:00.000Z","repo":"shared-lib","skill":"resolve-pr-comments","version":"1.0","event":"load","sessionID":"ses_abc007"}
-{"timestamp":"2026-01-09T14:35:00.000Z","repo":"shared-lib","skill":"resolve-pr-comments","version":"1.0","event":"pr-resolver-run.sh","sessionID":"ses_abc007"}
+{"timestamp":"2026-01-09T14:35:00.000Z","repo":"shared-lib","skill":"resolve-pr-comments","version":"1.0","event":"pr-resolver-run.sh","sessionID":"ses_abc007","arguments":"26"}
 {"timestamp":"2026-01-10T08:00:00.000Z","repo":"my-webapp","skill":"search","version":"1.0","event":"load","sessionID":"ses_abc008"}
 {"timestamp":"2026-01-10T08:30:00.000Z","repo":"my-webapp","skill":"code-quality","version":"1.0","event":"load","sessionID":"ses_abc008"}
 {"timestamp":"2026-01-10T08:35:00.000Z","repo":"my-webapp","skill":"code-quality","version":"1.0","event":"finalize.sh","sessionID":"ses_abc008"}
