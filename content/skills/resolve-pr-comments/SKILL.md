@@ -32,20 +32,6 @@ gh api graphql -f query='...'  # for PR data
 
 The script already fetches everything. Manual `gh` calls waste 10-50x tokens on garbage data.
 
----
-
-**✅ CORRECT: Run this script FIRST**
-
-```bash
-bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER>
-```
-
-**Then:**
-1. Read `.ada/data/pr-resolver/pr-<N>/actionable.json`
-2. Spawn subagents per cluster
-
----
-
 ## Architecture Overview
 
 ```
@@ -64,21 +50,22 @@ Orchestrator (You)
     └── Handle deferred items (escalate or investigate)
 ```
 
+
 ## Quick Start
 
 > **⚠️ WAIT BY DEFAULT**: The script waits for CI and AI reviews (max 10 min total) before clustering. **DO NOT use `--skip-wait` unless explicitly requested** or CI confirmed passed.
 >
 > **⏱️ TIMEOUT**: OpenCode default is 2 min. **Pass `timeout: 660000` (11 min)** to prevent early termination. On timeout, script outputs commands to check status - follow those to decide next steps.
 
-```typescript
-// 1. Fetch and cluster comments (waits for CI + AI reviews)
+```bash
+# 1. Fetch and cluster comments (waits for CI + AI reviews)
 bash({
   command: "bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER>",
   timeout: 660000,
   description: "Fetch and cluster PR comments"
 })
 
-// Skip wait only when explicitly asked
+# Skip wait only when explicitly asked
 bash({
   command: "bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER> --skip-wait \"<reason>\"",
   description: "Fetch PR comments (skip wait)"
@@ -91,17 +78,21 @@ bash({
 - `clusters/` — Markdown files for subagent consumption
 
 
-```typescript
-// 2. Fire subagents for each actionable cluster (non-blocking, returns immediately)
+```bash
+# 2. Fire subagents for each actionable cluster (non-blocking, returns immediately)
 background_task({ agent: "pr-comment-reviewer", prompt: "Process cluster. Read: .ada/data/pr-resolver/pr-7/clusters/agents-md-suggestion.md", description: "PR #7: agents-md" })
 background_task({ agent: "pr-comment-reviewer", prompt: "Process cluster. Read: .ada/data/pr-resolver/pr-7/clusters/install-sh-issue.md", description: "PR #7: install-sh" })
-// ... spawn all clusters immediately, then collect results as they complete with background_output(task_id)
+# ... spawn all clusters immediately, then collect results as they complete with background_output(task_id)
 ```
 
 
 ```bash
 # 3. After all subagents complete, verify
-bash skills/resolve-pr-comments/scripts/pr-resolver.sh 7
+bash({
+  command: "bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER>",
+  timeout: 660000,
+  description: "Fetch and cluster PR comments"
+})
 # Success: actionable_clusters should be 0
 ```
 
@@ -147,7 +138,11 @@ bash skills/resolve-pr-comments/scripts/pr-resolver.sh 7
 ### Phase 1: Fetch and Analyze
 
 ```bash
-bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER>
+bash({
+  command: "bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER>",
+  timeout: 660000,
+  description: "Fetch and cluster PR comments"
+})
 ```
 
 Read `actionable.json` to understand workload:
@@ -169,15 +164,15 @@ Use `background_task` for async execution. Fire all, collect as they complete.
 
 **CRITICAL**: The agent name MUST be exactly `"pr-comment-reviewer"`. No variations.
 
-```typescript
-// Fire ALL clusters immediately (non-blocking, returns task_id)
+```bash
+# Fire ALL clusters immediately (non-blocking, returns task_id)
 background_task({ agent: "pr-comment-reviewer", prompt: "Process cluster. Read: .ada/.../cluster-1.md", description: "Cluster 1" })
 background_task({ agent: "pr-comment-reviewer", prompt: "Process cluster. Read: .ada/.../cluster-2.md", description: "Cluster 2" })
 background_task({ agent: "pr-comment-reviewer", prompt: "Process cluster. Read: .ada/.../cluster-3.md", description: "Cluster 3" })
-// ... all return task_ids immediately
+# ... all return task_ids immediately
 
-// Collect results as they complete (system notifies on completion)
-background_output({ task_id: "..." })  // Get result for specific task
+# Collect results as they complete (system notifies on completion)
+background_output({ task_id: "..." })  # Get result for specific task
 ```
 
 **Characteristics:**
@@ -332,7 +327,11 @@ When escalating to human, provide full context:
 After all subagents complete and deferred items are handled:
 
 ```bash
-bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER>
+bash({
+  command: "bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER>",
+  timeout: 660000,
+  description: "Fetch and cluster PR comments"
+})
 ```
 
 **Success Criteria**: `actionable_clusters: 0`
@@ -372,10 +371,14 @@ When working with PRs from forks to upstream repos, use `--repo` to specify the 
 
 ```bash
 # Fetch PR comments from upstream repo (when in a fork)
-bash skills/resolve-pr-comments/scripts/pr-resolver.sh 123 --repo upstream-owner/repo
+bash({
+  command: "bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER>--repo <UPSTREAM-OWNER/REPO>",
+  timeout: 660000,
+  description: "Fetch and cluster PR comments"
+})
 
 # Resolve/dismiss also support --repo
-bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh 123 456789 --repo upstream-owner/repo
+bash skills/resolve-pr-comments/scripts/pr-resolver-resolve.sh <PR_NUMBER> <ID> --repo <UPSTREAM-OWNER/REPO>
 ```
 
 Auto-detection: If you're in a fork, the scripts automatically detect the upstream and use it. The `--repo` flag overrides this for explicit control.
@@ -410,11 +413,11 @@ Comments are auto-categorized by content:
 
 ### ⛔ FORBIDDEN (Blocking Subagents)
 
-```typescript
-// ❌ FORBIDDEN - task() blocks until ALL complete, one slow subagent blocks everything
+```bash
+# ❌ FORBIDDEN - task() blocks until ALL complete, one slow subagent blocks everything
 task({ subagent_type: "pr-comment-reviewer", ... })
 
-// ✅ CORRECT - background_task returns immediately, collect results as they complete
+# ✅ CORRECT - background_task returns immediately, collect results as they complete
 background_task({ agent: "pr-comment-reviewer", ... })
 ```
 
@@ -430,7 +433,11 @@ gh api repos/.../pulls/<N>/reviews
 gh api graphql -f query='...' # for PR comments
 
 # ✅ CORRECT - run this instead
-bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER>
+bash({
+  command: "bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER>",
+  timeout: 660000,
+  description: "Fetch and cluster PR comments"
+})
 ```
 
 ### Other Anti-Patterns
