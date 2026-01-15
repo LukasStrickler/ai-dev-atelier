@@ -63,14 +63,14 @@ get_ci_status() {
     case "$status" in
       COMPLETED|SUCCESS)
         case "$conclusion" in
-          failure|timed_out|cancelled|action_required)
+          FAILURE|TIMED_OUT|CANCELLED|ACTION_REQUIRED)
             failed_jobs="${failed_jobs}${name} (${conclusion}), "
             ;;
-          *) ((passed++)) ;;
+          *) passed=$((passed + 1)) ;;
         esac
         ;;
       PENDING|QUEUED|IN_PROGRESS|WAITING|REQUESTED)
-        ((pending++))
+        pending=$((pending + 1))
         pending_jobs="${pending_jobs}${name}, "
         ;;
     esac
@@ -90,7 +90,7 @@ get_ai_review_status() {
   
   while IFS=$'\t' read -r name status; do
     [ -z "$name" ] && continue
-    ((running++))
+    running=$((running + 1))
     running_names="${running_names}${name}, "
   done < <(gh api "repos/${repo}/actions/runs?head_sha=${sha}" 2>/dev/null | jq -r '.workflow_runs[] | select(.status != "completed") | "\(.name)\t\(.status)"' || true)
   
@@ -179,8 +179,8 @@ main() {
 
   local owner_repo="$target_repo"
   if [ -z "$owner_repo" ]; then
-    if [ -f "${SCRIPT_DIR}/pr-resolver-utils.sh" ]; then
-      source "${SCRIPT_DIR}/pr-resolver-utils.sh"
+    if [ -f "${SCRIPT_DIR}/../pr-resolver-utils.sh" ]; then
+      source "${SCRIPT_DIR}/../pr-resolver-utils.sh"
       owner_repo=$(get_effective_repo "")
     else
       owner_repo=$(gh repo view --json nameWithOwner -q '.nameWithOwner' 2>/dev/null || echo "")

@@ -67,7 +67,7 @@ Orchestrator (You)
 ## Quick Start
 
 > **⚠️ WAIT BY DEFAULT**: The script waits for CI and AI reviews (max 10 min total) before clustering. **DO NOT use `--skip-wait` unless explicitly requested** or CI confirmed passed.
-
+>
 > **⏱️ TIMEOUT**: OpenCode default is 2 min. **Pass `timeout: 660000` (11 min)** to prevent early termination. On timeout, script outputs commands to check status - follow those to decide next steps.
 
 ```typescript
