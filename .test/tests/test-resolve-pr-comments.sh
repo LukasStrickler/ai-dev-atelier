@@ -521,24 +521,25 @@ else
 fi
 
 echo ""
-echo "--- CI filter patterns include AI bots ---"
+echo "--- CI filter patterns exclude AI bots (we wait for them) ---"
 echo ""
 
-test_filter_exists() {
+test_filter_NOT_exists() {
   local pattern="$1"
   local description="$2"
   
   if grep -qi "$pattern" "$CI_FILTERS" 2>/dev/null; then
-    pass "$description"
+    fail "$description (pattern should NOT be in filters: $pattern)"
   else
-    fail "$description (pattern not found: $pattern)"
+    pass "$description"
   fi
 }
 
-test_filter_exists "coderabbit" "Filter includes CodeRabbit"
-test_filter_exists "copilot" "Filter includes Copilot"
-test_filter_exists "cubic" "Filter includes Cubic"
-test_filter_exists "gemini" "Filter includes Gemini"
+# AI reviewers should NOT be filtered - we need to wait for their comments
+test_filter_NOT_exists "coderabbit" "CodeRabbit NOT in filters (we wait for it)"
+test_filter_NOT_exists "copilot" "Copilot NOT in filters (we wait for it)"
+test_filter_NOT_exists "cubic" "Cubic NOT in filters (we wait for it)"
+test_filter_NOT_exists "gemini" "Gemini NOT in filters (we wait for it)"
 
 echo ""
 echo "--- is_ignored_job function tests ---"
@@ -593,11 +594,13 @@ test_ignored_with_script() {
   fi
 }
 
-test_ignored_with_script "CodeRabbit Review" "yes" "Ignores: CodeRabbit Review"
-test_ignored_with_script "coderabbit-lint" "yes" "Ignores: coderabbit-lint (lowercase)"
-test_ignored_with_script "Copilot code review" "yes" "Ignores: Copilot code review"
-test_ignored_with_script "cubic-review" "yes" "Ignores: cubic-review"
-test_ignored_with_script "gemini-review" "yes" "Ignores: gemini-review"
+# AI reviewers should NOT be ignored - we wait for their comments
+test_ignored_with_script "CodeRabbit Review" "no" "Does NOT ignore: CodeRabbit Review (we wait for it)"
+test_ignored_with_script "coderabbit-lint" "no" "Does NOT ignore: coderabbit-lint (we wait for it)"
+test_ignored_with_script "Copilot code review" "no" "Does NOT ignore: Copilot code review (we wait for it)"
+test_ignored_with_script "cubic-review" "no" "Does NOT ignore: cubic-review (we wait for it)"
+test_ignored_with_script "gemini-review" "no" "Does NOT ignore: gemini-review (we wait for it)"
+# Regular CI jobs should still not be ignored
 test_ignored_with_script "build" "no" "Does not ignore: build"
 test_ignored_with_script "test" "no" "Does not ignore: test"
 test_ignored_with_script "lint" "no" "Does not ignore: lint"
