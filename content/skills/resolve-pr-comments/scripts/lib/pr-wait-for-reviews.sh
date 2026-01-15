@@ -84,6 +84,7 @@ get_ci_status() {
       [ -z "$name" ] && continue
       is_ignored_job "$name" && continue
       [ -n "${seen_checks["${name,,}"]+x}" ] && continue
+      seen_checks["${name,,}"]=1
       
       case "$status" in
         COMPLETED|SUCCESS)
@@ -100,6 +101,26 @@ get_ci_status() {
           ;;
       esac
     done < <(gh api "repos/${repo}/commits/${sha}/check-runs" 2>/dev/null | jq -r '.check_runs[] | "\(.name)\t\(.status // "")\t\(.conclusion // "")"' || true)
+    
+    while IFS=$'\t' read -r name status; do
+      [ -z "$name" ] && continue
+      is_ignored_job "$name" && continue
+      [ -n "${seen_checks["${name,,}"]+x}" ] && continue
+      seen_checks["${name,,}"]=1
+      
+      case "$status" in
+        success)
+          passed=$((passed + 1))
+          ;;
+        failure|error)
+          failed_jobs="${failed_jobs}${name} (FAILURE), "
+          ;;
+        pending)
+          pending=$((pending + 1))
+          pending_jobs="${pending_jobs}${name}, "
+          ;;
+      esac
+    done < <(gh api "repos/${repo}/commits/${sha}/status" 2>/dev/null | jq -r '.statuses[] | "\(.context)\t\(.state)"' || true)
   fi
   
   [ -n "$failed_jobs" ] && echo "failed|$passed|$pending|${failed_jobs%, }|${pending_jobs%, }" && return
