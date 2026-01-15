@@ -170,7 +170,8 @@ get_ai_review_status() {
 
 wait_for_all() {
   local repo="$1" pr="$2"
-  local last_pending_jobs="" last_requested_bots=0
+  local last_pending_jobs="" last_requested_bots=0 ci_failed_jobs=""
+  local ci_failed=false
   
   log "[WAIT] PR #${pr}: Waiting for CI + AI reviews (max 10 min)"
   
@@ -180,8 +181,11 @@ wait_for_all() {
     
     case "$ci_result" in
       failed)
-        log "[FAIL] CI failed: $failed_jobs"
-        return 1
+        if ! $ci_failed; then
+          log "[FAIL] CI failed: $failed_jobs"
+        fi
+        ci_failed=true
+        ci_failed_jobs="$failed_jobs"
         ;;
       pending)
         last_pending_jobs="$pending_jobs"
@@ -192,7 +196,10 @@ wait_for_all() {
     IFS='|' read -r running requested running_names <<< "$(get_ai_review_status "$repo" "$pr")"
     last_requested_bots="$requested"
     
-    if [ "$ci_result" = "passed" ] && [ "$running" -eq 0 ] && [ "$requested" -eq 0 ]; then
+    if [ "$pending" -eq 0 ] && [ "$running" -eq 0 ] && [ "$requested" -eq 0 ]; then
+      if $ci_failed || [ "$ci_result" = "failed" ]; then
+        log "[FAIL] CI failed: $ci_failed_jobs"
+      fi
       log "[OK] Ready to fetch comments"
       return 0
     fi

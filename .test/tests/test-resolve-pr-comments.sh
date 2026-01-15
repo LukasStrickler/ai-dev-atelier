@@ -572,7 +572,7 @@ cat > "$TEMP_TEST" << 'TESTEOF'
 #!/bin/bash
 set -euo pipefail
 TESTEOF
-sed -n '/^load_ci_filters()/,/^wait_for_ci()/p' "$WAIT_SCRIPT" | head -n -1 >> "$TEMP_TEST"
+sed -n '/^load_ci_filters()/,/^get_ci_status()/p' "$WAIT_SCRIPT" | head -n -1 >> "$TEMP_TEST"
 echo "" >> "$TEMP_TEST"
 echo "CI_FILTERS_FILE=\"$CI_FILTERS\"" >> "$TEMP_TEST"
 echo 'is_ignored_job "$1"' >> "$TEMP_TEST"
@@ -609,8 +609,125 @@ test_ignored_with_script "deploy" "no" "Does not ignore: deploy"
 
 rm -f "$TEMP_TEST"
 
+
 echo ""
-echo "--- --skip-wait parameter tests ---"
+echo "--- wait logic for checks and bot reviews ---"
+echo ""
+
+MOCK_GH_WAIT=$(mktemp -d)
+cat > "$MOCK_GH_WAIT/gh" << 'MOCK_EOF_WAIT'
+#!/bin/bash
+set -euo pipefail
+
+cmd="$*"
+case "$cmd" in
+  *"pr view"*"--json"*"statusCheckRollup"*) printf '%s\n' "${GH_STATUS_ROLLUP_JSON:-{"statusCheckRollup":[]}}" ;;
+  *"pr view"*"--json"*"headRefOid"*) printf '%s\n' "${GH_HEAD_SHA:-}" ;;
+  *"pr checks"*"--json"*"name,bucket"*) printf '%s\n' "${GH_PR_CHECKS_JSON:-[]}" ;;
+  *"api repos/"*"/commits/"*"/check-runs"*) printf '%s\n' "${GH_CHECK_RUNS_JSON:-{\"check_runs\":[]}}" ;;
+  *"api repos/"*"/commits/"*"/status"*) printf '%s\n' "${GH_COMMIT_STATUS_JSON:-{\"statuses\":[]}}" ;;
+  *"api repos/"*"/pulls/"*"/requested_reviewers"*) printf '%s\n' "${GH_REQUESTED_REVIEWERS_JSON:-{\"users\":[],\"teams\":[]}}" ;;
+  *"api repos/"*"/actions/runs?head_sha="*) printf '%s\n' "${GH_ACTIONS_RUNS_JSON:-{\"workflow_runs\":[]}}" ;;
+  *) exit 1 ;;
+esac
+MOCK_EOF_WAIT
+chmod +x "$MOCK_GH_WAIT/gh"
+
+make_wait_harness() {
+  local body="$1"
+  local tmp
+  tmp=$(mktemp)
+  {
+    echo "#!/bin/bash"
+    echo "set -euo pipefail"
+    sed -n '1,/^main()/p' "$WAIT_SCRIPT" | head -n -1
+    echo "CI_FILTERS_FILE=\"$CI_FILTERS\""
+    echo "MAX_WAIT_SECONDS=5"
+    echo "POLL_INTERVAL=1"
+    echo "LOG_INTERVAL=1"
+    echo "START_TIME=\$(date +%s)"
+    echo "LAST_LOG_TIME=\$START_TIME"
+    echo "$body"
+  } > "$tmp"
+  chmod +x "$tmp"
+  echo "$tmp"
+}
+
+test_ci_pending_from_pr_checks() {
+  local tmp output
+  export GH_STATUS_ROLLUP_JSON='{"statusCheckRollup":[{"name":"label","status":"COMPLETED","conclusion":"SUCCESS"}]}'
+  export GH_PR_CHECKS_JSON='[{"name":"cubic · AI code reviewer","bucket":"pending"}]'
+  export GH_CHECK_RUNS_JSON='{"check_runs":[]}'
+  export GH_COMMIT_STATUS_JSON='{"statuses":[]}'
+  export GH_HEAD_SHA="abc"
+  tmp=$(make_wait_harness 'get_ci_status "owner/repo" "28"')
+  output=$(PATH="$MOCK_GH_WAIT:$PATH" bash "$tmp" 2>/dev/null)
+  rm -f "$tmp"
+  if echo "$output" | grep -q '^pending|'; then
+    pass "Waits when gh pr checks reports pending"
+  else
+    fail "Should report pending when gh pr checks has pending"
+  fi
+  if echo "$output" | grep -qi "cubic"; then
+    pass "Pending check name preserved from gh pr checks"
+  else
+    fail "Pending check name should include cubic"
+  fi
+}
+
+test_bot_review_request_pending() {
+  local tmp output requested
+  export GH_STATUS_ROLLUP_JSON='{"statusCheckRollup":[]}'
+  export GH_PR_CHECKS_JSON='[]'
+  export GH_CHECK_RUNS_JSON='{"check_runs":[]}'
+  export GH_COMMIT_STATUS_JSON='{"statuses":[]}'
+  export GH_ACTIONS_RUNS_JSON='{"workflow_runs":[]}'
+  export GH_REQUESTED_REVIEWERS_JSON='{"users":[{"login":"Copilot","type":"Bot"}],"teams":[]}'
+  export GH_HEAD_SHA="abc"
+  tmp=$(make_wait_harness 'get_ai_review_status "owner/repo" "28"')
+  output=$(PATH="$MOCK_GH_WAIT:$PATH" bash "$tmp" 2>/dev/null)
+  rm -f "$tmp"
+  IFS='|' read -r _ requested _ <<< "$output"
+  if [ "$requested" -eq 1 ]; then
+    pass "Bot review request keeps wait active"
+  else
+    fail "Expected bot review request count 1, got $requested"
+  fi
+}
+
+test_ci_pending_from_pr_checks
+ test_bot_review_request_pending
+
+ test_ci_failure_does_not_abort() {
+   local tmp output
+   export GH_STATUS_ROLLUP_JSON='{"statusCheckRollup":[{"name":"validate","status":"COMPLETED","conclusion":"FAILURE"}]}'
+   export GH_PR_CHECKS_JSON='[]'
+   export GH_CHECK_RUNS_JSON='{"check_runs":[]}'
+   export GH_COMMIT_STATUS_JSON='{"statuses":[]}'
+   export GH_ACTIONS_RUNS_JSON='{"workflow_runs":[]}'
+   export GH_REQUESTED_REVIEWERS_JSON='{"users":[],"teams":[]}'
+   export GH_HEAD_SHA="abc"
+   tmp=$(make_wait_harness 'wait_for_all "owner/repo" "28"')
+   output=$(PATH="$MOCK_GH_WAIT:$PATH" bash "$tmp" 2>&1 || true)
+   rm -f "$tmp"
+   if echo "$output" | grep -q "\[FAIL\] CI failed"; then
+     pass "CI failure is reported before finishing"
+   else
+     fail "Expected CI failure to be reported"
+   fi
+   if echo "$output" | grep -q "\[OK\] Ready to fetch comments"; then
+     pass "Wait completes even with CI failure"
+   else
+     fail "Expected wait to complete despite CI failure"
+   fi
+ }
+
+ test_ci_failure_does_not_abort
+
+ rm -rf "$MOCK_GH_WAIT"
+
+ echo ""
+ echo "--- --skip-wait parameter tests ---"
 echo ""
 
 test_skip_wait_requires_reason() {
