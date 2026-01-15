@@ -51,29 +51,43 @@ is_ignored_job() {
 
 get_ci_status() {
   local repo="$1" pr="$2"
-  local rollup pending=0 passed=0 failed_jobs="" pending_jobs="" sha=""
+  local rollup failed_jobs="" pending_jobs="" sha=""
+  local pending=0 passed=0
+  
+  declare -A check_state
+  declare -A check_name
+  record_state() {
+    local name="$1" state="$2" key value current
+    key="${name,,}"
+    case "$state" in
+      failed) value=2 ;;
+      pending) value=1 ;;
+      passed) value=0 ;;
+      *) return ;;
+    esac
+    current="${check_state[$key]-}"
+    if [ -z "$current" ] || [ "$value" -gt "$current" ]; then
+      check_state[$key]="$value"
+      check_name[$key]="$name"
+    fi
+  }
   
   rollup=$(gh pr view "$pr" --repo "$repo" --json statusCheckRollup 2>/dev/null || echo "")
   [ -z "$rollup" ] && rollup='{"statusCheckRollup":[]}'
   
-  declare -A seen_checks
   while IFS=$'\t' read -r name status conclusion; do
     [ -z "$name" ] && continue
     is_ignored_job "$name" && continue
-    seen_checks["${name,,}"]=1
     
     case "$status" in
       COMPLETED|SUCCESS)
         case "$conclusion" in
-          FAILURE|TIMED_OUT|CANCELLED|ACTION_REQUIRED)
-            failed_jobs="${failed_jobs}${name} (${conclusion}), "
-            ;;
-          *) passed=$((passed + 1)) ;;
+          FAILURE|TIMED_OUT|CANCELLED|ACTION_REQUIRED) record_state "$name" failed ;;
+          *) record_state "$name" passed ;;
         esac
         ;;
       PENDING|QUEUED|IN_PROGRESS|WAITING|REQUESTED|"")
-        pending=$((pending + 1))
-        pending_jobs="${pending_jobs}${name}, "
+        record_state "$name" pending
         ;;
     esac
   done < <(echo "$rollup" | jq -r '.statusCheckRollup[] | select(.name != null or .context != null) | "\(.name // .context)\t\(.status // .state)\t\(.conclusion // "")"')
@@ -83,21 +97,16 @@ get_ci_status() {
     while IFS=$'\t' read -r name status conclusion; do
       [ -z "$name" ] && continue
       is_ignored_job "$name" && continue
-      [ -n "${seen_checks["${name,,}"]+x}" ] && continue
-      seen_checks["${name,,}"]=1
       
       case "$status" in
         COMPLETED|SUCCESS)
           case "$conclusion" in
-            FAILURE|TIMED_OUT|CANCELLED|ACTION_REQUIRED)
-              failed_jobs="${failed_jobs}${name} (${conclusion}), "
-              ;;
-            *) passed=$((passed + 1)) ;;
+            FAILURE|TIMED_OUT|CANCELLED|ACTION_REQUIRED) record_state "$name" failed ;;
+            *) record_state "$name" passed ;;
           esac
           ;;
         PENDING|QUEUED|IN_PROGRESS|WAITING|REQUESTED|"")
-          pending=$((pending + 1))
-          pending_jobs="${pending_jobs}${name}, "
+          record_state "$name" pending
           ;;
       esac
     done < <(gh api "repos/${repo}/commits/${sha}/check-runs" 2>/dev/null | jq -r '.check_runs[] | "\(.name)\t\(.status // "")\t\(.conclusion // "")"' || true)
@@ -105,23 +114,36 @@ get_ci_status() {
     while IFS=$'\t' read -r name status; do
       [ -z "$name" ] && continue
       is_ignored_job "$name" && continue
-      [ -n "${seen_checks["${name,,}"]+x}" ] && continue
-      seen_checks["${name,,}"]=1
       
       case "$status" in
-        success)
-          passed=$((passed + 1))
-          ;;
-        failure|error)
-          failed_jobs="${failed_jobs}${name} (FAILURE), "
-          ;;
-        pending)
-          pending=$((pending + 1))
-          pending_jobs="${pending_jobs}${name}, "
-          ;;
+        success) record_state "$name" passed ;;
+        failure|error) record_state "$name" failed ;;
+        pending) record_state "$name" pending ;;
       esac
     done < <(gh api "repos/${repo}/commits/${sha}/status" 2>/dev/null | jq -r '.statuses[] | "\(.context)\t\(.state)"' || true)
   fi
+  
+  while IFS=$'\t' read -r name bucket; do
+    [ -z "$name" ] && continue
+    is_ignored_job "$name" && continue
+    
+    case "$bucket" in
+      pass) record_state "$name" passed ;;
+      fail|cancel) record_state "$name" failed ;;
+      pending) record_state "$name" pending ;;
+    esac
+  done < <((gh pr checks "$pr" --repo "$repo" --json name,bucket 2>/dev/null || true) | jq -r '.[] | "\(.name)\t\(.bucket // "")"')
+  
+  for key in "${!check_state[@]}"; do
+    case "${check_state[$key]}" in
+      2) failed_jobs="${failed_jobs}${check_name[$key]} (FAILURE), " ;;
+      1)
+        pending_jobs="${pending_jobs}${check_name[$key]}, "
+        pending=$((pending + 1))
+        ;;
+      0) passed=$((passed + 1)) ;;
+    esac
+  done
   
   [ -n "$failed_jobs" ] && echo "failed|$passed|$pending|${failed_jobs%, }|${pending_jobs%, }" && return
   [ "$pending" -eq 0 ] && echo "passed|$passed|0||" && return
@@ -170,7 +192,7 @@ wait_for_all() {
     IFS='|' read -r running requested running_names <<< "$(get_ai_review_status "$repo" "$pr")"
     last_requested_bots="$requested"
     
-    if { [ "$ci_result" = "passed" ] || [ "$ci_result" = "none" ]; } && [ "$running" -eq 0 ] && [ "$requested" -eq 0 ]; then
+    if [ "$ci_result" = "passed" ] && [ "$running" -eq 0 ] && [ "$requested" -eq 0 ]; then
       log "[OK] Ready to fetch comments"
       return 0
     fi
