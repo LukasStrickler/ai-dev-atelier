@@ -66,23 +66,21 @@ Orchestrator (You)
 
 ## Quick Start
 
-> **⚠️ WAIT BY DEFAULT**: The script waits for CI and AI reviews (max 10 min) to ensure all bot comments are available before clustering. **DO NOT use `--skip-wait` unless the user explicitly requests it** or CI is confirmed to have already passed. Skip reasons are logged for audit.
+> **⚠️ WAIT BY DEFAULT**: The script waits for CI and AI reviews (max 10 min total) before clustering. **DO NOT use `--skip-wait` unless explicitly requested** or CI confirmed passed.
 
-> **⏱️ TIMEOUT**: The script can wait up to 10 minutes. OpenCode's default bash timeout is 2 minutes. **You MUST pass `timeout: 660000` (11 min)** when calling the bash tool to prevent premature termination.
+> **⏱️ TIMEOUT**: OpenCode default is 2 min. **Pass `timeout: 660000` (11 min)** to prevent early termination. On timeout, script outputs commands to check status - follow those to decide next steps.
 
 ```typescript
-// 1. Fetch and cluster all comments (waits for CI/AI reviews by default)
-// CRITICAL: Set timeout to 660000ms (11 min) to accommodate the 10-min wait
+// 1. Fetch and cluster comments (waits for CI + AI reviews)
 bash({
   command: "bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER>",
-  timeout: 660000,  // 11 minutes - REQUIRED for wait mode
+  timeout: 660000,
   description: "Fetch and cluster PR comments"
 })
 
-// ONLY use --skip-wait when explicitly asked or CI confirmed passed
-// Reason is REQUIRED and logged for audit trail
+// Skip wait only when explicitly asked
 bash({
-  command: "bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER> --skip-wait \"user requested immediate fetch\"",
+  command: "bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER> --skip-wait \"<reason>\"",
   description: "Fetch PR comments (skip wait)"
 })
 ```

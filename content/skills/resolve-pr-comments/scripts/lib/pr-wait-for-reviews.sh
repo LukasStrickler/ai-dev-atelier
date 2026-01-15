@@ -1,14 +1,7 @@
 #!/bin/bash
-# Wait for PR CI and AI reviews to complete before fetching comments
-# Usage: Invoked by pr-resolver.sh, not meant to be called directly
-#
-# Waits for:
-# 1. CI jobs to complete (excluding filtered jobs from ci-job-filters.txt)
-# 2. AI review bots (CodeRabbit, Copilot, etc.) to post reviews
-#
-# Returns 0 when ready, 1 on CI failure, 2 on timeout
-# Timeout: 10 minutes total (reports pending jobs on timeout)
-# 
+# Wait for PR CI and AI reviews before fetching comments
+# Returns: 0=ready, 1=CI failed, 2=timeout (with actionable guidance)
+# Timeout: 10 minutes TOTAL for both CI and AI review phases
 
 set -euo pipefail
 
@@ -17,203 +10,172 @@ SKILL_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 CI_FILTERS_FILE="${SKILL_DIR}/ci-job-filters.txt"
 
 MAX_WAIT_SECONDS=600
+POLL_INTERVAL=15
+LOG_INTERVAL=60
 START_TIME=$(date +%s)
+LAST_LOG_TIME=0
 
-log_info() { echo "[WAIT] $1" >&2; }
-log_success() { echo "✓ $1" >&2; }
-log_error() { echo "✗ $1" >&2; }
-log_warn() { echo "⚠ $1" >&2; }
-
-time_remaining() {
-  local elapsed=$(($(date +%s) - START_TIME))
-  echo $((MAX_WAIT_SECONDS - elapsed))
+log() { echo "$1" >&2; }
+log_progress() {
+  local now elapsed
+  now=$(date +%s)
+  elapsed=$((now - LAST_LOG_TIME))
+  if [ "$elapsed" -ge "$LOG_INTERVAL" ] || [ "$LAST_LOG_TIME" -eq 0 ]; then
+    LAST_LOG_TIME=$now
+    log "[WAIT] $1"
+  fi
 }
 
-is_timed_out() {
-  [ "$(time_remaining)" -le 0 ]
-}
+time_remaining() { echo $((MAX_WAIT_SECONDS - $(date +%s) + START_TIME)); }
+is_timed_out() { [ "$(time_remaining)" -le 0 ]; }
 
 load_ci_filters() {
-  if [ ! -f "$CI_FILTERS_FILE" ]; then
-    echo ""
-    return 0
-  fi
-  grep -v '^[[:space:]]*#' "$CI_FILTERS_FILE" | grep -v '^[[:space:]]*$' || true
+  [ ! -f "$CI_FILTERS_FILE" ] && return 0
+  grep -v '^[[:space:]]*#' "$CI_FILTERS_FILE" 2>/dev/null | grep -v '^[[:space:]]*$' || true
 }
 
 is_ignored_job() {
-  local job_name="$1"
-  local job_name_lower
-  job_name_lower=$(echo "$job_name" | tr '[:upper:]' '[:lower:]')
-  local filters
+  local job_name_lower filters
+  job_name_lower=$(echo "$1" | tr '[:upper:]' '[:lower:]')
   filters=$(load_ci_filters)
-
   [ -z "$filters" ] && return 1
-
+  
   while IFS= read -r pattern; do
     [ -z "$pattern" ] && continue
-    local pattern_lower
-    pattern_lower=$(echo "$pattern" | tr '[:upper:]' '[:lower:]')
     local regex
-    regex=$(printf '%s' "$pattern_lower" | sed 's/\*/.*/g')
-    if [[ "$job_name_lower" =~ ^${regex}$ ]]; then
-      return 0
-    fi
+    regex=$(echo "$pattern" | tr '[:upper:]' '[:lower:]' | sed 's/\*/.*/g')
+    [[ "$job_name_lower" =~ ^${regex}$ ]] && return 0
   done <<< "$filters"
-
   return 1
 }
 
-wait_for_ci() {
-  local repo="$1"
-  local pr_number="$2"
-  local poll_interval=15
-
-  log_info "Waiting for CI checks on PR #${pr_number} (max $(time_remaining)s)..."
-
-  local ci_complete=0
-
-  while ! is_timed_out; do
-    local rollup_output
-    rollup_output=$(gh pr view "$pr_number" --repo "$repo" --json statusCheckRollup 2>/dev/null || echo "")
-
-    if [ -z "$rollup_output" ]; then
-      log_info "No checks found yet ($(time_remaining)s remaining)"
-      sleep "$poll_interval"
-      continue
-    fi
-
-    local pending=0
-    local failed=""
-    local passed=0
-    local pending_jobs=""
-
-    while IFS=$'\t' read -r name status conclusion; do
-      [ -z "$name" ] && continue
-
-      if is_ignored_job "$name"; then
-        continue
-      fi
-
-      case "$status" in
-        COMPLETED|SUCCESS)
-          case "$conclusion" in
-            failure|timed_out|cancelled|action_required)
-              failed="${failed}  - ${name} (${conclusion})\n"
-              ;;
-            *)
-              passed=$((passed + 1))
-              ;;
-          esac
-          ;;
-        PENDING|QUEUED|IN_PROGRESS|WAITING|REQUESTED)
-          pending=$((pending + 1))
-          pending_jobs="${pending_jobs}  - ${name} (${status})\n"
-          ;;
-      esac
-    done < <(echo "$rollup_output" | jq -r '
-      .statusCheckRollup[] | 
-      select(.name != null or .context != null) | 
-      "\(.name // .context)\t\(.status // .state)\t\(.conclusion // "")"
-    ')
-
-    if [ -n "$failed" ]; then
-      log_error "CI failed:\n${failed}"
-      return 1
-    fi
-
-    if [ "$pending" -eq 0 ]; then
-      log_success "All CI checks passed (${passed} check(s))"
-      ci_complete=1
-      break
-    fi
-
-    log_info "Waiting for ${pending} check(s) (${passed} passed) ($(time_remaining)s remaining)"
-    sleep "$poll_interval"
-  done
-
-  if [ "$ci_complete" -eq 0 ]; then
-    log_warn "CI timeout after ${MAX_WAIT_SECONDS}s"
-    if [ -n "$pending_jobs" ]; then
-      log_warn "Still pending:\n${pending_jobs}"
-    fi
-    log_warn "Agent should alert user: CI checks did not complete in time"
-    return 2
-  fi
-
-  return 0
+get_ci_status() {
+  local repo="$1" pr="$2"
+  local rollup pending=0 passed=0 failed_jobs="" pending_jobs=""
+  
+  rollup=$(gh pr view "$pr" --repo "$repo" --json statusCheckRollup 2>/dev/null || echo "")
+  [ -z "$rollup" ] && echo "none|0|0||" && return
+  
+  while IFS=$'\t' read -r name status conclusion; do
+    [ -z "$name" ] && continue
+    is_ignored_job "$name" && continue
+    
+    case "$status" in
+      COMPLETED|SUCCESS)
+        case "$conclusion" in
+          failure|timed_out|cancelled|action_required)
+            failed_jobs="${failed_jobs}${name} (${conclusion}), "
+            ;;
+          *) ((passed++)) ;;
+        esac
+        ;;
+      PENDING|QUEUED|IN_PROGRESS|WAITING|REQUESTED)
+        ((pending++))
+        pending_jobs="${pending_jobs}${name}, "
+        ;;
+    esac
+  done < <(echo "$rollup" | jq -r '.statusCheckRollup[] | select(.name != null or .context != null) | "\(.name // .context)\t\(.status // .state)\t\(.conclusion // "")"')
+  
+  [ -n "$failed_jobs" ] && echo "failed|$passed|$pending|${failed_jobs%, }|${pending_jobs%, }" && return
+  [ "$pending" -eq 0 ] && echo "passed|$passed|0||" && return
+  echo "pending|$passed|$pending||${pending_jobs%, }"
 }
 
-wait_for_ai_reviews() {
-  local repo="$1"
-  local pr_number="$2"
-  local max_wait=600
-  local poll_interval=15
-  local start_time=$(date +%s)
+get_ai_review_status() {
+  local repo="$1" pr="$2"
+  local sha running=0 requested=0 running_names=""
+  
+  sha=$(gh pr view "$pr" --repo "$repo" --json headRefOid -q '.headRefOid' 2>/dev/null || echo "")
+  [ -z "$sha" ] && echo "0|0|" && return
+  
+  while IFS=$'\t' read -r name status; do
+    [ -z "$name" ] && continue
+    ((running++))
+    running_names="${running_names}${name}, "
+  done < <(gh api "repos/${repo}/actions/runs?head_sha=${sha}" 2>/dev/null | jq -r '.workflow_runs[] | select(.status != "completed") | "\(.name)\t\(.status)"' || true)
+  
+  requested=$(gh pr view "$pr" --repo "$repo" --json reviewRequests -q '[.reviewRequests[] | select(.requestedReviewer.login | test("copilot|coderabbit|cubic|gemini"; "i"))] | length' 2>/dev/null || echo "0")
+  
+  echo "${running}|${requested}|${running_names%, }"
+}
 
-  log_info "Checking for running AI bot reviews (max ${max_wait}s)..."
-
-  while true; do
-    local elapsed=$(($(date +%s) - start_time))
-    [ "$elapsed" -ge "$max_wait" ] && break
-
-    local sha=""
-    local running_reviews=0
-    local pending_reviews=0
-
-    sha=$(gh pr view "$pr_number" --repo "$repo" --json headRefOid -q '.headRefOid' 2>/dev/null || echo "")
-
-    if [ -n "$sha" ]; then
-      running_reviews=$(gh api "repos/${repo}/actions/runs?head_sha=${sha}" 2>/dev/null | jq -r '
-        [.workflow_runs[] | select(.status != "completed") | .name] | length
-      ' || echo "0")
-
-      pending_reviews=$(gh pr view "$pr_number" --repo "$repo" --json reviewRequests -q '
-        [.reviewRequests[] | select(.requestedReviewer.login | test("copilot|coderabbit|cubic|gemini"; "i"))] | length
-      ' 2>/dev/null || echo "0")
+wait_for_all() {
+  local repo="$1" pr="$2"
+  local phase="ci" ci_done=false last_pending_jobs=""
+  
+  log "[WAIT] PR #${pr}: Waiting for CI + AI reviews (max 10 min)..."
+  
+  while ! is_timed_out; do
+    if [ "$phase" = "ci" ]; then
+      local ci_result pending passed pending_jobs failed_jobs
+      IFS='|' read -r ci_result passed pending failed_jobs pending_jobs <<< "$(get_ci_status "$repo" "$pr")"
+      
+      case "$ci_result" in
+        none)
+          log_progress "No CI checks configured"
+          phase="ai"
+          continue
+          ;;
+        failed)
+          log "✗ CI failed: $failed_jobs"
+          return 1
+          ;;
+        passed)
+          log "✓ CI passed ($passed checks)"
+          phase="ai"
+          ci_done=true
+          continue
+          ;;
+        pending)
+          last_pending_jobs="$pending_jobs"
+          log_progress "CI: $pending pending, $passed passed ($(time_remaining)s left)"
+          ;;
+      esac
+    else
+      local running requested running_names
+      IFS='|' read -r running requested running_names <<< "$(get_ai_review_status "$repo" "$pr")"
+      
+      if [ "$running" -eq 0 ] && [ "$requested" -eq 0 ]; then
+        log "✓ Ready to fetch comments"
+        return 0
+      fi
+      log_progress "AI reviews: $running running, $requested requested ($(time_remaining)s left)"
     fi
-
-    if [ "$running_reviews" -gt 0 ] || [ "$pending_reviews" -gt 0 ]; then
-      local remaining=$((max_wait - elapsed))
-      log_info "AI bot reviews in progress: ${running_reviews} running, ${pending_reviews} requested (${remaining}s remaining)"
-      sleep "$poll_interval"
-      continue
-    fi
-
-    log_success "No running AI bot reviews detected"
-    return 0
+    
+    sleep "$POLL_INTERVAL"
   done
-
-  log_warn "AI review wait timeout after ${max_wait}s - proceeding"
-  return 0
+  
+  log ""
+  log "⚠ TIMEOUT after 10 minutes"
+  log ""
+  log "ACTION REQUIRED: Check what's still running and decide:"
+  log "  gh pr checks $pr --repo $repo"
+  log "  gh api repos/$repo/actions/runs?head_sha=HEAD --jq '.workflow_runs[] | select(.status != \"completed\") | .name'"
+  log ""
+  log "Then either:"
+  log "  1. Wait longer manually, OR"
+  log "  2. Re-run with --skip-wait \"<reason>\" if reviews aren't needed"
+  [ -n "$last_pending_jobs" ] && log "" && log "Last seen pending: $last_pending_jobs"
+  return 2
 }
 
 main() {
-  command -v jq &>/dev/null || { log_error "jq required"; exit 1; }
-  command -v gh &>/dev/null || { log_error "gh required"; exit 1; }
+  command -v jq &>/dev/null || { log "✗ jq required"; exit 1; }
+  command -v gh &>/dev/null || { log "✗ gh required"; exit 1; }
 
-  local pr_number=""
-  local target_repo=""
+  local pr_number="" target_repo=""
 
   while [[ $# -gt 0 ]]; do
     case $1 in
       --repo)
-        [[ $# -lt 2 || "$2" == -* ]] && { log_error "--repo requires value"; exit 1; }
-        target_repo="$2"
-        shift 2
-        ;;
-      -*)
-        log_error "Unknown option: $1"
-        exit 1
-        ;;
-      *)
-        [ -z "$pr_number" ] && pr_number="$1"
-        shift
-        ;;
+        [[ $# -lt 2 || "$2" == -* ]] && { log "✗ --repo requires value"; exit 1; }
+        target_repo="$2"; shift 2 ;;
+      -*) log "✗ Unknown option: $1"; exit 1 ;;
+      *) [ -z "$pr_number" ] && pr_number="$1"; shift ;;
     esac
   done
 
-  [ -z "$pr_number" ] && { log_error "PR number required"; exit 1; }
+  [ -z "$pr_number" ] && { log "✗ PR number required"; exit 1; }
 
   local owner_repo="$target_repo"
   if [ -z "$owner_repo" ]; then
@@ -225,22 +187,9 @@ main() {
     fi
   fi
 
-  [ -z "$owner_repo" ] && { log_error "Could not determine repository"; exit 1; }
+  [ -z "$owner_repo" ] && { log "✗ Could not determine repository"; exit 1; }
 
-  local ci_result=0
-  wait_for_ci "$owner_repo" "$pr_number" || ci_result=$?
-
-  case "$ci_result" in
-    0) ;;
-    1) log_error "CI failed - fix issues before fetching comments"; exit 1 ;;
-    2) log_warn "CI timeout - alert user recommended"; exit 2 ;;
-    *) log_error "Unexpected error"; exit 1 ;;
-  esac
-
-  wait_for_ai_reviews "$owner_repo" "$pr_number"
-
-  log_success "Ready to fetch PR comments"
-  exit 0
+  wait_for_all "$owner_repo" "$pr_number"
 }
 
 main "$@"

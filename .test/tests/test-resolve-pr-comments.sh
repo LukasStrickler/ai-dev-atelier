@@ -653,7 +653,36 @@ test_skill_md_timeout() {
 
 test_skill_md_timeout "timeout.*660000" "SKILL.md documents timeout: 660000"
 test_skill_md_timeout "11 min\|11 minute" "SKILL.md mentions 11 minute timeout"
-test_skill_md_timeout "REQUIRED\|MUST" "SKILL.md emphasizes timeout is required"
+test_skill_md_timeout "10 min.*total\|total.*10 min" "SKILL.md mentions 10 min total wait"
+
+echo ""
+echo "--- Wait script timeout message tests ---"
+echo ""
+
+test_timeout_message_content() {
+  local script_content
+  script_content=$(cat "$WAIT_SCRIPT")
+  
+  if echo "$script_content" | grep -q "gh pr checks"; then
+    pass "Timeout message includes 'gh pr checks' command"
+  else
+    fail "Timeout message should include 'gh pr checks' command"
+  fi
+  
+  if echo "$script_content" | grep -q "gh api.*actions/runs"; then
+    pass "Timeout message includes 'gh api' actions command"
+  else
+    fail "Timeout message should include 'gh api' actions command"
+  fi
+  
+  if echo "$script_content" | grep -q "skip-wait"; then
+    pass "Timeout message mentions --skip-wait option"
+  else
+    fail "Timeout message should mention --skip-wait option"
+  fi
+}
+
+test_timeout_message_content
 
 echo ""
 echo "--- Wait script argument parsing ---"
