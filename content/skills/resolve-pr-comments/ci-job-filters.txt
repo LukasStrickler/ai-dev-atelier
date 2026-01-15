@@ -2,6 +2,16 @@
 # Jobs matching these patterns will be IGNORED when waiting for CI
 # Use wildcards (*) for pattern matching
 
+# AI Bot Reviews (handled separately, don't block CI on these)
+*cubic*
+*coderabbit*
+*copilot*
+*gemini*
+*openai*
+*anthropic*
+*llm*
+*ai-review*
+
 # Preview deployments (don't block on these)
 *-preview-*
 *-preview
