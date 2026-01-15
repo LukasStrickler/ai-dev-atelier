@@ -73,6 +73,25 @@ Orchestrator (You)
 - AI review wait: 10 minutes (600s) - ensures slow bots have time to complete
 - Both wait periods use 15s polling interval with progress updates
 
+**⚠️ IMPORTANT: Overriding OpenCode's 5-minute default timeout**
+
+OpenCode's bash command timeout is 5 minutes (300,000ms) by default. If you need commands to run longer than 5 minutes, add this to your shell session:
+
+```bash
+# Set longer timeout for current session (affects all subsequent bash commands)
+export OPCODE_BASH_TIMEOUT=600000  # 10 minutes in milliseconds
+
+# Or set in your shell config permanently
+echo 'export OPCODE_BASH_TIMEOUT=600000' >> ~/.bashrc
+source ~/.bashrc
+```
+
+**Why this matters:**
+- Without this override, any bash command that runs > 5 min will be killed mid-execution
+- The wait loop is designed to run for 10 minutes per phase (CI + AI reviews = up to 20 min total)
+- Setting `OPCODE_BASH_TIMEOUT=600000` (10 min) ensures the script won't crash while waiting
+- You can set even longer values for very slow CI or extremely slow bot reviews
+
 ```bash
 #1. Fetch and cluster all comments (waits for CI/AI reviews by default)
 bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER>
