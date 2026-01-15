@@ -499,6 +499,188 @@ test_hook_blocks_upstream "gh api repos/other-owner/other-repo/pulls/123/comment
 rm -rf "$MOCK_GH_FORK2"
 
 #==============================================================================
+# pr-wait-for-reviews.sh tests
+#==============================================================================
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Testing: pr-wait-for-reviews.sh (wait/timeout functionality)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+WAIT_SCRIPT="$REPO_ROOT/content/skills/resolve-pr-comments/scripts/lib/pr-wait-for-reviews.sh"
+CI_FILTERS="$REPO_ROOT/content/skills/resolve-pr-comments/ci-job-filters.txt"
+
+echo ""
+echo "--- CI job filters file existence ---"
+echo ""
+
+if [ -f "$CI_FILTERS" ]; then
+  pass "ci-job-filters.txt exists"
+else
+  fail "ci-job-filters.txt should exist"
+fi
+
+echo ""
+echo "--- CI filter patterns include AI bots ---"
+echo ""
+
+test_filter_exists() {
+  local pattern="$1"
+  local description="$2"
+  
+  if grep -qi "$pattern" "$CI_FILTERS" 2>/dev/null; then
+    pass "$description"
+  else
+    fail "$description (pattern not found: $pattern)"
+  fi
+}
+
+test_filter_exists "coderabbit" "Filter includes CodeRabbit"
+test_filter_exists "copilot" "Filter includes Copilot"
+test_filter_exists "cubic" "Filter includes Cubic"
+test_filter_exists "gemini" "Filter includes Gemini"
+
+echo ""
+echo "--- is_ignored_job function tests ---"
+echo ""
+
+test_ignored_job() {
+  local job_name="$1"
+  local should_ignore="$2"
+  local description="$3"
+  
+  local result=0
+  bash -c "
+    source '$WAIT_SCRIPT' 2>/dev/null
+    is_ignored_job '$job_name' && exit 0 || exit 1
+  " 2>/dev/null || result=$?
+  
+  if [ "$should_ignore" = "yes" ] && [ "$result" -eq 0 ]; then
+    pass "$description"
+  elif [ "$should_ignore" = "no" ] && [ "$result" -ne 0 ]; then
+    pass "$description"
+  else
+    fail "$description (expected ignore=$should_ignore, got result=$result)"
+  fi
+}
+
+# Create temp test script with the function
+TEMP_TEST=$(mktemp)
+cat > "$TEMP_TEST" << 'TESTEOF'
+#!/bin/bash
+set -euo pipefail
+TESTEOF
+sed -n '/^load_ci_filters()/,/^wait_for_ci()/p' "$WAIT_SCRIPT" | head -n -1 >> "$TEMP_TEST"
+echo "" >> "$TEMP_TEST"
+echo "CI_FILTERS_FILE=\"$CI_FILTERS\"" >> "$TEMP_TEST"
+echo 'is_ignored_job "$1"' >> "$TEMP_TEST"
+chmod +x "$TEMP_TEST"
+
+test_ignored_with_script() {
+  local job_name="$1"
+  local should_ignore="$2"
+  local description="$3"
+  
+  local result=0
+  bash "$TEMP_TEST" "$job_name" 2>/dev/null || result=$?
+  
+  if [ "$should_ignore" = "yes" ] && [ "$result" -eq 0 ]; then
+    pass "$description"
+  elif [ "$should_ignore" = "no" ] && [ "$result" -ne 0 ]; then
+    pass "$description"
+  else
+    fail "$description (expected ignore=$should_ignore, got result=$result)"
+  fi
+}
+
+test_ignored_with_script "CodeRabbit Review" "yes" "Ignores: CodeRabbit Review"
+test_ignored_with_script "coderabbit-lint" "yes" "Ignores: coderabbit-lint (lowercase)"
+test_ignored_with_script "Copilot code review" "yes" "Ignores: Copilot code review"
+test_ignored_with_script "cubic-review" "yes" "Ignores: cubic-review"
+test_ignored_with_script "gemini-review" "yes" "Ignores: gemini-review"
+test_ignored_with_script "build" "no" "Does not ignore: build"
+test_ignored_with_script "test" "no" "Does not ignore: test"
+test_ignored_with_script "lint" "no" "Does not ignore: lint"
+test_ignored_with_script "deploy" "no" "Does not ignore: deploy"
+
+rm -f "$TEMP_TEST"
+
+echo ""
+echo "--- --skip-wait parameter tests ---"
+echo ""
+
+test_skip_wait_requires_reason() {
+  local output
+  output=$(bash "$REPO_ROOT/content/skills/resolve-pr-comments/scripts/pr-resolver.sh" 123 --skip-wait 2>&1 || true)
+  
+  if echo "$output" | grep -qi "requires.*reason\|reason.*required"; then
+    pass "--skip-wait requires a reason"
+  else
+    fail "--skip-wait should require a reason"
+  fi
+}
+
+test_skip_wait_logs_reason() {
+  local output
+  output=$(bash "$REPO_ROOT/content/skills/resolve-pr-comments/scripts/pr-resolver.sh" 99999 --skip-wait "test reason" 2>&1 || true)
+  
+  if echo "$output" | grep -q "test reason"; then
+    pass "--skip-wait logs the provided reason"
+  else
+    fail "--skip-wait should log the provided reason"
+  fi
+}
+
+test_skip_wait_requires_reason
+test_skip_wait_logs_reason
+
+echo ""
+echo "--- SKILL.md timeout documentation ---"
+echo ""
+
+SKILL_MD="$REPO_ROOT/content/skills/resolve-pr-comments/SKILL.md"
+
+test_skill_md_timeout() {
+  local pattern="$1"
+  local description="$2"
+  
+  if grep -q "$pattern" "$SKILL_MD" 2>/dev/null; then
+    pass "$description"
+  else
+    fail "$description (pattern not found)"
+  fi
+}
+
+test_skill_md_timeout "timeout.*660000" "SKILL.md documents timeout: 660000"
+test_skill_md_timeout "11 min\|11 minute" "SKILL.md mentions 11 minute timeout"
+test_skill_md_timeout "REQUIRED\|MUST" "SKILL.md emphasizes timeout is required"
+
+echo ""
+echo "--- Wait script argument parsing ---"
+echo ""
+
+test_wait_script_arg() {
+  local args="$1"
+  local expected_exit="$2"
+  local description="$3"
+  
+  local actual_exit=0
+  # shellcheck disable=SC2086 # Intentional word splitting
+  bash "$WAIT_SCRIPT" $args >/dev/null 2>&1 || actual_exit=$?
+  
+  # Exit codes: 0=success, 1=CI fail/error, 2=timeout
+  if [ "$actual_exit" -eq "$expected_exit" ]; then
+    pass "$description"
+  else
+    fail "$description (expected exit $expected_exit, got $actual_exit)"
+  fi
+}
+
+test_wait_script_arg "" 1 "Wait script errors without PR number"
+test_wait_script_arg "--repo" 1 "Wait script errors with --repo but no value"
+test_wait_script_arg "--unknown-flag" 1 "Wait script errors with unknown flag"
+
+#==============================================================================
 # Summary
 #==============================================================================
 

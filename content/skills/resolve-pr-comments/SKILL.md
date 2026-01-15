@@ -68,43 +68,29 @@ Orchestrator (You)
 
 > **⚠️ WAIT BY DEFAULT**: The script waits for CI and AI reviews (max 10 min) to ensure all bot comments are available before clustering. **DO NOT use `--skip-wait` unless the user explicitly requests it** or CI is confirmed to have already passed. Skip reasons are logged for audit.
 
-**Timeouts**:
-- CI wait: 10 minutes (600s) - exceeds OpenCode SDK default (5 min) for long-running jobs
-- AI review wait: 10 minutes (600s) - ensures slow bots have time to complete
-- Both wait periods use 15s polling interval with progress updates
+> **⏱️ TIMEOUT**: The script can wait up to 10 minutes. OpenCode's default bash timeout is 2 minutes. **You MUST pass `timeout: 660000` (11 min)** when calling the bash tool to prevent premature termination.
 
-**⚠️ IMPORTANT: Overriding OpenCode's 5-minute default timeout**
+```typescript
+// 1. Fetch and cluster all comments (waits for CI/AI reviews by default)
+// CRITICAL: Set timeout to 660000ms (11 min) to accommodate the 10-min wait
+bash({
+  command: "bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER>",
+  timeout: 660000,  // 11 minutes - REQUIRED for wait mode
+  description: "Fetch and cluster PR comments"
+})
 
-OpenCode's bash command timeout is 5 minutes (300,000ms) by default. If you need commands to run longer than 5 minutes, add this to your shell session:
-
-```bash
-# Set longer timeout for current session (affects all subsequent bash commands)
-export OPCODE_BASH_TIMEOUT=600000  # 10 minutes in milliseconds
-
-# Or set in your shell config permanently
-echo 'export OPCODE_BASH_TIMEOUT=600000' >> ~/.bashrc
-source ~/.bashrc
+// ONLY use --skip-wait when explicitly asked or CI confirmed passed
+// Reason is REQUIRED and logged for audit trail
+bash({
+  command: "bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER> --skip-wait \"user requested immediate fetch\"",
+  description: "Fetch PR comments (skip wait)"
+})
 ```
 
-**Why this matters:**
-- Without this override, any bash command that runs > 5 min will be killed mid-execution
-- The wait loop is designed to run for 10 minutes per phase (CI + AI reviews = up to 20 min total)
-- Setting `OPCODE_BASH_TIMEOUT=600000` (10 min) ensures the script won't crash while waiting
-- You can set even longer values for very slow CI or extremely slow bot reviews
-
-```bash
-#1. Fetch and cluster all comments (waits for CI/AI reviews by default)
-bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER>
-
-# ONLY use --skip-wait when explicitly asked or CI confirmed passed
-# Reason is REQUIRED and logged for audit trail
-bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER> --skip-wait "user requested immediate fetch"
-
-# Output: .ada/data/pr-resolver/pr-<N>/
-#   ├── data.json       (full data, all clusters)
-#   ├── actionable.json (token-efficient, actionable clusters only)
-#   └── clusters/       (markdown files for subagent consumption)
-```
+**Output**: `.ada/data/pr-resolver/pr-<N>/`
+- `data.json` — Full data, all clusters
+- `actionable.json` — Token-efficient, actionable clusters only
+- `clusters/` — Markdown files for subagent consumption
 
 
 ```typescript
