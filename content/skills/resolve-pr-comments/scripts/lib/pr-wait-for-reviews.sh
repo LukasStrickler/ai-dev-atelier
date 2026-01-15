@@ -1,5 +1,5 @@
 #!/bin/bash
-# Wait for PR CI and AI reviews before fetching comments
+# Wait for PR CI and  AI reviews before fetching comments
 # Returns: 0=ready, 1=CI failed, 2=timeout (with actionable guidance)
 # Timeout: 10 minutes TOTAL for both CI and AI review phases
 
