@@ -94,50 +94,44 @@ get_ai_review_status() {
     running_names="${running_names}${name}, "
   done < <(gh api "repos/${repo}/actions/runs?head_sha=${sha}" 2>/dev/null | jq -r '.workflow_runs[] | select(.status != "completed") | "\(.name)\t\(.status)"' || true)
   
-  requested=$(gh pr view "$pr" --repo "$repo" --json reviewRequests -q '[.reviewRequests[] | select(.requestedReviewer.login | test("copilot|coderabbit|cubic|gemini"; "i"))] | length' 2>/dev/null || echo "0")
+  requested=$(gh api "repos/${repo}/pulls/${pr}/requested_reviewers" 2>/dev/null | jq -r '[.users[] | select(.type == "Bot") | .login] | length' || echo "0")
   
   echo "${running}|${requested}|${running_names%, }"
 }
 
 wait_for_all() {
   local repo="$1" pr="$2"
-  local phase="ci" last_pending_jobs=""
+  local last_pending_jobs="" last_requested_bots=0
   
   log "[WAIT] PR #${pr}: Waiting for CI + AI reviews (max 10 min)"
   
   while ! is_timed_out; do
-    if [ "$phase" = "ci" ]; then
-      local ci_result pending passed pending_jobs failed_jobs
-      IFS='|' read -r ci_result passed pending failed_jobs pending_jobs <<< "$(get_ci_status "$repo" "$pr")"
-      
-      case "$ci_result" in
-        none)
-          phase="ai"
-          continue
-          ;;
-        failed)
-          log "[FAIL] CI failed: $failed_jobs"
-          return 1
-          ;;
-        passed)
-          log "[OK] CI passed ($passed checks)"
-          phase="ai"
-          continue
-          ;;
-        pending)
-          last_pending_jobs="$pending_jobs"
-          log_progress "CI: $pending pending, $passed passed"
-          ;;
-      esac
+    local ci_result pending passed pending_jobs failed_jobs
+    IFS='|' read -r ci_result passed pending failed_jobs pending_jobs <<< "$(get_ci_status "$repo" "$pr")"
+    
+    case "$ci_result" in
+      failed)
+        log "[FAIL] CI failed: $failed_jobs"
+        return 1
+        ;;
+      pending)
+        last_pending_jobs="$pending_jobs"
+        ;;
+    esac
+    
+    local running requested running_names
+    IFS='|' read -r running requested running_names <<< "$(get_ai_review_status "$repo" "$pr")"
+    last_requested_bots="$requested"
+    
+    if { [ "$ci_result" = "passed" ] || [ "$ci_result" = "none" ]; } && [ "$running" -eq 0 ] && [ "$requested" -eq 0 ]; then
+      log "[OK] Ready to fetch comments"
+      return 0
+    fi
+    
+    if [ "$ci_result" = "passed" ]; then
+      log_progress "CI: 0 pending, $passed passed | Bots: $requested requested"
     else
-      local running requested running_names
-      IFS='|' read -r running requested running_names <<< "$(get_ai_review_status "$repo" "$pr")"
-      
-      if [ "$running" -eq 0 ] && [ "$requested" -eq 0 ]; then
-        log "[OK] Ready to fetch comments"
-        return 0
-      fi
-      log_progress "AI: $running running, $requested requested"
+      log_progress "CI: $pending pending, $passed passed | Bots: $requested requested"
     fi
     
     sleep "$POLL_INTERVAL"
@@ -149,6 +143,7 @@ wait_for_all() {
   log "Check status:  gh pr checks $pr --repo $repo"
   log "Then either:   wait longer, OR re-run with --skip-wait \"<reason>\""
   [ -n "$last_pending_jobs" ] && log "Last pending:  $last_pending_jobs"
+  [ "$last_requested_bots" -gt 0 ] && log "Pending bots:  $last_requested_bots"
   return 2
 }
 
