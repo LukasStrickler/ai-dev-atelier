@@ -101,12 +101,18 @@ if [ -n "$SKIP_WAIT" ]; then
   log_info "Skipping wait: $SKIP_WAIT"
 else
   WAIT_SCRIPT="${SCRIPT_DIR}/lib/pr-wait-for-reviews.sh"
-  if [ -f "$WAIT_SCRIPT" ]; then
-    log_info "Waiting for CI and AI reviews (use --skip-wait \"reason\" to skip)..."
-    if ! bash "$WAIT_SCRIPT" "$PR_NUMBER" --repo "$OWNER_REPO"; then
-      log_error "CI/review wait failed - fix CI issues or use --skip-wait \"reason\" to proceed anyway"
-      exit 1
-    fi
+  if command -v realpath &>/dev/null; then
+    WAIT_SCRIPT="$(realpath "$WAIT_SCRIPT" 2>/dev/null || echo "$WAIT_SCRIPT")"
+  fi
+  if [ ! -f "$WAIT_SCRIPT" ]; then
+    log_error "Wait script missing: $WAIT_SCRIPT"
+    exit 1
+  fi
+  log_info "Using wait script: $WAIT_SCRIPT"
+  log_info "Waiting for CI and AI reviews (use --skip-wait \"reason\" to skip)..."
+  if ! bash "$WAIT_SCRIPT" "$PR_NUMBER" --repo "$OWNER_REPO"; then
+    log_error "CI/review wait failed - fix CI issues or use --skip-wait \"reason\" to proceed anyway"
+    exit 1
   fi
 fi
 
