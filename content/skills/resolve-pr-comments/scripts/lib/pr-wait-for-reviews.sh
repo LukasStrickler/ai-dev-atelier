@@ -147,38 +147,44 @@ wait_for_ci() {
 wait_for_ai_reviews() {
   local repo="$1"
   local pr_number="$2"
-  local max_wait=30
+  local max_wait=600
+  local poll_interval=15
+  local start_time=$(date +%s)
 
-  log_info "Checking for AI bot reviews (max ${max_wait}s)..."
+  log_info "Checking for running AI bot reviews (max ${max_wait}s)..."
 
-  for i in $(seq 1 $((max_wait / 5))); do
-    local elapsed=$((i * 5))
+  while true; do
+    local elapsed=$(($(date +%s) - start_time))
+    [ "$elapsed" -ge "$max_wait" ] && break
 
-    local rollup_output
-    rollup_output=$(gh pr view "$pr_number" --repo "$repo" --json statusCheckRollup 2>/dev/null || echo "")
+    local sha=""
+    local running_reviews=0
+    local pending_reviews=0
 
-    if [ -n "$rollup_output" ]; then
-      local bot_reviews=0
-      while IFS= read -r name status; do
-        [ -z "$name" ] && continue
-        case "$name" in
-          *coderabbit*|*cubic*|*copilot*|*gemini*|*openai*|*anthropic*)
-            bot_reviews=$((bot_reviews + 1))
-            ;;
-        esac
-      done < <(echo "$rollup_output" | jq -r '.statusCheckRollup[] | "\(.name // .context)\t\(.status // .state)"')
+    sha=$(gh pr view "$pr_number" --repo "$repo" --json headRefOid -q '.headRefOid' 2>/dev/null || echo "")
 
-      if [ "$bot_reviews" -gt 0 ]; then
-        log_success "Found ${bot_reviews} AI bot review(s) already posted"
-        return 0
-      fi
+    if [ -n "$sha" ]; then
+      running_reviews=$(gh api "repos/${repo}/actions/runs?head_sha=${sha}" 2>/dev/null | jq -r '
+        [.workflow_runs[] | select(.status != "completed") | .name] | length
+      ' || echo "0")
+
+      pending_reviews=$(gh pr view "$pr_number" --repo "$repo" --json reviewRequests -q '
+        [.reviewRequests[] | select(.requestedReviewer.login | test("copilot|coderabbit|cubic|gemini"; "i"))] | length
+      ' 2>/dev/null || echo "0")
     fi
 
-    log_info "No AI bot reviews yet (${elapsed}s/${max_wait}s)"
-    sleep 5
+    if [ "$running_reviews" -gt 0 ] || [ "$pending_reviews" -gt 0 ]; then
+      local remaining=$((max_wait - elapsed))
+      log_info "AI bot reviews in progress: ${running_reviews} running, ${pending_reviews} requested (${remaining}s remaining)"
+      sleep "$poll_interval"
+      continue
+    fi
+
+    log_success "No running AI bot reviews detected"
+    return 0
   done
 
-  log_info "AI review check complete - proceeding (no bots detected)"
+  log_warn "AI review wait timeout after ${max_wait}s - proceeding"
   return 0
 }
 
