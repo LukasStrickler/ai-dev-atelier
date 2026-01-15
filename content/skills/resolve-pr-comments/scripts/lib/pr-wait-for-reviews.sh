@@ -70,15 +70,41 @@ wait_for_ci() {
 
   log_info "Waiting for CI checks on PR #${pr_number} (max $(time_remaining)s)..."
 
+  local empty_output_count=0
+  local last_checks=""
+
   while ! is_timed_out; do
     local checks_output
     checks_output=$(gh pr checks "$pr_number" --repo "$repo" 2>/dev/null || echo "")
 
     if [ -z "$checks_output" ]; then
+      empty_output_count=$((empty_output_count + 1))
       log_info "No checks found yet ($(time_remaining)s remaining)"
       sleep "$poll_interval"
+      
+      # If checks output is empty for 3 consecutive polls (45s), 
+      # check if there are any workflow runs at all
+      if [ "$empty_output_count" -ge 3 ]; then
+        local workflow_runs
+        workflow_runs=$(gh api "repos/${repo}/actions/runs?per_page=10&event=pull_request" 2>/dev/null || echo "")
+        if [ -n "$workflow_runs" ]; then
+          # Has workflow runs but no checks - assume they're still running
+          log_warn "Workflow runs found but no check results - jobs likely in progress"
+          # Don't exit, continue waiting for checks to appear
+          continue
+        fi
+        # No workflow runs either - genuinely no CI or PR is stale
+        if [ "$empty_output_count" -ge 6 ]; then
+          log_warn "No checks or workflow runs found after 90s - assuming CI not configured"
+          return 0  # Not a CI failure, just no CI
+        fi
+      fi
       continue
     fi
+
+    # Reset counter if we got actual output
+    empty_output_count=0
+    last_checks="$checks_output"
 
     local pending=0
     local failed=""
@@ -127,44 +153,45 @@ wait_for_ci() {
 wait_for_ai_reviews() {
   local repo="$1"
   local pr_number="$2"
-  local poll_interval=10
-  local max_ai_wait=120
+  local max_wait=300
+  local start=$(date +%s)
 
-  local bots=(
-    "coderabbitai[bot]"
-    "github-copilot[bot]"
-    "gemini-code-assist[bot]"
-  )
+  log_info "Waiting for AI reviews to complete..."
 
-  log_info "Checking for AI bot reviews (max ${max_ai_wait}s)..."
+  while [ $(($(date +%s) - start)) -lt "$max_wait" ]; do
+    # Check for ACTIVE bot tasks (Review Requests in progress or Check Runs in progress)
+    local active_bots
+    active_bots=$(gh pr view "$pr_number" --repo "$repo" --json reviewRequests,statusCheckRollup --jq '
+      [
+        (.reviewRequests[] | select(.type == "Bot" or (.login | endswith("[bot]"))),
+        (.statusCheckRollup[] | select(.status != "COMPLETED") | select(.name | ascii_downcase | test("coderabbit|copilot|gemini|ai-review")))
+      ] | unique | .[]' 2>/dev/null)
 
-  local ai_start=$(($(date +%s)))
-  while [ $(($(date +%s) - ai_start)) -lt "$max_ai_wait" ] && ! is_timed_out; do
-    local found=0
-
-    for bot in "${bots[@]}"; do
-      local count
-      count=$(gh api "repos/${repo}/pulls/${pr_number}/reviews" \
-        --jq "[.[] | select(.user.login == \"${bot}\")] | length" 2>/dev/null || echo "0")
-      [ "$count" -gt 0 ] && found=$((found + 1))
-    done
-
-    if [ "$found" -gt 0 ]; then
-      log_success "Found ${found} AI bot review(s)"
-      return 0
+    if [ -z "$active_bots" ]; then
+      # No active bots found. Check if any bot has ALREADY posted a review
+      local finished_bots
+      finished_bots=$(gh api "repos/${repo}/pulls/${pr_number}/reviews" \
+        --jq '.[] | select(.user.type == "Bot" or (.user.login | endswith("[bot]")))' 2>/dev/null)
+      
+      if [ -n "$finished_bots" ]; then
+        log_success "AI reviews complete."
+        return 0
+      fi
+      
+      # No active bots AND no finished reviews yet. Wait at least 60s before proceeding.
+      local elapsed=$(($(date +%s) - start))
+      if [ "$elapsed" -ge 60 ]; then
+        log_info "No AI bots detected after ${elapsed}s. Proceeding."
+        return 0
+      fi
+    else
+      log_info "Active AI reviews: $(echo "$active_bots" | tr '\n' ' ')"
     fi
 
-    local elapsed=$(($(date +%s) - ai_start))
-    if [ "$elapsed" -ge 60 ]; then
-      log_info "No AI bot reviews after ${elapsed}s - proceeding (bots may not be configured)"
-      return 0
-    fi
-
-    log_info "Waiting for AI reviews (${elapsed}s/${max_ai_wait}s)"
-    sleep "$poll_interval"
+    sleep 15
   done
 
-  log_info "AI review wait complete - proceeding"
+  log_warn "Timed out waiting for AI reviews. Proceeding anyway."
   return 0
 }
 
