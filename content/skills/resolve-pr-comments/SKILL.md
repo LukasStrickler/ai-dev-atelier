@@ -68,15 +68,20 @@ Orchestrator (You)
 
 > **⚠️ WAIT BY DEFAULT**: The script waits for CI and AI reviews (max 10 min) to ensure all bot comments are available before clustering. **DO NOT use `--skip-wait` unless the user explicitly requests it** or CI is confirmed to have already passed. Skip reasons are logged for audit.
 
+**Timeouts**:
+- CI wait: 10 minutes (600s) - exceeds OpenCode SDK default (5 min) for long-running jobs
+- AI review wait: 10 minutes (600s) - ensures slow bots have time to complete
+- Both wait periods use 15s polling interval with progress updates
+
 ```bash
-# 1. Fetch and cluster all comments (waits for CI/AI reviews by default)
+#1. Fetch and cluster all comments (waits for CI/AI reviews by default)
 bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER>
 
 # ONLY use --skip-wait when explicitly asked or CI confirmed passed
 # Reason is REQUIRED and logged for audit trail
 bash skills/resolve-pr-comments/scripts/pr-resolver.sh <PR_NUMBER> --skip-wait "user requested immediate fetch"
 
-# Output: .ada/data/pr-resolver/pr-7/
+# Output: .ada/data/pr-resolver/pr-<N>/
 #   ├── data.json       (full data, all clusters)
 #   ├── actionable.json (token-efficient, actionable clusters only)
 #   └── clusters/       (markdown files for subagent consumption)
