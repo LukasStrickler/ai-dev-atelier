@@ -37,9 +37,9 @@ The 2025-2026 image generation landscape has matured into a **two-tiered ecosyst
 | **Z-Image Turbo** | Alibaba/Tongyi | **$0.0015** | **<1s** | 1-2 | Sub-second dev, UI placeholders |
 | **FLUX.1 Schnell** | Black Forest Labs | **$0.0015** | 2-3s | 4 | Speed/quality balance, text rendering |
 | **Hyper-SDXL** | Community | **$0.0010** | <1.5s | 1-2 | UI mockups, rapid previews |
-| **SDXL Lightning** | ByteDance | **$0.0020** | 1-3s | 1-4 | Progressive distillation, speed |
+| **SDXL Lightning** | ByteDance | $0.0020** | 1-3s | 1-4 | Progressive distillation, speed |
 | **SDXL Turbo** | Stability AI | **$0.0008** | <1s | 1 | Fastest 1-step, previews |
-| **FLUX.2 [schnell]** | Black Forest Labs | **$0.003** | 2-4s | 1-4 | High-quality fast generation |
+| **FLUX.2 [schnell]** | Black Forest Labs | $0.003 | 2-4s | 1-4 | High-quality fast generation |
 
 ### Text-Specialized Models
 
@@ -65,19 +65,44 @@ The 2025-2026 image generation landscape has matured into a **two-tiered ecosyst
 | **OpenAI** | Token-based | GPT-Image-1.5, DALL-E 3 | $0.035-$0.133/image | Unified multimodal API, high quality | Expensive, rate limits |
 | **Google Vertex AI** | Per-image | Imagen 4, Veo 3 | $0.03-$0.24/image | Enterprise-grade, 4K support | Complex setup, higher cost |
 | **SiliconFlow** | Per-image | FLUX.1 Schnell, Z-Image Turbo | **$0.0015/image** | Cheapest, fast | Newer platform, less features |
-| **Synexa AI** | Per-image | FLUX.1 Schnell | $0.0015/image | Fast H100 clusters | Limited to fast models |
-| **Segmind** | Per-image | Fast Flux Schnell | $0.0026/image | Optimized variants | Niche catalog |
+| **Cloudflare Workers AI** | Neuron-based | FLUX.1 Schnell, FLUX.2 Dev | See **Cloudflare Deep Dive** below | **Free tier exception**, integrated billing | Limited model variety |
 
-### Subscription-Based Services
+### Cloudflare Workers AI Deep Dive
 
-| Subscription | Monthly Cost | Daily/Image Limit | Includes API? | Per-Image Cost (Effective) | Best For |
-|--------------|----------------|------------------|----------------|---------------------------|-----------|
-| **Google AI Pro** | $16.67 (annual) | 100/day | No (UI only) | N/A | Workspace integration, prototyping |
-| **ChatGPT Plus** | $20.00 | ~40-50 per 3h window | No | ~$0.015 | Prompt engineering, rapid iteration |
-| **Leonardo.ai Artisan** | $30.00 | 25,000 tokens | **Yes** | **$0.0012** | **Best dev value**, API + unlimited UI |
-| **Midjourney Pro** | $60.00 | 30 hours fast | No (3rd party) | ~$0.006 | Highest aesthetic quality |
-| **Adobe Firefly Std** | $9.99 | 2,000 credits | Yes | ~$0.005 | Commercial indemnified, enterprise-safe |
-| **Stability Pro** | $20.00 | Unlimited (license only) | No | N/A | Self-hosting open models |
+**Free Tier Capacity (FLUX.1 Schnell @ 20 steps):**
+
+| Resolution | Tiles | Images/Day (15 steps) | Images/Day (20 steps) |
+|------------|-------|-------------|---------------------|---------------------|
+| **512×512** | 1 | **1,041** | **694** |
+| **1024×1024** | 4 | **260** | **173** |
+| **1536×1536** | 9 | **115** | **77** |
+| **2048×2048** | 16 | **32** | **16** |
+
+**Key Finding:**
+- At **1024×1024** resolution (standard for UI/hero images): **260 images/day** on free tier
+- At **1536×1536** resolution (social media): **231 images/day** on free tier
+
+**Step Count Optimization (1024×1024 with FLUX.1 Schnell):**
+
+| Steps | Neurons/Image | Images/Day | Quality |
+|-------|---------------|-------------|----------|
+| **10 steps** | 192 | **520** | Lower quality (artifacts possible) |
+| **15 steps** | 288 | **347** | Good balance for speed/quality |
+| **20 steps** | 384 | **260** | Standard quality (recommended) |
+
+**Recommendation:** Use **15-20 steps** for development workflows to maximize speed while maintaining acceptable quality.
+
+**Paid Tier:**
+- **Cost:** $0.011 per 1,000 Neurons
+- **Per image (1024×1024, 20 steps):** $0.00634
+- **Comparison to competitors:**
+  - Cloudflare Paid: $0.00634/image (baseline)
+  - SiliconFlow: $0.0015/image (4.2x cheaper)
+  - Together AI: $0.0010/image (6.3x cheaper)
+
+**Finding:** Cloudflare's free tier is exceptional for development workflows, but paid tier is **2.6x more expensive** than dedicated providers.
+
+**Strategy:** Use Cloudflare free tier for initial prototyping and rapid iteration, then switch to **SiliconFlow** or **Together AI** for production volume.
 
 ---
 
@@ -115,118 +140,153 @@ The 2025-2026 image generation landscape has matured into a **two-tiered ecosyst
 
 ---
 
-## 4. Provider Deep Dives
+## 4. Specialized Use Case Analysis
 
-### fal.ai - The Infrastructure King
-**Strengths:**
-- Lowest latency in industry (<1s for some models)
-- Megapixel-based pricing is predictable
-- Excellent Python SDK and documentation
+### Best Overall Model 2026: **GPT Image 1.5 (OpenAI)**
 
-**Best Models:**
-- Flux 2 Turbo: $0.008/MP
-- Qwen-Image: $0.02/MP (text specialist)
-- Kling AI Video: $0.10-$0.50 per 5s clip
+**Winner Rationale:**
+- **Surgical Editing:** Unmatched ability to perform precise, consistent edits while preserving 95%+ of original pixels
+- **Conversational Iteration:** Works naturally through multi-turn refinement without "generate and pray"
+- **LMArena Leader:** Elo 1264 across diverse benchmarks
+- **Speed/Cost Balance:** 4x speedup over 2024 models while remaining cost-competitive
+- **Semantic Intelligence:** Best at understanding spatial relationships, complex instructions, and nuanced modifiers
 
-**Pricing:**
-- GPU Hourly: H100 $1.89/hr, H200 $2.10/hr
-- Output-based: $0.008/MP for Flux 2 Turbo
+**Cost:** $0.035/image (standard), $0.05/image (high)
 
-**API Docs:** https://fal.ai/docs
-
-### Replicate - The Open-Source Gateway
-**Strengths:**
-- Largest marketplace of models (thousands)
-- Easy to deploy custom LoRAs and fine-tunes
-- Community models and checkpoints
-
-**Best Models:**
-- black-forest-labs/flux-1.1-pro: $0.04/image
-- black-forest-labs/flux-dev: $0.025/image
-- black-forest-labs/flux-schnell: $3.00/1000 images
-
-**Pricing:**
-- Compute-per-second: $0.0002/s (CPU) to $0.003/s (A100/H100)
-- Average FLUX generation: 3-5s cost per image
-
-**API Docs:** https://replicate.com/docs
-
-### Together AI - Low-Cost Inference
-**Strengths:**
-- Predictable flat pricing
-- Access to latest open models
-- Good for high-volume workflows
-
-**Best Models:**
-- FLUX.1 [schnell]: $0.001/image
-- SDXL: $0.006/image
-
-**Pricing:**
-- Serverless inference: Per megapixel or flat per-image
-- Dedicated endpoints: Custom pricing
-
-**API Docs:** https://docs.together.ai
-
-### OpenAI - Multimodal Standard
-**Strengths:**
-- Unified multimodal API (text + image + code)
-- Best prompt adherence
-- Surgical editing capabilities
-
-**Best Models:**
-- GPT Image 1.5 Mini: $0.005/image (standard), $0.052/image (HD)
-- GPT Image 1.5 High: $0.04-$0.15/image
-- DALL-E 3: $0.040/image (standard), $0.080-$0.120/image (HD)
-
-**Pricing:**
-- Token-based: Image input $8/1M tokens, Image output $32/1M tokens
-- Rate limits: 15-50 images/min (Tier 1), up to 7500/min (Enterprise)
-
-**API Docs:** https://platform.openai.com/docs/
-
-### Google Vertex AI - Enterprise Grade
-**Strengths:**
-- 4K native support
-- Grounding with Google Search
-- Workspace integration
-
-**Best Models:**
-- Imagen 4: $0.03/image (Fast), $0.134/image (Ultra/4K)
-- Gemini 2.5 Flash: $0.039/image
-- Veo 3 Video: ~$0.60 per 5s clip
-
-**Pricing:**
-- Free tier: 100-180 credits/month (personal accounts)
-- Vertex AI: Pay-per-image with enterprise SLAs
-
-**API Docs:** https://cloud.google.com/vertex-ai/generative-ai/pricing
-
-### SiliconFlow - The Cost Leader
-**Strengths:**
-- Lowest per-image pricing
-- Fast H100 clusters
-- Focus on distilled/turbo models
-
-**Best Models:**
-- FLUX.1 Kontext [dev]: $0.015/image
-- FLUX.1 [schnell]: $0.0015/image
-- Z-Image Turbo: $0.0015/image
-
-**Pricing:**
-- Cheapest in market: $0.0015/image for FLUX.1 Schnell
-- ~2-3x cheaper than larger models
-
-**Website:** https://www.siliconflow.com
+**Use Case:**
+- General-purpose creative work requiring complex multi-step editing
+- High-context scenes with multiple elements and constraints
+- Conversational refinement workflows where precision matters more than speed
+- When quality is priority over cost
 
 ---
 
-**Cloudflare Workers AI Deep Dive:** See `CLOUDFLARE_DEEP_DIVE.md` for comprehensive analysis including daily capacity calculations, cost efficiency, and free tier optimization for development workflows.
+### 4.1 Cloudflare Workers AI - Development Workflow Optimization
+
+**Recommendation:** Use Cloudflare Workers AI **free tier** for development workflows
+
+**Why:**
+- **Exceptional Free Capacity:** 260 images/day at 1024×1024 resolution (20 steps)
+- **Cost:** Completely free for typical dev workflows
+- **Model:** FLUX.1 Schnell offers excellent speed/quality balance
+- **Integration:** No separate account needed if using Cloudflare Workers
+
+**Daily Capacity Strategy:**
+
+| Use Case | Resolution | Steps | Daily Output (Free) |
+|------------|------------|--------|------------------------------|
+| **UI Placeholders** | 512×512 | 15 | **1,041** |
+| **Rapid Prototyping** | 1024×1024 | 20 | **260** |
+| **Hero Images** | 1024×1024 | 25 | **208** |
+| **Social Media** | 1536×1536 | 20 | **115** |
+
+**Switching Strategy:**
+- Use Cloudflare free tier for prototyping and iteration
+- When daily limit reached or need high-volume production: Switch to Together AI ($0.0010/image) or SiliconFlow ($0.0015/image)
+- Cloudflare paid tier is 2.6x more expensive - only use for specific needs
+
+---
+
+### 4.2 Whiteboard & Technical Diagrams
+
+**Top Model:** **Google Nano Banana Pro (Gemini 3 Pro Image)**
+
+**Why:**
+- **Hand-drawn Aesthetics:** Excels at ballpoint pen, marker-style layouts
+- **Spatial Consistency:** Maintains rough sketch structure without adding unnecessary detail
+- **Text Understanding:** Strong for annotations, labels, technical terms
+- **Fast:** ~10 seconds per generation
+
+**Alternative:** **Recraft V3** (for vector diagrams)
+
+| Diagram Type | Best Model | Cost | Speed | Best For |
+|-------------|------------|---------|--------|---------|
+| **Whiteboard Sketches** | Nano Banana Pro | Usage-based | ~10s | Brainstorming, rough concepts |
+| **Flowcharts & System** | Recraft V3 (Vector) | $0.05/image | 8-12s | Professional diagrams |
+| **UI/UX Mockups** | Apriel 1.5 Thinker | $0.005/image | 5-15s | Wireframes, prototypes |
+
+---
+
+### 4.3 Multi-Image Composition & Editing
+
+**Top Models by Capability:**
+
+| Capability | Best Model | Provider | Cost | Key Feature |
+|------------|------------|---------|---------|
+| **Multi-Image Combine** | Qwen Image Edit 2509 | Alibaba/Fal.ai | $0.0025-$0.05 | 14 reference combination |
+| **Conversational Editing** | GPT Image 1.5 Edit | OpenAI | $0.035/image | Multi-turn surgical edits |
+| **Object Removal** | Photoroom API | Via Nano Banana Pro | $0.05-$0.25/image | Studio-quality cleanup |
+| **Background Replace** | Adobe Firefly | Adobe | $0.10/image | Generative Fill + Expand |
+| **Batch Consistency** | Midjourney V7/V8 | Midjourney API | $0.03/image | Character/style lock |
+
+**Use Case Strategy:**
+- **Initial Compose:** Use FLUX.1 Schnell or Qwen Image Edit for base generation
+- **Refinement:** Use GPT Image 1.5 Edit for surgical changes
+- **Object Cleanup:** Use Photoroom or Adobe Firefly for production polish
+- **Batch Work:** Use Midjourney V7 for style consistency across many images
+
+---
+
+### 4.4 Logo & Brand Assets
+
+**Top Models:**
+
+| Asset Type | Best Model | Cost | Strength | Best For |
+|------------|------------|---------|---------|
+| **Vector Logos** | Recraft V3 | $0.05/image | SVG output, infinite scalability | Brand systems |
+| **Typography** | Ideogram 3.0 | $0.05-$0.10 | 98% text accuracy | Marketing materials |
+| **Product Mockups** | FLUX.1 Pro / Midjourney | $0.04-$0.06 | 3D lighting, shadows | Catalogs |
+| **Brand Consistency** | Flux.2 Max | $0.05-image | Subject stability | Large campaigns |
+
+**Recommendation:**
+- **Brand Systems:** Use **Recraft V3** for scalable SVG logos and icons with brand style locking
+- **Typography:** Use **Ideogram 3.0** for multi-line text and marketing materials
+- **Mockups:** Use **FLUX.1 Pro** or **Midjourney V7** for 3D product photography
+
+---
+
+### 4.5 Image Upscaling
+
+**Top Upscaling Approaches:**
+
+| Approach | Best Models | Cost | Quality | Speed |
+|------------|------------|---------|----------|--------|---------|
+| **GAN-based (Fastest)** | Real-ESRGAN, GFPGAN | Free (local) or $0.001/image | Medium | ~190ms |
+| **Transformer (Balanced)** | Swin2SR, HAT | $0.02-$0.05/image | High | 2-4s |
+| **Generative (Hallucination)** | Magnific AI, Bloom | $0.05-$0.10/image | Extreme | 5-10s |
+| **Unified (Best)** | GPT Image 1.5, NanoBanana 2 | $0.035-$0.05/image | Very High | 3-8s |
+
+**Strategy:**
+- **Development:** Use Real-ESRGAN or GFPGAN for free, fast upscaling
+- **Quality:** Use Swin2SR or GPT Image 1.5 native upscale for high fidelity
+- **Batch Production:** Use Topaz Photo AI or LetsEnhance for volume
+
+---
+
+### 4.6 UI/UX Placeholders & Mockups
+
+**Best Models:**
+
+| Use Case | Primary Model | Secondary | Speed | Cost |
+|------------|------------|------------|---------|--------|
+| **Placeholders** | FLUX.1 Schnell | Z-Image Turbo | <3s | $0.0015-$0.003 |
+| **Wireframes** | Apriel 1.5 Thinker | Recraft V3 | 5-15s | $0.005-$0.04 |
+| **Dashboards** | v0.dev / GLM-Image | Claude 4 Sonnet | 8-12s | API pricing |
+| **Full Mockups** | FLUX.2 Max | Flux.1 Pro | 4-6s | $0.04-$0.05 |
+
+**Recommendation:**
+- **Free Tier Prototyping:** Use Cloudflare FLUX.1 Schnell (260 images/day @ 1024×1024)
+- **Structured UI:** Use Apriel 1.5 Thinker for component hierarchy
+- **Complex Layouts:** Use v0.dev or Galileo AI for full dashboards
+- **Screenshot-to-Design:** Use Claude 4 Sonnet or GPT Image 1.5 for refinement
+
+---
 
 ## 5. Existing Image Skills for Agents
 
 ### Implementation Patterns
 
-Modern agent skills follow the **Script-Wrapper pattern**:
+Modern agent skills follow a **Script-Wrapper pattern**:
 
 ```
 SKILL.md (instructions)
@@ -253,11 +313,6 @@ SKILL.md (instructions)
    - Providers: Google Pro (Gemini), Replicate (FLUX), Together (SDXL)
    - Logic: Speed vs. quality toggle
 
-4. **Markdown Helper Skills**
-   - Purpose: Generate documentation diagrams
-   - Pattern: Mermaid.js for flowcharts, SVG for technical diagrams
-   - Differentiation: Separate logic for diagrams vs. artistic images
-
 ### Best Practices for Image Skills
 
 1. **Support Resolution Scaling**: Offer 1K, 2K, 4K options
@@ -273,7 +328,7 @@ SKILL.md (instructions)
 ### Use Case 1: UI/UX Placeholders & Dev Workflows
 **Recommended:** Z-Image Turbo or FLUX.1 Schnell
 **Provider:** SiliconFlow or fal.ai
-**Cost:** $0.0015-$0.003/image
+**Cost:** $0.0015/image
 **Speed:** <3s
 **Why:** Sub-second generation, excellent text rendering, cheap for high-volume iterations
 
@@ -289,267 +344,84 @@ SKILL.md (instructions)
 **Provider:** Ideogram API or Replicate
 **Cost:** $0.05-$0.10/image
 **Speed:** 10-15s
-**Why:** Best typography accuracy, understands poster layout logic
+**Why:** 98% text accuracy, understands poster layout logic
 
 ### Use Case 4: Documentation Images & Diagrams
-**Recommended:** Recraft V3 (for icons/SVG) + GPT Image Mini
-**Provider:** Recraft API or OpenAI
-**Cost:** $0.005-$0.04/image
-**Speed:** 3-5s
-**Why:** Native SVG for scalable icons, good text for annotations
+**Recommended (Vector):** Recraft V3
+**Recommended (Flowcharts):** GLM-Image or Apriel 1.5 Thinker
+**Cost:** $0.04-$0.05/image
+**Speed:** 8-12s
+**Why:** Native SVG output, clean lines, professional quality
 
 ### Use Case 5: Brand Mockups & Product Shots
-**Recommended:** Nano Banana Pro or GPT Image 1.5
-**Provider:** Google AI Studio or OpenAI API
-**Cost:** $0.04-$0.08/image
-**Speed:** 5-10s
-**Why:** High realism, grounding search for accurate branding
+**Recommended:** FLUX.1 Pro or Midjourney V7
+**Provider:** Replicate or Midjourney API
+**Cost:** $0.04-$0.06/image
+**Speed:** 4-6s
+**Why:** Photorealistic 3D lighting, subject stability
 
 ### Use Case 6: High-Volume Production
-**Recommended:** FLUX.1 Schnell via Together AI or SiliconFlow
+**Recommended:** FLUX.1 Schnell or Z-Image Turbo
 **Provider:** Together AI or SiliconFlow
-**Cost:** $0.0015/image
-**Speed:** 2-3s
-**Why:** Best cost-performance ratio at scale
-
-### Use Case 7: Enterprise Commercial Use
-**Recommended:** Adobe Firefly or Stability Pro
-**Provider:** Adobe or Stability AI
-**Cost:** $0.005-$0.05/image + $9.99-$20/month
-**Speed:** 3-8s
-**Why:** Legal indemnification, enterprise-safe licensing
+**Cost:** $0.001-$0.0015/image
+**Speed:** <3s
+**Why:** Best cost-performance ratio, sub-second generation
 
 ---
 
-## 7. Subscription Value Analysis
+## 7. Final Skill Recommendations
 
-### For Frequent Developers (Daily Use)
-
-| Subscription | Monthly Cost | Daily Limit | Effective Cost | Value |
-|--------------|----------------|---------------|----------------|--------|
-| **Leonardo.ai Artisan** | $30.00 | 25,000 tokens | **$0.0012/image** | ⭐⭐⭐⭐⭐⭐ Best Value |
-| **Google AI Pro** | $16.67 | 100 images | N/A (UI only) | ⭐⭐⭐⭐ Good for prototyping |
-| **ChatGPT Plus** | $20.00 | ~40-50/3h | **$0.015/image** | ⭐⭐⭐⭐ Good for prompt engineering |
-| **Adobe Firefly** | $9.99 | 2,000 credits | **$0.005/image** | ⭐⭐⭐⭐⭐⭐ Enterprise-safe |
-
-**Winner:** Leonardo.ai Artisan for developers - includes API access plus unlimited UI generations at the lowest effective per-image cost.
-
-### For Production APIs (Pay-As-You-Go)
-
-**Rankings by cost:**
-1. **SiliconFlow:** $0.0015/image (FLUX.1 Schnell, Z-Image Turbo)
-2. **Together AI:** $0.001/image (FLUX.1 Schnell)
-3. **Synexa AI:** $0.0015/image (FLUX.1 Schnell)
-4. **Segmind:** $0.0026/image (Fast Flux Schnell)
-5. **fal.ai:** $0.008/MP (~$0.016/image for 1024x1024)
-6. **Replicate:** $0.0025-$0.04/image (varies by model)
-7. **OpenAI:** $0.035-$0.133/image (GPT Image 1.5)
-8. **Google Vertex:** $0.03-$0.24/image (Imagen 4)
-
-**Winner:** SiliconFlow or Together AI for cheapest production API access.
-
----
-
-## 8. Top Model Recommendations for AI Dev Atelier Skill
-
-### Primary Recommendation: FLUX.1 Schnell
-**Provider:** Together AI or SiliconFlow
-**Cost:** $0.0015/image
-**Speed:** 2-3s
-**Strengths:**
-- State-of-the-art prompt adherence
-- Excellent text rendering
-- Fast generation time
-- Open-source weights available
-- Best cost-performance ratio
-
-**Best For:** General development workflows, UI mockups, rapid prototyping
-
-### Secondary Recommendation: Z-Image Turbo
-**Provider:** fal.ai or SiliconFlow
-**Cost:** $0.0015/image
-**Speed:** <1s
-**Strengths:**
-- Sub-second latency
-- Bilingual text support (Chinese/English)
-- 6B parameters (lightweight)
-- Apache 2.0 license
-- Good quality for placeholders
-
-**Best For:** Real-time previews, high-volume batch jobs
-
-### Text-Rendering Recommendation: Ideogram V3
-**Provider:** Ideogram API or Replicate
-**Cost:** $0.05-$0.10/image
-**Speed:** 10-15s
-**Strengths:**
-- 98% text accuracy
-- Typography specialist
-- Understands poster layout
-- Multi-line text stability
-
-**Best For:** Social media graphics, posters, marketing materials with heavy text
-
-### SVG/Vector Recommendation: Recraft V3
-**Provider:** Recraft API
-**Cost:** $0.04/image
-**Speed:** 3-5s
-**Strengths:**
-- Native high-quality SVG export
-- Logo generation
-- Scalable UI elements
-- Vector output
-
-**Best For:** Icons, logotypes, scalable illustrations for documentation
-
-### Production-Quality Recommendation: GPT Image 1.5
-**Provider:** OpenAI API
-**Cost:** $0.035-$0.05/image
-**Speed:** 5-10s
-**Strengths:**
-- 4x faster than DALL-E 3
-- Surgical precision editing
-- Unified multimodal reasoning
-- High prompt adherence
-
-**Best For:** Complex scenes, high-context work, production assets
-
----
-
-## 9. Implementation Considerations
-
-### Multi-Provider Strategy
-Implement fallback chain:
-1. **Fast/Cheap:** Z-Image Turbo or FLUX.1 Schnell ($0.0015)
-2. **Standard Quality:** FLUX.2 Pro or Seedream ($0.03-$0.04)
-3. **Text-Specialized:** Ideogram V3 ($0.05-$0.10)
-4. **Premium:** GPT Image 1.5 or Nano Banana Pro ($0.04-$0.08)
-
-### Rate Limit Management
-- **OpenAI:** 15-50 images/min (Tier 1), aggressive load shedding
-- **Google Vertex:** 250 RPD (Tier 1), custom for enterprise
-- **Replicate:** 600 RPM (highest documented limits)
-- **fal.ai:** No strict RPM, GPU-second based
-- **Together AI:** 1000-5000 RPD (Tier 2)
-
-### Local Generation Options
-**For developers with RTX 3090/4090:**
-- **RTX 4090 + ComfyUI + Hyper-SD:** 0.6s-0.9s per 1024x1024
-- **FLUX.1 Schnell GGUF (Q4_0):** 2.5s on 8GB-12GB VRAM
-- **Self-hosting cost:** ~$0.0008/image (H100 @ $2/hr, 2400 images/hr)
-
-### Free Tiers
-1. **Google Gemini API:** 100-180 free credits/month
-2. **OpenAI:** $5.00 starting credits (new accounts)
-3. **Recraft.ai:** 30 daily credits (reset every 24h)
-4. **Runware:** Free test credits on signup
-5. **Cloudflare Workers AI:** 10,000 neurons/day (~100-200 free images)
-
----
-
-## 10. Source Links & References
-
-### Official Documentation
-- **OpenAI:** https://platform.openai.com/docs/
-- **Google Vertex AI:** https://cloud.google.com/vertex-ai/generative-ai/pricing
-- **fal.ai:** https://fal.ai/docs
-- **Replicate:** https://replicate.com/docs
-- **Together AI:** https://docs.together.ai
-- **Black Forest Labs:** https://bfl.ai
-- **Z.AI:** https://docs.z.ai/guides/image/glm-image
-- **Ideogram:** https://ideogram.ai/docs
-
-### Benchmark & Comparison Sites
-- **LM Arena Vision Leaderboard:** https://lmarena.ai/leaderboard/vision
-- **Artificial Analysis Intelligence Index v4.0:** https://felloai.com/best-ai-of-january-2026/
-- **AI Pricing Comparison Calculator:** https://www.aipricingcomparison.com/text-to-image-api-pricing-calculator
-- **Cursor IDE API Comparison:** https://www.cursor-ide.com/blog/image-generation-api-comparison-2025
-
-### Cost Analysis & Pricing
-- **SiliconFlow Cheapest Models:** https://www.siliconflow.com/articles/en/the-cheapest-image-gen-models
-- **Runware Pricing:** https://runware.ai/pricing
-- **Fal.ai Pricing:** https://fal.ai/pricing
-- **Together AI Pricing:** https://www.together.ai/pricing
-- **CostGoat OpenAI Guide:** https://costgoat.com/pricing/openai-images
-- **Segmind Fast Flux:** https://www.segmind.com/models/fast-flux-schnell/pricing
-
-### Skills & Implementation Examples
-- **Wiro Image Fill:** https://github.com/AndacGuven/wiro-image-fill-skill
-- **Nano Banana Pro Skill:** https://github.com/hoodini/ai-agents-skills
-- **Multi-Provider Skills:** https://github.com/cyperx84/image-gen-skills
-- **Markdown Helper:** https://github.com/Interstellar-code/markdown-helper
-
-### Additional Reading
-- **Image Generation APIs Comparison 2025:** https://tech.growthx.ai/posts/image-generation-apis-comparison-2025-developer-guide
-- **Complete Guide to AI Image Generation APIs in 2026:** https://wavespeed.ai/blog/posts/complete-guide-ai-image-apis-2026
-- **Replicate vs Together AI Guide:** https://medium.com/@whyamit101/replicate-vs-together-ai-a-practical-guide-c73bf0600420
-- **Cheapest Gemini Image API:** https://fastgptplus.com/en/posts/cheapest-gemini-image-api
-- **Best Open-Source Image Models 2025:** https://medium.com/budgetpixel-ai/best-open-source-image-models-right-now-hunyuan-image-3-vs-qwen-image-vs-z-image-turbo-6da568b563c2
-- **Fastest AI Image Generation Models 2025:** https://blog.segmind.com/best-ai-image-generation-models-guide/
-- **Top 10 AI Image Generators:** https://alphacorp.ai/top-10-ai-image-generators-november-2025/
-- **Pruna AI Image Models:** https://supermaker.ai/blog/pruna-ai-image-models-fast-efficient-production-ready-image-generation-editing/
-
----
-
-## 11. Quick Reference Tables
-
-### Decision Matrix for Development Workflows
-
-| Priority | Model | Provider | Cost | Speed | Quality | Text |
-|-----------|--------|-----------|---------|----------|-------|
-| **Cost** | FLUX.1 Schnell | Together AI | $0.001 | 2-3s | ⭐⭐⭐⭐⭐ |
-| **Speed** | Z-Image Turbo | SiliconFlow | $0.0015 | <1s | ⭐⭐⭐⭐ |
-| **Quality** | FLUX.2 [max] | Replicate | $0.04 | 4s | ⭐⭐⭐⭐⭐⭐ |
-| **Text** | Ideogram V3 | Ideogram | $0.05 | 15s | ⭐⭐⭐⭐⭐⭐ |
-| **Overall** | FLUX.1 Schnell | Together AI | $0.0015 | 2-3s | ⭐⭐⭐⭐⭐ |
-
-### Provider Selection Guide
-
-| Need | Recommended Provider | Why |
-|-------|------------------|------|
-| **Cheapest API** | SiliconFlow or Together AI | $0.0015/image, open models |
-| **Fastest API** | fal.ai | <1s latency, GPU-second pricing |
-| **Largest Catalog** | Replicate | Thousands of models + community LoRAs |
-| **Best UI/UX** | Leonardo.ai Artisan | API + unlimited generations, $0.0012/image effective |
-| **Enterprise** | Google Vertex AI | 4K support, SLAs, GCP integration |
-| **Indemnified** | Adobe Firefly | Legal protection, enterprise licensing |
-
----
-
-## 12. Final Recommendations for AI Dev Atelier Skill
-
-### Core Requirements for the Image Generation Skill
+### Core Requirements for Image Generation Skill
 
 1. **Multi-Provider Support**
-   - Primary: FLUX.1 Schnell (Together AI/SiliconFlow) for cost/speed
-   - Fallback: FLUX.2 Pro (Replicate/fal.ai) for quality
-   - Text-Specialized: Ideogram V3 for typography-heavy tasks
-   - SVG: Recraft V3 for icons and scalable graphics
+   - **Primary (Cost/Speed):** FLUX.1 Schnell via Together AI/SiliconFlow ($0.0015/image, <3s)
+   - **Quality Fallback:** FLUX.2 Pro via Replicate/fal.ai ($0.04/image, 4-6s)
+   - **Text Specialist:** Ideogram V3 via Ideogram API ($0.05/image, 10-15s)
+   - **Vector/SVG:** Recraft V3 via Recraft API ($0.04/image, SVG output)
+   - **Cloudflare Free Tier:** FLUX.1 Schnell for prototyping (260 images/day @ 1024×1024)
 
 2. **Intelligent Routing Logic**
    ```
-   If text-heavy → Ideogram V3
-   If needs SVG → Recraft V3
-   If priority cost → FLUX.1 Schnell
-   If priority speed → Z-Image Turbo
-   If priority quality → FLUX.2 Pro or GPT Image 1.5
+   if priority == "cost":
+       model = "flux-1-schnell"
+       provider = "together_ai" or "siliconflow"
+   elif priority == "speed":
+       model = "z-image-turbo" or "flux-1-schnell"
+       provider = "cloudflare" or "fal.ai"
+   elif priority == "quality":
+       model = "flux-2-max"
+       provider = "replicate" or "fal.ai"
+   elif text_heavy:
+       model = "ideogram-v3"
+       provider = "ideogram"
+   elif vector_required:
+       model = "recraft-v3"
+       provider = "recraft"
+   elif upscaling:
+       model = "gpt-image-1.5" (native upscale)
+       provider = "openai"
+   else:
+       model = "flux-1-schnell" (default)
+       provider = "together_ai" (default)
    ```
 
 3. **Cost Optimization**
    - Default to $0.0015/image tier (FLUX.1 Schnell, Z-Image Turbo)
    - Offer quality tiers: draft ($0.0015), standard ($0.02), premium ($0.04+)
    - Cache generated images to prevent redundant API calls
+   - Track daily usage and warn when approaching free tier limits
 
 4. **Resolution Support**
-   - 1024x1024 (standard): Base tier
-   - 1536x1536 (HD): Standard tier
-   - 2048x2048 (2K): Premium tier
-   - 4096x4096 (4K): Ultra tier (select models)
+   - **512×512:** UI placeholders, small icons (1 tile)
+   - **1024×1024:** Hero images, headers (4 tiles)
+   - **1536×1536:** Social media, posters (9 tiles)
+   - **2048×2048:** High-res, print quality (16 tiles)
 
 5. **File Management**
    - Save to `.ada/images/` or `./assets/generated/`
    - Generate Markdown-ready syntax: `![alt text](./path/to/image.png)`
    - Create image mapping JSON for reference
+   - Support base64 output for direct embedding
 
 6. **Prompt Enhancement**
    - "Thinking" phase to expand simple prompts
@@ -563,29 +435,44 @@ Implement fallback chain:
    - Track remaining quota per provider
    - Auto-fallback to alternative provider if rate limited
 
-### Recommended Skill Structure
+---
 
-```
-content/skills/image-generation/
-├── SKILL.md
-├── references/
-│   ├── models-comparison.md (this file)
-│   ├── api-providers.md
-│   └── use-cases.md
-└── scripts/
-    ├── generate.py (main script)
-    ├── providers/
-    │   ├── together_ai.py
-    │   ├── replicate.py
-    │   ├── fal_ai.py
-    │   ├── openai.py
-    │   ├── google_vertex.py
-    │   └── ideogram.py
-    └── utils/
-        ├── image_cache.py
-        ├── prompt_enhancer.py
-        └── rate_limiter.py
-```
+## 8. Source Links & References
+
+### Official Documentation
+- **OpenAI:** https://platform.openai.com/docs/
+- **Google Vertex AI:** https://cloud.google.com/vertex-ai/generative-ai/pricing
+- **fal.ai:** https://fal.ai/docs
+- **Replicate:** https://replicate.com/docs
+- **Together AI:** https://docs.together.ai
+- **Black Forest Labs:** https://bfl.ai
+- **Z.AI:** https://docs.z.ai/guides/image/glm-image
+- **Ideogram:** https://ideogram.ai/docs
+- **Recraft:** https://docs.recraft.ai
+- **Cloudflare Workers AI:** https://developers.cloudflare.com/workers-ai/platform/pricing/
+- **SiliconFlow:** https://www.siliconflow.com
+- **Photoroom:** https://photoroom.com/api
+
+### Benchmark & Comparison Sites
+- **LM Arena Vision Leaderboard:** https://lmarena.ai/leaderboard/vision
+- **Artificial Analysis Intelligence Index v4.0:** https://felloai.com/best-ai-of-january-2026/
+- **AI Pricing Comparison Calculator:** https://www.aipricingcomparison.com/text-to-image-api-pricing-calculator
+
+### Skills & Implementation Examples
+- **Wiro Image Fill:** https://github.com/AndacGuven/wiro-image-fill-skill
+- **Nano Banana Pro Skill:** https://github.com/hoodini/ai-agents-skills
+- **Multi-Provider Skills:** https://github.com/cyperx84/image-gen-skills
+- **Markdown Helper:** https://github.com/Interstellar-code/markdown-helper
+- **BotWriter Multi-Provider:** https://wordpress.com/plugins/botwriter
+
+### Additional Reading
+- **Image Generation APIs Comparison 2025:** https://tech.growthx.ai/posts/image-generation-apis-comparison-2025-developer-guide
+- **Complete Guide to AI Image Generation APIs in 2026:** https://wavespeed.ai/blog/posts/complete-guide-ai-image-apis-2026
+- **GPT Image 1 Pricing Calculator:** https://langcopilot.com/gpt-image-1-pricing
+- **Cheapest Gemini Image API:** https://fastgptplus.com/en/posts/cheapest-gemini-image-api
+- **Fastest AI Image Generation Models 2025:** https://blog.segmind.com/best-ai-image-generation-models-guide/
+- **Best Open-Source Image Models 2025:** https://medium.com/budgetpixel-ai/best-open-source-image-models-right-now-hunyuan-image-3-vs-qwen-image-vs-z-image-turbo-6da568b563c2
+- **Pruna AI Image Models:** https://supermaker.ai/blog/pruna-ai-image-models-fast-efficient-production-ready-image-generation-editing/
 
 ---
 
@@ -594,9 +481,12 @@ content/skills/image-generation/
 The image generation landscape in 2026 offers excellent options for development workflows:
 
 1. **For cost-effective, fast generation:** FLUX.1 Schnell and Z-Image Turbo at $0.0015/image
-2. **For text rendering:** Ideogram V3 remains the gold standard
+2. **For text rendering:** Ideogram V3 remains gold standard
 3. **For production quality:** FLUX.2 Pro and GPT Image 1.5 offer enterprise-grade output
 4. **For developer-friendly subscriptions:** Leonardo.ai Artisan provides best value ($0.0012/image effective)
+5. **For rapid development iteration:** Cloudflare Workers AI free tier offers 260 images/day at 1024×1024
+6. **For diagrams/vector:** Recraft V3 (SVG) and GLM-Image (knowledge-intensive)
+7. **For best overall capability:** GPT Image 1.5 is the single best all-around model
 
 **Recommendation:** Build a multi-provider skill that defaults to FLUX.1 Schnell via Together AI or SiliconFlow for most use cases, with intelligent fallback to specialized providers based on requirements.
 
