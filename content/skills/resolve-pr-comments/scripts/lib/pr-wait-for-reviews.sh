@@ -51,14 +51,16 @@ is_ignored_job() {
 
 get_ci_status() {
   local repo="$1" pr="$2"
-  local rollup pending=0 passed=0 failed_jobs="" pending_jobs=""
+  local rollup pending=0 passed=0 failed_jobs="" pending_jobs="" sha=""
   
   rollup=$(gh pr view "$pr" --repo "$repo" --json statusCheckRollup 2>/dev/null || echo "")
-  [ -z "$rollup" ] && echo "none|0|0||" && return
+  [ -z "$rollup" ] && rollup='{"statusCheckRollup":[]}'
   
+  declare -A seen_checks
   while IFS=$'\t' read -r name status conclusion; do
     [ -z "$name" ] && continue
     is_ignored_job "$name" && continue
+    seen_checks["${name,,}"]=1
     
     case "$status" in
       COMPLETED|SUCCESS)
@@ -75,6 +77,30 @@ get_ci_status() {
         ;;
     esac
   done < <(echo "$rollup" | jq -r '.statusCheckRollup[] | select(.name != null or .context != null) | "\(.name // .context)\t\(.status // .state)\t\(.conclusion // "")"')
+  
+  sha=$(gh pr view "$pr" --repo "$repo" --json headRefOid -q '.headRefOid' 2>/dev/null || echo "")
+  if [ -n "$sha" ]; then
+    while IFS=$'\t' read -r name status conclusion; do
+      [ -z "$name" ] && continue
+      is_ignored_job "$name" && continue
+      [ -n "${seen_checks["${name,,}"]+x}" ] && continue
+      
+      case "$status" in
+        COMPLETED|SUCCESS)
+          case "$conclusion" in
+            FAILURE|TIMED_OUT|CANCELLED|ACTION_REQUIRED)
+              failed_jobs="${failed_jobs}${name} (${conclusion}), "
+              ;;
+            *) passed=$((passed + 1)) ;;
+          esac
+          ;;
+        PENDING|QUEUED|IN_PROGRESS|WAITING|REQUESTED|"")
+          pending=$((pending + 1))
+          pending_jobs="${pending_jobs}${name}, "
+          ;;
+      esac
+    done < <(gh api "repos/${repo}/commits/${sha}/check-runs" 2>/dev/null | jq -r '.check_runs[] | "\(.name)\t\(.status // "")\t\(.conclusion // "")"' || true)
+  fi
   
   [ -n "$failed_jobs" ] && echo "failed|$passed|$pending|${failed_jobs%, }|${pending_jobs%, }" && return
   [ "$pending" -eq 0 ] && echo "passed|$passed|0||" && return
