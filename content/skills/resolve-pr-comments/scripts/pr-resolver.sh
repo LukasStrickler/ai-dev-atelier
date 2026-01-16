@@ -381,13 +381,20 @@ ACTIONABLE_CLUSTERS=$(echo "$CLUSTERS_JSON" | jq '[.[] | select(.actionable == t
 GENERATED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 ACTIONABLE_OUTPUT_FILE="${PR_DIR}/actionable.json"
 
+# Write large JSON arrays to temp files to avoid "Argument list too long" errors
+CLUSTERS_TEMP=$(mktemp)
+DUPLICATES_TEMP=$(mktemp)
+trap 'rm -f "$CLUSTERS_TEMP" "$DUPLICATES_TEMP"' EXIT
+echo "$CLUSTERS_JSON" > "$CLUSTERS_TEMP"
+echo "$DUPLICATES_ARRAY" > "$DUPLICATES_TEMP"
+
 # Full data.json (all clusters, for historical context)
 jq -n \
   --arg generated_at "$GENERATED_AT" \
   --argjson pr_number "$PR_NUMBER" \
   --arg repository "${OWNER}/${REPO}" \
-  --argjson clusters "$CLUSTERS_JSON" \
-  --argjson duplicates "$DUPLICATES_ARRAY" \
+  --slurpfile clusters "$CLUSTERS_TEMP" \
+  --slurpfile duplicates "$DUPLICATES_TEMP" \
   --argjson total_comments "$TOTAL_COMMENTS" \
   --argjson resolved_comments "$TOTAL_RESOLVED" \
   --argjson unresolved_comments "$TOTAL_UNRESOLVED" \
@@ -408,8 +415,8 @@ jq -n \
       clusters_created: $clusters_created,
       actionable_clusters: $actionable_clusters
     },
-    clusters: $clusters,
-    duplicates: $duplicates,
+    clusters: $clusters[0],
+    duplicates: $duplicates[0],
     results: []
   }' > "$OUTPUT_FILE"
 
@@ -419,12 +426,14 @@ log_success "PR #${PR_NUMBER} data saved to $OUTPUT_FILE"
 # Contains only clusters with unresolved_count > 0
 # Includes resolved comments within those clusters for context
 ACTIONABLE_CLUSTERS_JSON=$(echo "$CLUSTERS_JSON" | jq '[.[] | select(.actionable == true)]')
+ACTIONABLE_TEMP=$(mktemp)
+echo "$ACTIONABLE_CLUSTERS_JSON" > "$ACTIONABLE_TEMP"
 
 jq -n \
   --arg generated_at "$GENERATED_AT" \
   --argjson pr_number "$PR_NUMBER" \
   --arg repository "${OWNER}/${REPO}" \
-  --argjson clusters "$ACTIONABLE_CLUSTERS_JSON" \
+  --slurpfile clusters "$ACTIONABLE_TEMP" \
   --argjson total_comments "$TOTAL_COMMENTS" \
   --argjson resolved_comments "$TOTAL_RESOLVED" \
   --argjson unresolved_comments "$TOTAL_UNRESOLVED" \
@@ -440,8 +449,10 @@ jq -n \
       unresolved_comments: $unresolved_comments,
       actionable_clusters: $actionable_clusters
     },
-    clusters: $clusters
+    clusters: $clusters[0]
   }' > "$ACTIONABLE_OUTPUT_FILE"
+
+rm -f "$ACTIONABLE_TEMP"
 
 log_success "Actionable-only data saved to $ACTIONABLE_OUTPUT_FILE"
 
