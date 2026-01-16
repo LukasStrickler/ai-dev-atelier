@@ -194,12 +194,22 @@ wait_for_all() {
   local repo="$1" pr="$2"
   local last_pending_jobs="" last_requested_bots=0 ci_failed_jobs=""
   local ci_failed=false
+  local first_iteration=true
   
   log "[WAIT] PR #${pr}: Waiting for CI + AI reviews (max 10 min)"
+  log "[DEBUG] repo='$repo' pr='$pr'"
   
   while ! is_timed_out; do
     local ci_result pending passed pending_jobs failed_jobs
-    IFS='|' read -r ci_result passed pending failed_jobs pending_jobs <<< "$(get_ci_status "$repo" "$pr")"
+    local ci_raw
+    ci_raw="$(get_ci_status "$repo" "$pr")"
+    IFS='|' read -r ci_result passed pending failed_jobs pending_jobs <<< "$ci_raw"
+    
+    # Debug: log first iteration values to understand instant returns
+    if $first_iteration; then
+      log "[DEBUG] CI raw='$ci_raw'"
+      log "[DEBUG] ci_result='$ci_result' passed='$passed' pending='$pending'"
+    fi
     
     case "$ci_result" in
       failed)
@@ -215,8 +225,17 @@ wait_for_all() {
     esac
     
     local running requested running_names
-    IFS='|' read -r running requested running_names <<< "$(get_ai_review_status "$repo" "$pr")"
+    local ai_raw
+    ai_raw="$(get_ai_review_status "$repo" "$pr")"
+    IFS='|' read -r running requested running_names <<< "$ai_raw"
     last_requested_bots="$requested"
+    
+    # Debug: log first iteration AI values
+    if $first_iteration; then
+      log "[DEBUG] AI raw='$ai_raw'"
+      log "[DEBUG] running='$running' requested='$requested'"
+      first_iteration=false
+    fi
     
     if [ "$pending" -eq 0 ] && [ "$running" -eq 0 ] && [ "$requested" -eq 0 ]; then
       if $ci_failed || [ "$ci_result" = "failed" ]; then
