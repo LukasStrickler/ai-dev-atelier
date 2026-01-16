@@ -104,7 +104,7 @@ background_task({
 | `tavily_extract` | Get full content from specific URLs (after search) | `extract_depth`: "basic"/"advanced", `query`: rerank chunks by relevance |
 | `tavily_crawl` | Crawl multiple pages from a docs site | `max_depth`: 1-3, `limit`: max pages, `select_paths`: regex to include, `instructions`: natural language filter |
 | `tavily_map` | Discover site structure before crawling | `max_depth`: 1-3, `limit`: max URLs to return |
-| `websearch_web_search_exa` | Alternative web search (Exa AI) | `numResults`: 5-20, `type`: "auto"/"fast"/"deep" |
+ | `websearch_web_search_exa` | **Fallback web search (unlimited quota)** - Use when Tavily quota exceeded or for bulk searches | `numResults`: 5-20, `type`: "auto"/"fast"/"deep" |
 
 ### Context7 (Library Docs)
 | Tool | When to Use | Key Params |
@@ -219,6 +219,11 @@ useRegexp: true
 - `basic` = 1 credit, `advanced` = 2 credits
 - Prefer two-step extraction over `include_raw_content: true`
 - Use `tavily_map` before `tavily_crawl`
+
+**Quota Management:**
+- Default to Tavily for important/critical searches (better relevance when quota available)
+- Fallback to Exa (`websearch_web_search_exa`) when Tavily quota exceeded (unlimited)
+- Don't retry quota errors - switch to Exa immediately on first failure
 
 For advanced techniques: See `references/advanced-techniques.md`
 
