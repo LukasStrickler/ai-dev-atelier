@@ -237,6 +237,7 @@ wait_for_all() {
       first_iteration=false
     fi
     
+    log "[DEBUG] CONDITION CHECK: pending='$pending' running='$running' requested='$requested'"
     if [ "$pending" -eq 0 ] && [ "$running" -eq 0 ] && [ "$requested" -eq 0 ]; then
       if $ci_failed || [ "$ci_result" = "failed" ]; then
         log "[FAIL] CI failed: $ci_failed_jobs"
