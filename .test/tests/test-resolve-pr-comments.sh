@@ -859,6 +859,72 @@ test_wait_script_arg "--repo" 1 "Wait script errors with --repo but no value"
 test_wait_script_arg "--unknown-flag" 1 "Wait script errors with unknown flag"
 
 #==============================================================================
+# get_repo_owner_repo .git suffix stripping tests
+#==============================================================================
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Testing: get_repo_owner_repo .git suffix handling"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+echo ""
+echo "--- .git suffix must be stripped from repo name ---"
+echo ""
+
+# Create a mock git environment to test get_repo_owner_repo
+MOCK_GIT_DIR=$(mktemp -d)
+trap 'rm -rf "$MOCK_GIT_DIR"' EXIT
+
+test_git_suffix_stripping() {
+  local remote_url="$1"
+  local expected="$2"
+  local description="$3"
+  
+  # Create mock git that returns the specified remote URL
+  local mock_git_script="$MOCK_GIT_DIR/git"
+  cat > "$mock_git_script" << MOCK_GIT_EOF
+#!/bin/bash
+if [[ "\$*" == *"remote get-url origin"* ]]; then
+  echo "$remote_url"
+  exit 0
+fi
+# Pass through other git commands
+/usr/bin/git "\$@"
+MOCK_GIT_EOF
+  chmod +x "$mock_git_script"
+  
+  local result
+  result=$(PATH="$MOCK_GIT_DIR:$PATH" bash -c "source '$UTILS_SCRIPT' && get_repo_owner_repo" 2>&1)
+  local exit_code=$?
+  
+  if [ "$exit_code" -eq 0 ] && [ "$result" = "$expected" ]; then
+    pass "$description"
+  else
+    fail "$description (got: '$result', expected: '$expected')"
+  fi
+}
+
+# Test cases for .git suffix stripping
+test_git_suffix_stripping "https://github.com/owner/repo.git" "owner/repo" \
+  "Strips .git suffix from HTTPS URL"
+
+test_git_suffix_stripping "https://github.com/owner/repo" "owner/repo" \
+  "Works without .git suffix in HTTPS URL"
+
+test_git_suffix_stripping "git@github.com:owner/repo.git" "owner/repo" \
+  "Strips .git suffix from SSH URL"
+
+test_git_suffix_stripping "git@github.com:owner/repo" "owner/repo" \
+  "Works without .git suffix in SSH URL"
+
+test_git_suffix_stripping "https://github.com/LukasStrickler/ai-dev-atelier.git" "LukasStrickler/ai-dev-atelier" \
+  "Strips .git suffix from real repo URL (regression test for wait script bug)"
+
+# Edge case: repo name that contains 'git' but doesn't end with .git
+test_git_suffix_stripping "https://github.com/owner/my-git-project" "owner/my-git-project" \
+  "Preserves 'git' in middle of repo name"
+
+#==============================================================================
 # Summary
 #==============================================================================
 
