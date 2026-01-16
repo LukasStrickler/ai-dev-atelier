@@ -499,6 +499,432 @@ test_hook_blocks_upstream "gh api repos/other-owner/other-repo/pulls/123/comment
 rm -rf "$MOCK_GH_FORK2"
 
 #==============================================================================
+# pr-wait-for-reviews.sh tests
+#==============================================================================
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Testing: pr-wait-for-reviews.sh (wait/timeout functionality)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+WAIT_SCRIPT="$REPO_ROOT/content/skills/resolve-pr-comments/scripts/lib/pr-wait-for-reviews.sh"
+CI_FILTERS="$REPO_ROOT/content/skills/resolve-pr-comments/ci-job-filters.txt"
+
+echo ""
+echo "--- CI job filters file existence ---"
+echo ""
+
+if [ -f "$CI_FILTERS" ]; then
+  pass "ci-job-filters.txt exists"
+else
+  fail "ci-job-filters.txt should exist"
+fi
+
+echo ""
+echo "--- CI filter patterns exclude AI bots (we wait for them) ---"
+echo ""
+
+test_filter_NOT_exists() {
+  local pattern="$1"
+  local description="$2"
+  
+  # Only check non-comment lines (actual filter patterns)
+  if grep -v '^[[:space:]]*#' "$CI_FILTERS" 2>/dev/null | grep -qi "$pattern"; then
+    fail "$description (pattern should NOT be in filters: $pattern)"
+  else
+    pass "$description"
+  fi
+}
+
+# AI reviewers should NOT be filtered - we need to wait for their comments
+test_filter_NOT_exists "coderabbit" "CodeRabbit NOT in filters (we wait for it)"
+test_filter_NOT_exists "copilot" "Copilot NOT in filters (we wait for it)"
+test_filter_NOT_exists "cubic" "Cubic NOT in filters (we wait for it)"
+test_filter_NOT_exists "gemini" "Gemini NOT in filters (we wait for it)"
+
+echo ""
+echo "--- is_ignored_job function tests ---"
+echo ""
+
+test_ignored_job() {
+  local job_name="$1"
+  local should_ignore="$2"
+  local description="$3"
+  
+  local result=0
+  bash -c "
+    source '$WAIT_SCRIPT' 2>/dev/null
+    is_ignored_job '$job_name' && exit 0 || exit 1
+  " 2>/dev/null || result=$?
+  
+  if [ "$should_ignore" = "yes" ] && [ "$result" -eq 0 ]; then
+    pass "$description"
+  elif [ "$should_ignore" = "no" ] && [ "$result" -ne 0 ]; then
+    pass "$description"
+  else
+    fail "$description (expected ignore=$should_ignore, got result=$result)"
+  fi
+}
+
+# Create temp test script with the function
+TEMP_TEST=$(mktemp)
+cat > "$TEMP_TEST" << 'TESTEOF'
+#!/bin/bash
+set -euo pipefail
+TESTEOF
+sed -n '/^load_ci_filters()/,/^get_ci_status()/p' "$WAIT_SCRIPT" | head -n -1 >> "$TEMP_TEST"
+echo "" >> "$TEMP_TEST"
+echo "CI_FILTERS_FILE=\"$CI_FILTERS\"" >> "$TEMP_TEST"
+echo 'is_ignored_job "$1"' >> "$TEMP_TEST"
+chmod +x "$TEMP_TEST"
+
+test_ignored_with_script() {
+  local job_name="$1"
+  local should_ignore="$2"
+  local description="$3"
+  
+  local result=0
+  bash "$TEMP_TEST" "$job_name" 2>/dev/null || result=$?
+  
+  if [ "$should_ignore" = "yes" ] && [ "$result" -eq 0 ]; then
+    pass "$description"
+  elif [ "$should_ignore" = "no" ] && [ "$result" -ne 0 ]; then
+    pass "$description"
+  else
+    fail "$description (expected ignore=$should_ignore, got result=$result)"
+  fi
+}
+
+# AI reviewers should NOT be ignored - we wait for their comments
+test_ignored_with_script "CodeRabbit Review" "no" "Does NOT ignore: CodeRabbit Review (we wait for it)"
+test_ignored_with_script "coderabbit-lint" "no" "Does NOT ignore: coderabbit-lint (we wait for it)"
+test_ignored_with_script "Copilot code review" "no" "Does NOT ignore: Copilot code review (we wait for it)"
+test_ignored_with_script "cubic-review" "no" "Does NOT ignore: cubic-review (we wait for it)"
+test_ignored_with_script "gemini-review" "no" "Does NOT ignore: gemini-review (we wait for it)"
+# Regular CI jobs should still not be ignored
+test_ignored_with_script "build" "no" "Does not ignore: build"
+test_ignored_with_script "test" "no" "Does not ignore: test"
+test_ignored_with_script "lint" "no" "Does not ignore: lint"
+test_ignored_with_script "deploy" "no" "Does not ignore: deploy"
+
+rm -f "$TEMP_TEST"
+
+
+echo ""
+echo "--- wait logic for checks and bot reviews ---"
+echo ""
+
+MOCK_GH_WAIT=$(mktemp -d)
+cat > "$MOCK_GH_WAIT/gh" << 'MOCK_EOF_WAIT'
+#!/bin/bash
+set -euo pipefail
+
+cmd="$*"
+case "$cmd" in
+  *"pr view"*"--json"*"statusCheckRollup"*) printf '%s\n' "${GH_STATUS_ROLLUP_JSON:-{"statusCheckRollup":[]}}" ;;
+  *"pr view"*"--json"*"headRefOid"*) printf '%s\n' "${GH_HEAD_SHA:-}" ;;
+  *"pr view"*"--json"*"baseRefName"*) printf '%s\n' "${GH_BASE_REF:-main}" ;;
+  *"pr checks"*"--json"*"name,bucket"*) printf '%s\n' "${GH_PR_CHECKS_JSON:-[]}" ;;
+  *"api repos/"*"/commits/"*"/check-runs"*) printf '%s\n' "${GH_CHECK_RUNS_JSON:-{\"check_runs\":[]}}" ;;
+  *"api repos/"*"/commits/"*"/status"*) printf '%s\n' "${GH_COMMIT_STATUS_JSON:-{\"statuses\":[]}}" ;;
+  *"api repos/"*"/pulls/"*"/requested_reviewers"*) printf '%s\n' "${GH_REQUESTED_REVIEWERS_JSON:-{\"users\":[],\"teams\":[]}}" ;;
+  *"api repos/"*"/actions/runs?head_sha="*) printf '%s\n' "${GH_ACTIONS_RUNS_JSON:-{\"workflow_runs\":[]}}" ;;
+  *"api repos/"*"/rules/branches/"*) printf '%s\n' "${GH_RULES_BRANCH_JSON:-[]}" ;;
+  *"api repos/"*"/branches/"*"/protection/required_status_checks"*) printf '%s\n' "${GH_REQUIRED_STATUS_JSON:-{\"contexts\":[],\"checks\":[]}}" ;;
+  *) exit 1 ;;
+esac
+MOCK_EOF_WAIT
+chmod +x "$MOCK_GH_WAIT/gh"
+
+make_wait_harness() {
+  local body="$1"
+  local tmp
+  tmp=$(mktemp)
+  {
+    echo "#!/bin/bash"
+    echo "set -euo pipefail"
+    sed -n '1,/^main()/p' "$WAIT_SCRIPT" | head -n -1
+    echo "CI_FILTERS_FILE=\"$CI_FILTERS\""
+    echo "MAX_WAIT_SECONDS=5"
+    echo "POLL_INTERVAL=1"
+    echo "LOG_INTERVAL=1"
+    echo "START_TIME=\$(date +%s)"
+    echo "LAST_LOG_TIME=\$START_TIME"
+    echo "$body"
+  } > "$tmp"
+  chmod +x "$tmp"
+  echo "$tmp"
+}
+
+test_ci_pending_from_pr_checks() {
+  local tmp output
+  export GH_STATUS_ROLLUP_JSON='{"statusCheckRollup":[{"name":"label","status":"COMPLETED","conclusion":"SUCCESS"}]}'
+  export GH_PR_CHECKS_JSON='[{"name":"cubic · AI code reviewer","bucket":"pending"}]'
+  export GH_CHECK_RUNS_JSON='{"check_runs":[]}'
+  export GH_COMMIT_STATUS_JSON='{"statuses":[]}'
+  export GH_HEAD_SHA="abc"
+  tmp=$(make_wait_harness 'get_ci_status "owner/repo" "28"')
+  output=$(PATH="$MOCK_GH_WAIT:$PATH" bash "$tmp" 2>/dev/null)
+  rm -f "$tmp"
+  if echo "$output" | grep -q '^pending|'; then
+    pass "Waits when gh pr checks reports pending"
+  else
+    fail "Should report pending when gh pr checks has pending"
+  fi
+  if echo "$output" | grep -qi "cubic"; then
+    pass "Pending check name preserved from gh pr checks"
+  else
+    fail "Pending check name should include cubic"
+  fi
+}
+
+test_bot_review_request_pending() {
+  local tmp output requested
+  export GH_STATUS_ROLLUP_JSON='{"statusCheckRollup":[]}'
+  export GH_PR_CHECKS_JSON='[]'
+  export GH_CHECK_RUNS_JSON='{"check_runs":[]}'
+  export GH_COMMIT_STATUS_JSON='{"statuses":[]}'
+  export GH_ACTIONS_RUNS_JSON='{"workflow_runs":[]}'
+  export GH_REQUESTED_REVIEWERS_JSON='{"users":[{"login":"Copilot","type":"Bot"}],"teams":[]}'
+  export GH_HEAD_SHA="abc"
+  tmp=$(make_wait_harness 'get_ai_review_status "owner/repo" "28"')
+  output=$(PATH="$MOCK_GH_WAIT:$PATH" bash "$tmp" 2>/dev/null)
+  rm -f "$tmp"
+  IFS='|' read -r _ requested _ <<< "$output"
+  if [ "$requested" -eq 1 ]; then
+    pass "Bot review request keeps wait active"
+  else
+    fail "Expected bot review request count 1, got $requested"
+  fi
+}
+
+test_ci_pending_from_pr_checks
+ test_bot_review_request_pending
+
+ test_required_check_missing_is_pending() {
+   local tmp output
+   export GH_STATUS_ROLLUP_JSON='{"statusCheckRollup":[]}'
+   export GH_PR_CHECKS_JSON='[]'
+   export GH_CHECK_RUNS_JSON='{"check_runs":[]}'
+   export GH_COMMIT_STATUS_JSON='{"statuses":[]}'
+   export GH_RULES_BRANCH_JSON='[{"type":"required_status_checks","parameters":{"required_status_checks":[{"context":"required-ci"}]}}]'
+   export GH_REQUIRED_STATUS_JSON='{"contexts":[],"checks":[]}'
+   export GH_HEAD_SHA="abc"
+   export GH_BASE_REF="main"
+   tmp=$(make_wait_harness 'get_ci_status "owner/repo" "28"')
+   output=$(PATH="$MOCK_GH_WAIT:$PATH" bash "$tmp" 2>/dev/null)
+   rm -f "$tmp"
+   if echo "$output" | grep -q '^pending|'; then
+     pass "Required checks missing are treated as pending"
+   else
+     fail "Missing required checks should cause pending"
+   fi
+   if echo "$output" | grep -qi "required-ci"; then
+     pass "Missing required check name is listed"
+   else
+     fail "Missing required check name should be listed"
+   fi
+ }
+
+ test_required_check_missing_is_pending
+
+ test_ci_failure_does_not_abort() {
+   local tmp output
+   export GH_STATUS_ROLLUP_JSON='{"statusCheckRollup":[{"name":"validate","status":"COMPLETED","conclusion":"FAILURE"}]}'
+   export GH_PR_CHECKS_JSON='[]'
+   export GH_CHECK_RUNS_JSON='{"check_runs":[]}'
+   export GH_COMMIT_STATUS_JSON='{"statuses":[]}'
+  export GH_ACTIONS_RUNS_JSON='{"workflow_runs":[]}'
+  export GH_REQUESTED_REVIEWERS_JSON='{"users":[],"teams":[]}'
+  export GH_RULES_BRANCH_JSON='[]'
+  export GH_REQUIRED_STATUS_JSON='{"contexts":[],"checks":[]}'
+  export GH_BASE_REF="main"
+  export GH_HEAD_SHA="abc"
+
+   tmp=$(make_wait_harness 'wait_for_all "owner/repo" "28"')
+   output=$(PATH="$MOCK_GH_WAIT:$PATH" bash "$tmp" 2>&1 || true)
+   rm -f "$tmp"
+   if echo "$output" | grep -q "\[FAIL\] CI failed"; then
+     pass "CI failure is reported before finishing"
+   else
+     fail "Expected CI failure to be reported"
+   fi
+   if echo "$output" | grep -q "\[OK\] Ready to fetch comments"; then
+     pass "Wait completes even with CI failure"
+   else
+     fail "Expected wait to complete despite CI failure"
+   fi
+ }
+
+ test_ci_failure_does_not_abort
+
+ rm -rf "$MOCK_GH_WAIT"
+
+ echo ""
+ echo "--- --skip-wait parameter tests ---"
+echo ""
+
+test_skip_wait_requires_reason() {
+  local output
+  output=$(bash "$REPO_ROOT/content/skills/resolve-pr-comments/scripts/pr-resolver.sh" 123 --skip-wait 2>&1 || true)
+  
+  if echo "$output" | grep -qi "requires.*reason\|reason.*required"; then
+    pass "--skip-wait requires a reason"
+  else
+    fail "--skip-wait should require a reason"
+  fi
+}
+
+test_skip_wait_logs_reason() {
+  local output
+  output=$(bash "$REPO_ROOT/content/skills/resolve-pr-comments/scripts/pr-resolver.sh" 99999 --skip-wait "test reason" 2>&1 || true)
+  
+  if echo "$output" | grep -q "test reason"; then
+    pass "--skip-wait logs the provided reason"
+  else
+    fail "--skip-wait should log the provided reason"
+  fi
+}
+
+test_skip_wait_requires_reason
+test_skip_wait_logs_reason
+
+echo ""
+echo "--- SKILL.md timeout documentation ---"
+echo ""
+
+SKILL_MD="$REPO_ROOT/content/skills/resolve-pr-comments/SKILL.md"
+
+test_skill_md_timeout() {
+  local pattern="$1"
+  local description="$2"
+  
+  if grep -q "$pattern" "$SKILL_MD" 2>/dev/null; then
+    pass "$description"
+  else
+    fail "$description (pattern not found)"
+  fi
+}
+
+test_skill_md_timeout "timeout.*660000" "SKILL.md documents timeout: 660000"
+test_skill_md_timeout "11 min\|11 minute" "SKILL.md mentions 11 minute timeout"
+test_skill_md_timeout "10 min.*total\|total.*10 min" "SKILL.md mentions 10 min total wait"
+
+echo ""
+echo "--- Wait script timeout message tests ---"
+echo ""
+
+test_timeout_message_content() {
+  local script_content
+  script_content=$(cat "$WAIT_SCRIPT")
+  
+  if echo "$script_content" | grep -q "gh pr checks"; then
+    pass "Timeout message includes 'gh pr checks' command"
+  else
+    fail "Timeout message should include 'gh pr checks' command"
+  fi
+  
+  if echo "$script_content" | grep -q "skip-wait"; then
+    pass "Timeout message mentions --skip-wait option"
+  else
+    fail "Timeout message should mention --skip-wait option"
+  fi
+}
+
+test_timeout_message_content
+
+echo ""
+echo "--- Wait script argument parsing ---"
+echo ""
+
+test_wait_script_arg() {
+  local args="$1"
+  local expected_exit="$2"
+  local description="$3"
+  
+  local actual_exit=0
+  # shellcheck disable=SC2086 # Intentional word splitting
+  bash "$WAIT_SCRIPT" $args >/dev/null 2>&1 || actual_exit=$?
+  
+  # Exit codes: 0=success, 1=CI fail/error, 2=timeout
+  if [ "$actual_exit" -eq "$expected_exit" ]; then
+    pass "$description"
+  else
+    fail "$description (expected exit $expected_exit, got $actual_exit)"
+  fi
+}
+
+test_wait_script_arg "" 1 "Wait script errors without PR number"
+test_wait_script_arg "--repo" 1 "Wait script errors with --repo but no value"
+test_wait_script_arg "--unknown-flag" 1 "Wait script errors with unknown flag"
+
+#==============================================================================
+# get_repo_owner_repo .git suffix stripping tests
+#==============================================================================
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "Testing: get_repo_owner_repo .git suffix handling"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+echo ""
+echo "--- .git suffix must be stripped from repo name ---"
+echo ""
+
+# Create a mock git environment to test get_repo_owner_repo
+MOCK_GIT_DIR=$(mktemp -d)
+trap 'rm -rf "$MOCK_GIT_DIR"' EXIT
+
+test_git_suffix_stripping() {
+  local remote_url="$1"
+  local expected="$2"
+  local description="$3"
+  
+  # Create mock git that returns the specified remote URL
+  local mock_git_script="$MOCK_GIT_DIR/git"
+  cat > "$mock_git_script" << MOCK_GIT_EOF
+#!/bin/bash
+if [[ "\$*" == *"remote get-url origin"* ]]; then
+  echo "$remote_url"
+  exit 0
+fi
+# Pass through other git commands
+/usr/bin/git "\$@"
+MOCK_GIT_EOF
+  chmod +x "$mock_git_script"
+  
+  local result
+  result=$(PATH="$MOCK_GIT_DIR:$PATH" bash -c "source '$UTILS_SCRIPT' && get_repo_owner_repo" 2>&1)
+  local exit_code=$?
+  
+  if [ "$exit_code" -eq 0 ] && [ "$result" = "$expected" ]; then
+    pass "$description"
+  else
+    fail "$description (got: '$result', expected: '$expected')"
+  fi
+}
+
+# Test cases for .git suffix stripping
+test_git_suffix_stripping "https://github.com/owner/repo.git" "owner/repo" \
+  "Strips .git suffix from HTTPS URL"
+
+test_git_suffix_stripping "https://github.com/owner/repo" "owner/repo" \
+  "Works without .git suffix in HTTPS URL"
+
+test_git_suffix_stripping "git@github.com:owner/repo.git" "owner/repo" \
+  "Strips .git suffix from SSH URL"
+
+test_git_suffix_stripping "git@github.com:owner/repo" "owner/repo" \
+  "Works without .git suffix in SSH URL"
+
+test_git_suffix_stripping "https://github.com/LukasStrickler/ai-dev-atelier.git" "LukasStrickler/ai-dev-atelier" \
+  "Strips .git suffix from real repo URL (regression test for wait script bug)"
+
+# Edge case: repo name that contains 'git' but doesn't end with .git
+test_git_suffix_stripping "https://github.com/owner/my-git-project" "owner/my-git-project" \
+  "Preserves 'git' in middle of repo name"
+
+#==============================================================================
 # Summary
 #==============================================================================
 

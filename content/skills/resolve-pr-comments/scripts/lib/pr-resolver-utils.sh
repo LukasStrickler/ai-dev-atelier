@@ -114,7 +114,7 @@ get_repo_owner_repo() {
     return 1
   fi
   local owner_repo
-  owner_repo=$(echo "$remote_url" | sed -E 's|.*github\.com[:/]([^/]+)/([^/]+)(\.git)?$|\1/\2|')
+  owner_repo=$(echo "$remote_url" | sed -E 's|.*github\.com[:/]([^/]+)/([^/]+)(\.git)?$|\1/\2|' | sed 's/\.git$//')
   if [ -z "$owner_repo" ] || [ "$owner_repo" = "$remote_url" ]; then
     log_error "Could not extract owner/repo from: $remote_url"
     return 1

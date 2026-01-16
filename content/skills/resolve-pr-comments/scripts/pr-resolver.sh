@@ -1,6 +1,6 @@
 #!/bin/bash
 # Fetch and cluster PR review comments in one call
-# Usage: bash pr-resolver.sh [PR_NUMBER] [--repo owner/repo]
+# Usage: bash pr-resolver.sh [PR_NUMBER] [--repo owner/repo] [--skip-wait "reason"]
 # Output: .ada/data/pr-resolver/pr-{N}/data.json (encapsulated per PR)
 #
 # Clusters include BOTH resolved and unresolved comments for context.
@@ -9,6 +9,11 @@
 # Fork/Upstream Support:
 #   For PRs from forks to upstream repos, use --repo to specify the upstream:
 #   bash pr-resolver.sh 123 --repo upstream-owner/upstream-repo
+#
+# Wait Behavior (DEFAULT):
+#   By default, waits for CI jobs and AI reviews to complete before fetching.
+#   This ensures all bot comments are available before clustering.
+#   Use --skip-wait "reason" to skip waiting (reason is required for audit trail).
 
 set -euo pipefail
 
@@ -29,21 +34,31 @@ fi
 # Parse arguments
 PR_NUMBER=""
 TARGET_REPO=""
+SKIP_WAIT=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     --repo)
       if [[ $# -lt 2 || "$2" == -* ]]; then
         log_error "--repo requires a value (owner/repo)"
-        echo "Usage: $0 [PR_NUMBER] [--repo owner/repo]" >&2
+        echo "Usage: $0 [PR_NUMBER] [--repo owner/repo] [--skip-wait \"reason\"]" >&2
         exit 1
       fi
       TARGET_REPO="$2"
       shift 2
       ;;
+    --skip-wait)
+      if [[ $# -lt 2 || "$2" == -* ]]; then
+        log_error "--skip-wait requires a reason"
+        echo "Usage: $0 [PR_NUMBER] [--repo owner/repo] [--skip-wait \"reason\"]" >&2
+        exit 1
+      fi
+      SKIP_WAIT="$2"
+      shift 2
+      ;;
     -*)
       log_error "Unknown option: $1"
-      echo "Usage: $0 [PR_NUMBER] [--repo owner/repo]" >&2
+      echo "Usage: $0 [PR_NUMBER] [--repo owner/repo] [--skip-wait \"reason\"]" >&2
       exit 1
       ;;
     *)
@@ -77,6 +92,29 @@ if [ -z "$OWNER_REPO" ]; then
   exit 1
 fi
 read -r OWNER REPO <<< "$(parse_owner_repo "$OWNER_REPO")"
+
+# ============================================================================
+# PHASE 0: Wait for CI and AI reviews (unless --skip-wait)
+# ============================================================================
+
+if [ -n "$SKIP_WAIT" ]; then
+  log_info "Skipping wait: $SKIP_WAIT"
+else
+  WAIT_SCRIPT="${SCRIPT_DIR}/lib/pr-wait-for-reviews.sh"
+  if command -v realpath &>/dev/null; then
+    WAIT_SCRIPT="$(realpath "$WAIT_SCRIPT" 2>/dev/null || echo "$WAIT_SCRIPT")"
+  fi
+  if [ ! -f "$WAIT_SCRIPT" ]; then
+    log_error "Wait script missing: $WAIT_SCRIPT"
+    exit 1
+  fi
+  log_info "Using wait script: $WAIT_SCRIPT"
+  log_info "Waiting for CI and AI reviews (use --skip-wait \"reason\" to skip)..."
+  if ! bash "$WAIT_SCRIPT" "$PR_NUMBER" --repo "$OWNER_REPO"; then
+    log_error "CI/review wait failed - fix CI issues or use --skip-wait \"reason\" to proceed anyway"
+    exit 1
+  fi
+fi
 
 # Determine if we should show --repo in examples
 # Show when: explicit --repo provided, OR get_effective_repo detected upstream (fork)
@@ -343,13 +381,20 @@ ACTIONABLE_CLUSTERS=$(echo "$CLUSTERS_JSON" | jq '[.[] | select(.actionable == t
 GENERATED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 ACTIONABLE_OUTPUT_FILE="${PR_DIR}/actionable.json"
 
+# Write large JSON arrays to temp files to avoid "Argument list too long" errors
+CLUSTERS_TEMP=$(mktemp)
+DUPLICATES_TEMP=$(mktemp)
+trap 'rm -f "$CLUSTERS_TEMP" "$DUPLICATES_TEMP"' EXIT
+echo "$CLUSTERS_JSON" > "$CLUSTERS_TEMP"
+echo "$DUPLICATES_ARRAY" > "$DUPLICATES_TEMP"
+
 # Full data.json (all clusters, for historical context)
 jq -n \
   --arg generated_at "$GENERATED_AT" \
   --argjson pr_number "$PR_NUMBER" \
   --arg repository "${OWNER}/${REPO}" \
-  --argjson clusters "$CLUSTERS_JSON" \
-  --argjson duplicates "$DUPLICATES_ARRAY" \
+  --slurpfile clusters "$CLUSTERS_TEMP" \
+  --slurpfile duplicates "$DUPLICATES_TEMP" \
   --argjson total_comments "$TOTAL_COMMENTS" \
   --argjson resolved_comments "$TOTAL_RESOLVED" \
   --argjson unresolved_comments "$TOTAL_UNRESOLVED" \
@@ -370,8 +415,8 @@ jq -n \
       clusters_created: $clusters_created,
       actionable_clusters: $actionable_clusters
     },
-    clusters: $clusters,
-    duplicates: $duplicates,
+    clusters: $clusters[0],
+    duplicates: $duplicates[0],
     results: []
   }' > "$OUTPUT_FILE"
 
@@ -381,12 +426,14 @@ log_success "PR #${PR_NUMBER} data saved to $OUTPUT_FILE"
 # Contains only clusters with unresolved_count > 0
 # Includes resolved comments within those clusters for context
 ACTIONABLE_CLUSTERS_JSON=$(echo "$CLUSTERS_JSON" | jq '[.[] | select(.actionable == true)]')
+ACTIONABLE_TEMP=$(mktemp)
+echo "$ACTIONABLE_CLUSTERS_JSON" > "$ACTIONABLE_TEMP"
 
 jq -n \
   --arg generated_at "$GENERATED_AT" \
   --argjson pr_number "$PR_NUMBER" \
   --arg repository "${OWNER}/${REPO}" \
-  --argjson clusters "$ACTIONABLE_CLUSTERS_JSON" \
+  --slurpfile clusters "$ACTIONABLE_TEMP" \
   --argjson total_comments "$TOTAL_COMMENTS" \
   --argjson resolved_comments "$TOTAL_RESOLVED" \
   --argjson unresolved_comments "$TOTAL_UNRESOLVED" \
@@ -402,8 +449,10 @@ jq -n \
       unresolved_comments: $unresolved_comments,
       actionable_clusters: $actionable_clusters
     },
-    clusters: $clusters
+    clusters: $clusters[0]
   }' > "$ACTIONABLE_OUTPUT_FILE"
+
+rm -f "$ACTIONABLE_TEMP"
 
 log_success "Actionable-only data saved to $ACTIONABLE_OUTPUT_FILE"
 

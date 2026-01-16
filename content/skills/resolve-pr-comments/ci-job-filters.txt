@@ -1,0 +1,25 @@
+# CI Job Filters for pr-wait-for-reviews.sh
+# Jobs matching these patterns will be IGNORED when waiting for CI
+# Use wildcards (*) for pattern matching
+#
+# NOTE: AI reviewers (CodeRabbit, Copilot, Cubic, Gemini) are NOT filtered.
+# We MUST wait for them because pr-resolver needs their comments.
+
+# Preview deployments (don't block on these)
+*-preview-*
+*-preview
+preview-*
+*deploy-preview*
+vercel*
+netlify*
+
+# Visual/snapshot testing (often slow and non-blocking)
+*chromatic*
+*storybook*
+*visual-regression*
+
+# Optional/informational checks
+*coverage*
+*codecov*
+*codacy*
+*sonar*
