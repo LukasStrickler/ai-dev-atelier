@@ -3,12 +3,12 @@ name: image-generation
 description: "Generate, edit, and upscale AI images. Use when creating visual assets for apps, websites, or documentation. FREE Cloudflare tier for iterate generation (~96/day), Fal.ai for paid tiers. Four quality tiers (iterate/default/premium/max). Supports text specialists, multi-ref editing, SVG, background removal. Triggers: generate image, create image, edit image, upscale, logo, picture of, remove background."
 metadata:
   author: ai-dev-atelier
-  version: "2.0"
+  version: "3.0"
 ---
 
 # Image Generation
 
-Generate, edit, and upscale images with standardized quality tiers.
+Generate, edit, and upscale images with standardized quality tiers and embedded best practices.
 
 ## Quick Start
 
@@ -38,108 +38,131 @@ Tier selection:
 | `bun scripts/svg.ts` | Image → SVG ($0.01/img) |
 | `bun scripts/rembg.ts` | Remove background (FREE) |
 
-## Quality Tiers
+---
 
-| Tier | Use Case |
-|------|----------|
-| `iterate` | Quick drafts, FREE for gen |
-| `default` | Daily driver, balanced |
-| `premium` | Final assets, quality |
-| `max` | Critical work, SOTA |
+## Prompting Best Practices
 
-## Workflow
+**CRITICAL**: Good prompts are the difference between unusable output and production-ready assets.
 
-### 1. Verify API Keys
+### The Universal Prompt Structure
 
-```bash
-# Check .env has required keys
-# iterate tier (FREE): CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN
-# Other tiers: FAL_API_KEY
+```
+[Subject] + [Action/Pose] + [Environment] + [Style/Medium] + [Lighting] + [Camera/Composition]
 ```
 
-### 2. Select Tier Based on Use Case
+**Example**:
+> "A cybernetic owl perched on a neon sign in a rain-soaked alley. Cinematic lighting with teal and orange highlights. Shot on 35mm film, shallow depth of field, hyper-detailed textures."
 
-| Scenario | Recommended Tier |
-|----------|------------------|
-| Quick exploration, 10+ variations | `iterate` (FREE) |
-| Daily use, 3-5 variations | `default` |
-| Final client deliverables | `premium` |
-| Critical work, multi-reference | `max` |
+### DO: Effective Prompting
 
-### 3. Execute Script
+| Technique | Example |
+|-----------|---------|
+| **Be specific** | "middle-aged man with salt-and-pepper hair wearing charcoal turtleneck" NOT "a man" |
+| **Describe the result** | "person with clear eyes" NOT "remove glasses" |
+| **Use camera terms** | "Shot on Hasselblad, 85mm lens, f/1.8" |
+| **Specify lighting** | "golden hour rim lighting with deep shadows" |
+| **Include textures** | "weathered sandstone", "anodized aluminum", "iridescent silk" |
 
-```bash
-# Generation
-bun scripts/gen.ts "<prompt>" -t <tier>
+### DON'T: Common Mistakes
 
-# Text/Logo (uses Recraft V3 or Ideogram V2)
-bun scripts/gen.ts "<prompt>" --text -t <tier>
+| Mistake | Problem | Fix |
+|---------|---------|-----|
+| Negative phrasing | "no glasses" often adds glasses | Describe what IS there |
+| Vague subjects | AI interprets randomly | Be exhaustively specific |
+| Keyword salad | "4k, trending, masterpiece" is noise | Use descriptive sentences |
+| Short prompts | Under 20 words underperforms | Aim for 40-80 words |
 
-# Editing
-bun scripts/edit.ts <image> "<instruction>" -t <tier>
+### Style Keywords That Work
 
-# Upscaling
-bun scripts/upscale.ts <image> -t <tier> --scale 2
+| Category | Keywords |
+|----------|----------|
+| **Lighting** | golden hour, volumetric lighting, Rembrandt lighting, neon rim light, bioluminescent |
+| **Camera** | 35mm anamorphic, macro photography, tilt-shift, fisheye, drone shot |
+| **Style** | cinematic, photorealistic, concept art, ukiyo-e, baroque, impressionist |
+| **Quality** | hyper-detailed, sharp focus, 8k resolution, raytraced |
 
-# Background removal
-bun scripts/rembg.ts <image>
-```
+---
 
-### 4. Handle Output
+## Text & Logo Generation (--text flag)
 
-- **Success**: Image saved to `.ada/data/images/` with timestamp
-- **Quota exceeded**: Exit code 3, no fallback to paid tier
-- **API error**: Exit code 1, check error message for fix
+Uses **Recraft V3** (iterate/default) or **Ideogram V2** (premium/max) - specialized for typography.
 
-### Exit Codes
+### Text Prompting Rules
 
-| Code | Meaning | Action |
-|------|---------|--------|
-| 0 | Success | Image saved |
-| 1 | General error | Check error message |
-| 2 | Config/auth error | Check API keys in .env |
-| 3 | Resource limit | Quota exceeded, wait or use different tier |
-
-## Generation
+**CRITICAL**: Put text in `"Double Quotes"` at the START of your prompt.
 
 ```bash
-bun scripts/gen.ts <prompt> [-t TIER] [--text] [--svg]
+# Correct - text first, then describe
+bun scripts/gen.ts '"QUANTUM" in bold futuristic font, metallic silver, dark space background' --text
+
+# Wrong - text buried in description
+bun scripts/gen.ts 'A logo with the word QUANTUM on it' --text
 ```
 
-| Tier | Provider | Cost |
-|------|----------|------|
-| iterate | Cloudflare | **FREE** (~96/day) |
-| default | Fal.ai flux-2/turbo | $0.008/MP |
-| premium | Fal.ai flux-2-pro | $0.03/MP |
-| max | Fal.ai flux-2-max | $0.07/MP |
+### Logo Design Patterns
 
-**Text/Logo** (add `--text`):
-| Tier | Model | Cost |
-|------|-------|------|
-| iterate/default | Recraft V3 | $0.04/img |
-| premium/max | Ideogram V2 | $0.08/img |
+| Style | Prompt Pattern |
+|-------|----------------|
+| **Minimalist** | `"BRAND" minimalist vector logo, clean lines, simple geometry, flat design` |
+| **Vintage** | `"EST. 1920" vintage badge logo, circular emblem, ribbon banner, ornate border` |
+| **Negative space** | `"PEAK" logo where the letter A forms a mountain, negative space design` |
+| **3D/Modern** | `"TECHCORP" bold 3D chrome letters, gradient fill, dark background` |
 
-Examples:
+### Font Specification
+
+Use typography terms: `modern sans-serif`, `elegant script`, `bold blocky`, `blackletter`, `neon tubing`, `retro 70s serif`
+
+### DO/DON'T for Text
+
+| DO | DON'T |
+|----|-------|
+| "Three cats playing" (exact count) | "cats playing" (random count) |
+| "wooden baseball bat" (specific) | "bat" (ambiguous) |
+| Describe only what you want | "no cake" (will add cake) |
+
+---
+
+## Image Editing
+
 ```bash
-bun scripts/gen.ts "cyberpunk city"              # default ($0.008/MP)
-bun scripts/gen.ts "cyberpunk city" -t iterate   # FREE (Cloudflare)
-bun scripts/gen.ts "TechCorp logo" --text        # text specialist
+bun scripts/edit.ts <image> <instruction> [-t TIER] [--mask <mask.png>] [--ref <img>...]
 ```
 
-## Editing
+### Writing Edit Instructions
+
+**Key**: Describe the TARGET STATE, not the change.
+
+| Bad Instruction | Good Instruction |
+|-----------------|------------------|
+| "change car to blue" | "A sleek blue metallic sports car, reflections of neon lights on wet asphalt" |
+| "add a hat" | "person wearing a vintage red fedora, matching the scene lighting" |
+| "remove background" | Use `rembg.ts` instead (FREE and better) |
+
+### Mask Best Practices
+
+| Task | Mask Strategy |
+|------|---------------|
+| **Object removal** | Mask LARGER than object (10-20px margin) for seamless fill |
+| **Object addition** | Mask exact shape or slightly smaller |
+| **Outpainting** | Overlap 10-20px INTO original image |
+
+**Feathering**: Apply 12-16px blur to masks. Sharp masks = visible seams.
+
+### Multi-Reference Editing (--ref)
+
+Using 2+ reference images auto-selects `max` tier (flux-2-flex).
 
 ```bash
-bun scripts/edit.ts <image> <instruction> [-t TIER] [--mask] [--ref ...]
+# Style transfer: apply reference style to base image
+bun scripts/edit.ts base.jpg "in the style of the reference" --ref style.jpg
+
+# Multi-reference blending
+bun scripts/edit.ts scene.jpg "forest sofa scene" --ref forest.jpg --ref sofa.jpg
 ```
 
-| Tier | Model | Cost |
-|------|-------|------|
-| iterate | flux-2/flash/edit | $0.005/MP |
-| default | flux-2/turbo/edit | $0.008/MP |
-| premium | flux-2-pro/edit | $0.03/MP |
-| max | flux-2-flex/edit | $0.06/MP |
+**Tip**: When blending references, describe their relationship: "A velvet sofa placed in a misty pine forest"
 
-Note: 2+ `--ref` images auto-selects max tier. No free tier (CF doesn't support editing).
+---
 
 ## Upscaling
 
@@ -147,43 +170,103 @@ Note: 2+ `--ref` images auto-selects max tier. No free tier (CF doesn't support 
 bun scripts/upscale.ts <image> [-t TIER] [--scale 2|4]
 ```
 
-| Tier | Model | Cost |
-|------|-------|------|
-| iterate/default | SeedVR2 | $0.001/MP |
-| premium/max | Clarity | $0.03/MP |
+### When to Use 2x vs 4x
 
-## Background Removal
+| Source Quality | Recommendation |
+|----------------|----------------|
+| High (RAW, clean PNG) | 4x safe - AI infers detail accurately |
+| Medium (standard JPEG) | 2x preferred - denoise first if possible |
+| Low (compressed, blurry) | 2x max - noise gets magnified |
 
-```bash
-bun scripts/rembg.ts <image>                     # FREE
+### Use Case Guidelines
+
+| Output | Scale | Notes |
+|--------|-------|-------|
+| Web/UI | 2x | Reduces file size, improves perceived sharpness |
+| Print (300 DPI) | 4x | Target 300 DPI for print quality |
+| Icons/Logos | 2x | Use `svg.ts` instead for infinite scaling |
+
+### Common Artifacts & Fixes
+
+| Artifact | Cause | Prevention |
+|----------|-------|------------|
+| Haloing (white edges) | Aggressive sharpening | Use iterate/default tier |
+| Plasticky skin | Over-smoothing | Reduce to 2x, use premium tier |
+| Grid patterns | Tile processing | Use higher tier models |
+
+**Rule of Thumb**: If image looks "crunchy" at 100% zoom, don't exceed 2x.
+
+---
+
+## Tier Selection Guide
+
+| Scenario | Tier | Why |
+|----------|------|-----|
+| Exploring 10+ variations | `iterate` | FREE, fast iteration |
+| Daily work, 3-5 variations | `default` | Best cost/quality balance |
+| Client deliverables | `premium` | Higher fidelity |
+| Critical assets, multi-ref | `max` | SOTA quality, advanced features |
+| Text/logos (any) | `default` | Recraft V3 already excellent |
+| Text/logos (critical) | `premium` | Ideogram V2 for perfect typography |
+
+### Cost Optimization
+
 ```
+EXPENSIVE WORKFLOW (avoid):
+  Generate at max tier → iterate on max → deliver
+
+COST-EFFECTIVE WORKFLOW (recommended):
+  Generate at iterate (FREE) → find best concept
+  → Regenerate winner at default/premium → deliver
+```
+
+---
 
 ## Environment
 
+```bash
+# For FREE iterate generation (Cloudflare)
+CLOUDFLARE_ACCOUNT_ID=xxx
+CLOUDFLARE_API_TOKEN=xxx
+
+# For paid tiers (Fal.ai)
+FAL_API_KEY=xxx
 ```
-CLOUDFLARE_ACCOUNT_ID=xxx   # For FREE iterate gen
-CLOUDFLARE_API_TOKEN=xxx    # For FREE iterate gen
-FAL_API_KEY=xxx             # For paid tiers
-```
+
+**Quota**: Cloudflare FREE tier allows ~96 images/day at 1024x1024.
+
+## Exit Codes
+
+| Code | Meaning | Action |
+|------|---------|--------|
+| 0 | Success | Image saved to `.ada/data/images/` |
+| 1 | General error | Check error message |
+| 2 | Config/auth error | Verify API keys in `.env` |
+| 3 | Resource limit | Quota exceeded - wait 24h or use paid tier |
+
+**CRITICAL**: Exit code 3 does NOT fall back to paid tier. This prevents accidental charges.
+
+---
 
 ## Integration
 
-| Skill | Use Case |
-|-------|----------|
+| Skill | When to Use Together |
+|-------|---------------------|
 | `ui-animation` | Animate generated images for web/mobile |
-| `docs-write` | Document image assets and generation parameters |
+| `docs-write` | Document image assets and parameters used |
 | `search` | Find prompting resources and style references |
-| `code-quality` | Run after modifying skill scripts |
+| `code-quality` | After modifying skill scripts |
 
 ## References
 
-- `references/usage-guide.md` - Comprehensive prompting guide (Flux-2, Recraft, Ideogram)
-- `README.md` - Architecture diagrams and model reference
+- `references/usage-guide.md` - Extended prompting guide, error codes, testing
+- `README.md` - Architecture diagrams, model reference, CLI details
 - [Fal.ai Docs](https://fal.ai/learn/devs) - Official API documentation
 
 ## Output
 
 Images saved to `.ada/data/images/` with timestamped filenames:
 ```
-.ada/data/images/20260118_gen_default_cyberpunk_city.jpg
+20260118_gen_default_cyberpunk_city.jpg
+20260118_svg_default_logo_vector.svg
 ```
