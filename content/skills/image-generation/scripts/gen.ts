@@ -103,8 +103,8 @@ async function main() {
         { image_url: imageUrl },
         OUTPUT_DIR,
         prompt + "_vector",
-        "gen",
-        "iterate"
+        "svg",
+        "default"
       );
       if (svgResult.success && svgResult.filePath) {
         console.log(`✅ SVG: ${svgResult.filePath}`);
@@ -145,8 +145,8 @@ async function main() {
       { image_url: imageUrl },
       OUTPUT_DIR,
       prompt + "_vector",
-      "gen",
-      tier
+      "svg",
+      "default"
     );
     if (svgResult.success && svgResult.filePath) {
       console.log(`✅ SVG: ${svgResult.filePath}`);

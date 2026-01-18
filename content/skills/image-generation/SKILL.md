@@ -18,6 +18,7 @@ Need image?
 ├─ Photo/Art → bun scripts/gen.ts "..." [-t tier]
 ├─ Edit existing → bun scripts/edit.ts <img> "..." [-t tier]
 ├─ Upscale → bun scripts/upscale.ts <img> [-t tier]
+├─ Vectorize → bun scripts/svg.ts <img> ($0.01/img)
 └─ Remove BG → bun scripts/rembg.ts <img> (FREE)
 
 Tier selection:
@@ -34,6 +35,7 @@ Tier selection:
 | `bun scripts/gen.ts` | Text → Image |
 | `bun scripts/edit.ts` | Image + Instruction → Image |
 | `bun scripts/upscale.ts` | Image → Larger Image |
+| `bun scripts/svg.ts` | Image → SVG ($0.01/img) |
 | `bun scripts/rembg.ts` | Remove background (FREE) |
 
 ## Quality Tiers

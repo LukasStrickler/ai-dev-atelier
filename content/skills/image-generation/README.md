@@ -48,6 +48,7 @@ All operations use the same 4-tier system:
 | `gen.ts` | Text → Image | `bun gen.ts "a sunset"` |
 | `edit.ts` | Image + Instruction → Image | `bun edit.ts photo.jpg "make it blue"` |
 | `upscale.ts` | Image → Larger Image | `bun upscale.ts photo.jpg` |
+| `svg.ts` | Image → SVG | `bun svg.ts logo.png` |
 | `rembg.ts` | Image → Image (no background) | `bun rembg.ts photo.jpg` |
 
 ## Routing Diagrams
@@ -264,6 +265,7 @@ scripts/
 ├── gen.ts           # Text-to-image (CF iterate + Fal.ai tiers)
 ├── edit.ts          # Image editing (Fal.ai only)
 ├── upscale.ts       # Upscaling (Fal.ai only)
+├── svg.ts           # Vectorization to SVG (Fal.ai)
 ├── rembg.ts         # Background removal (Fal.ai FREE)
 ├── types.ts         # TypeScript types
 └── lib/
