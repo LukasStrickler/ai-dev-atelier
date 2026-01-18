@@ -94,8 +94,10 @@ async function main() {
     }
 
     if (values.svg && result.filePath) {
+      const rasterPath = result.filePath;
+      console.log(`✅ Raster: ${rasterPath}`);
       console.log(`   Vectorizing to SVG... ${PRICING.util.vectorize}`);
-      const imageUrl = await uploadToFal(result.filePath);
+      const imageUrl = await uploadToFal(rasterPath);
       const svgResult = await falQueue(
         UTIL_MODELS.vectorize,
         { image_url: imageUrl },
@@ -104,8 +106,10 @@ async function main() {
         "gen",
         "iterate"
       );
-      if (svgResult.success) {
-        result = svgResult;
+      if (svgResult.success && svgResult.filePath) {
+        console.log(`✅ SVG: ${svgResult.filePath}`);
+        console.log(`   Done: saved both raster and SVG`);
+        return;
       }
     }
 
@@ -132,8 +136,10 @@ async function main() {
   }
 
   if (values.svg && result.filePath) {
+    const rasterPath = result.filePath;
+    console.log(`✅ Raster: ${rasterPath}`);
     console.log(`   Vectorizing to SVG... ${PRICING.util.vectorize}`);
-    const imageUrl = await uploadToFal(result.filePath);
+    const imageUrl = await uploadToFal(rasterPath);
     const svgResult = await falQueue(
       UTIL_MODELS.vectorize,
       { image_url: imageUrl },
@@ -142,8 +148,10 @@ async function main() {
       "gen",
       tier
     );
-    if (svgResult.success) {
-      result = svgResult;
+    if (svgResult.success && svgResult.filePath) {
+      console.log(`✅ SVG: ${svgResult.filePath}`);
+      console.log(`   Done: saved both raster and SVG`);
+      return;
     }
   }
 
