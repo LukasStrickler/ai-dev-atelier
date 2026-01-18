@@ -59,6 +59,7 @@ body:
         - "docs-check"
         - "docs-write"
         - "git-commit"
+        - "image-generation"
         - "code-review"
         - "resolve-pr-comments"
         - "search"
