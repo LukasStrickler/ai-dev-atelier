@@ -73,9 +73,9 @@ bun gen.ts <prompt> [-t TIER] [--text] [--svg]
     │          $0.04/img  │                   │          FREE        │
     │ default: Recraft V3 │                   │ default: flux-2/turbo│
     │          $0.04/img  │                   │          $0.008/MP   │
-    │ premium: Ideogram V2│                   │ premium: flux-2-pro  │
+    │ premium: Ideogram V3│                   │ premium: flux-2-pro  │
     │          $0.08/img  │                   │          $0.03/MP    │
-    │ max:     Ideogram V2│                   │ max:     flux-2-max  │
+    │ max:     Ideogram V3│                   │ max:     flux-2-max  │
     │          $0.08/img  │                   │          $0.07/MP    │
     └─────────────────────┘                   └──────────────────────┘
 
@@ -161,8 +161,8 @@ bun rembg.ts <image>
 |------|----------|------|
 | iterate | `fal-ai/recraft/v3/text-to-image` | $0.04/img |
 | default | `fal-ai/recraft/v3/text-to-image` | $0.04/img |
-| premium | `fal-ai/ideogram/v2` | $0.08/img |
-| max | `fal-ai/ideogram/v2` | $0.08/img |
+| premium | `fal-ai/ideogram/v3` | $0.06/img |
+| max | `fal-ai/ideogram/v3` | $0.06/img |
 
 ### Edit Models
 

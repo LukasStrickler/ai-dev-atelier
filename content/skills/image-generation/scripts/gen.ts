@@ -51,8 +51,8 @@ Tiers (general):
 Tiers (--text):
   iterate   Recraft V3                  ${PRICING.gen_text.iterate}
   default   Recraft V3                  ${PRICING.gen_text.default}
-  premium   Ideogram V2                 ${PRICING.gen_text.premium}
-  max       Ideogram V2                 ${PRICING.gen_text.max}
+premium   Ideogram V3                 ${PRICING.gen_text.premium}
+max       Ideogram V3                 ${PRICING.gen_text.max}
 
 Examples:
   bun gen.ts "cyberpunk city"                    # default (flux-2/turbo)

@@ -85,7 +85,7 @@ Tier selection:
 
 ## Text & Logo Generation (--text flag)
 
-Uses **Recraft V3** (iterate/default) or **Ideogram V2** (premium/max) - specialized for typography.
+Uses **Recraft V3** (iterate/default) or **Ideogram V3** (premium/max) - specialized for typography.
 
 ### Text Prompting Rules
 
@@ -207,7 +207,7 @@ bun scripts/upscale.ts <image> [-t TIER] [--scale 2|4]
 | Client deliverables | `premium` | Higher fidelity |
 | Critical assets, multi-ref | `max` | SOTA quality, advanced features |
 | Text/logos (any) | `default` | Recraft V3 already excellent |
-| Text/logos (critical) | `premium` | Ideogram V2 for perfect typography |
+| Text/logos (critical) | `premium` | Ideogram V3 for perfect typography |
 
 ### Cost Optimization
 

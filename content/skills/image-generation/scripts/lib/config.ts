@@ -10,8 +10,8 @@ export const GEN_MODELS: Record<Tier, string> = {
 export const GEN_TEXT_MODELS: Record<Tier, string> = {
   iterate: "fal-ai/recraft/v3/text-to-image",
   default: "fal-ai/recraft/v3/text-to-image",
-  premium: "fal-ai/ideogram/v2",
-  max: "fal-ai/ideogram/v2",
+  premium: "fal-ai/ideogram/v3",
+  max: "fal-ai/ideogram/v3",
 };
 
 export const EDIT_MODELS: Record<Tier, string> = {
@@ -43,8 +43,8 @@ export const PRICING = {
   gen_text: {
     iterate: "$0.04/img",
     default: "$0.04/img",
-    premium: "$0.08/img",
-    max: "$0.08/img",
+    premium: "$0.06/img",
+    max: "$0.06/img",
   },
   edit: {
     iterate: "$0.005/MP",

@@ -1,7 +1,7 @@
-# Prompting Guide for Image Generation
+# Comprehensive Image Generation Guide
 
 **Last Updated**: January 2026  
-**Covers**: Flux-2, Recraft V3, Ideogram V2, editing, and upscaling
+**Covers**: Flux-2, Recraft V3, Ideogram V3, editing, upscaling, and vectorization
 
 ---
 
@@ -13,16 +13,29 @@ Modern image prompting (2025-2026) has shifted from "keyword salad" to **structu
 
 ---
 
+## Model Rankings (January 2026)
+
+### Text/Logo Generation
+
+| Rank | Model | Primary Strength | Best For |
+|------|-------|------------------|----------|
+| **#1** | **Recraft V3** | Long text, native SVG | Professional logos, brand kits, vector assets |
+| **#2** | **Ideogram V3 Turbo** | Creative layouts, typography | Posters, t-shirt designs, social media |
+| **#3** | **FLUX.2 Max** | Photorealistic text in scenes | Ad creatives, text in 3D environments |
+| **#4** | Imagen 4 Ultra | Semantic coherence | Short branding phrases |
+
+### General Image Generation
+
+| Tier | Model | Speed | Quality | Cost |
+|------|-------|-------|---------|------|
+| iterate | Flux-2 Klein (Cloudflare) | Sub-second | Good drafts | **FREE** (~96/day) |
+| default | Flux-2 Turbo | Very fast | High adherence | $0.008/MP |
+| premium | Flux-2 Pro | Medium | Excellent | $0.03/MP |
+| max | Flux-2 Max | Slow | SOTA | $0.07/MP |
+
+---
+
 ## Flux-2 Prompting (Generation)
-
-### Model Variants
-
-| Model | Speed | Quality | Best Use |
-|--------|--------|----------|-----------|
-| **Flux-2 Klein** (Cloudflare) | Sub-second | Good drafts | FREE iteration, quick exploration |
-| **Flux-2 Turbo** | Very fast | High adherence | Daily use, rapid iteration |
-| **Flux-2 Pro** | Medium | Excellent | Final assets, complex scenes |
-| **Flux-2 Max** | Slow | SOTA | Critical deliverables, multi-reference |
 
 ### Four-Pillar Structure (Recommended)
 
@@ -38,41 +51,46 @@ Flux-2 responds best to prompts structured as:
 **Example**:
 > "A titanium luxury watch with #0047AB accent. Submerged in clear water with rising air bubbles. Soft morning sunlight filtering through canopy, creating dappled bokeh. Macro photography, 100mm lens, f/2.8."
 
-### Key Techniques
+### Lighting (Critical for Quality)
 
-#### Lighting (Critical for Klein)
-Lighting is the **single most important element** for Flux-2 Klein quality. Always describe:
+Lighting is the **single most important element** for Flux-2 quality. Always describe:
 
-- **Source**: Natural (sunlight, overcast, neon, candlelight)
-- **Quality**: Diffused, direct, harsh, cinematic, soft
-- **Direction**: Top-down, side-lit, backlit, rim-lit
-- **Temperature**: Warm, cool, neutral, golden hour
+| Aspect | Examples |
+|--------|----------|
+| **Source** | Natural sunlight, neon, candlelight, overcast sky |
+| **Quality** | Diffused, direct, harsh, cinematic, soft |
+| **Direction** | Top-down, side-lit, backlit, rim-lit |
+| **Temperature** | Warm, cool, neutral, golden hour |
 
-**Good Example**:
-> "Soft, diffused morning light filtering through high clerestory windows, casting long, warm shadows across polished concrete floor."
+**Good**: "Soft, diffused morning light filtering through high clerestory windows, casting long, warm shadows across polished concrete floor."
 
-**Bad Example**:
-> "Cinematic lighting" (too vague, model guesses)
+**Bad**: "Cinematic lighting" (too vague)
 
-#### Color Precision
+### Color Precision
+
 Flux-2 supports **direct HEX codes** for brand accuracy:
 
-> "A sports car in color #FF5733 with #2ecc71 racing stripes"
+```
+"A sports car in color #FF5733 with #2ecc71 racing stripes"
+```
 
 When not using HEX, use **precise color descriptions**:
-- "Vibrant electric blue" ✅
-- "Blue car" ❌ (model may choose wrong shade)
+- ✅ "Vibrant electric blue with metallic sheen"
+- ❌ "Blue car"
 
-#### No Negative Prompts
-Flux-2 **does not support negative prompts**. Instead of what to avoid, describe what should be:
+### No Negative Prompts
 
-- ❌ "No blur, sharp focus"
-- ✅ "Sharp focus throughout, high contrast"
-- ❌ "No people, empty street"
-- ✅ "An empty street at dusk"
+Flux-2 **does not support negative prompts**. Describe what SHOULD be:
 
-#### JSON-Structured Prompting (Pro/Max Only)
-For complex multi-subject scenes, use JSON for precise control:
+| Instead of... | Write... |
+|---------------|----------|
+| "No blur, sharp focus" | "Sharp focus throughout, high contrast" |
+| "No people, empty street" | "An empty street at dusk" |
+| "Without glasses" | "Clear eyes, no accessories on face" |
+
+### JSON-Structured Prompting (Pro/Max Only)
+
+For complex multi-subject scenes:
 
 ```json
 {
@@ -92,132 +110,307 @@ For complex multi-subject scenes, use JSON for precise control:
 
 ### Common Mistakes
 
-1. **Keyword Stuffing** (Klein): Using "4k, high resolution, masterpiece" degrades performance
-   - **Fix**: Use descriptive sentences instead
-   
-2. **Prompt Upsampling** (Klein): Klein doesn't support `prompt_upsampling` parameter
-   - **Fix**: Be descriptive yourself
-   
-3. **Small Reference Images**: Keep reference images under 512x512 for optimal processing
-
-### Example Prompts by Use Case
-
-#### Photorealistic (Pro/Max)
-> "Shot on Hasselblad X2D, 80mm lens, f/2.8. A macro shot of a single drop of water resting on a vibrant green leaf, #00FF00 green reflecting in the droplet. Dappled sunlight filters through forest canopy, creating a bokeh background."
-
-#### Narrative (Klein)
-> "A weathered fisherman in his late sixties stands at the bow of a small wooden boat. He is wearing a salt-stained wool sweater, his hands gripping a frayed rope. Golden hour sunlight filters through morning mist, creating a sense of quiet determination."
-
-#### Product Photography (Turbo/Pro)
-> "Editorial product shot of a premium wireless earbud. Glossy matte black finish, subtle #333333 accents. Clean white infinity-curve background with soft studio lighting. 100mm macro lens, f/4.0, sharp focus on product details."
+| Mistake | Why It Fails | Fix |
+|---------|--------------|-----|
+| Keyword stuffing | "4k, masterpiece, trending" is noise | Use descriptive sentences |
+| Vague subjects | "a man" interpreted randomly | "middle-aged man with salt-and-pepper hair" |
+| Short prompts | Under 20 words underperforms | Aim for 40-80 words |
+| Negative phrasing | Often adds what you want removed | Describe target state only |
 
 ---
 
-## Text & Logo Prompting (--text Flag)
+## Text & Logo Generation (--text Flag)
 
-### Choosing: Recraft V3 vs Ideogram V2
+### Model Selection Guide
 
-| Feature | Recraft V3 | Ideogram V2 |
-|----------|---------------|--------------|
-| **Primary Strength** | Design, vectors, long text | Photorealism, high impact |
-| **Text Limit** | High (paragraphs, posters) | Medium (words, phrases) |
-| **Spatial Control** | Excellent (positioning tools) | Good (prompt ordering) |
-| **Output Formats** | Native SVG/Vector + Raster | Raster (high-quality JPG/PNG) |
-| **Typography** | 1500+ integrated fonts | Intelligent, less granular |
-| **When to Use** | Professional branding, packaging, icons | Social media ads, posters, realistic mockups |
+| Need | Model | Flag | Notes |
+|------|-------|------|-------|
+| Professional logos, SVG output | Recraft V3 | `--text` | Native vector, 1500+ fonts |
+| Creative posters, complex layouts | Ideogram V3 Turbo | `--text -t premium` | Layout engine |
+| Text IN photorealistic scenes | Flux-2 Max | (no flag, describe text) | For signs, billboards in photos |
+| Minimalist icons | Recraft V3 | `--text --svg` | Clean vectorization |
 
-### Recraft V3 Best Practices
+### Recraft V3 Deep Dive
 
-#### Designer's Blueprint Format
-> `A <image style> of <main content>. <detailed description>. <background description>. <style description>.`
+**Why #1 for Logos**:
+- Native **SVG vector output** (only frontier model with this)
+- **1500+ integrated fonts** with granular control
+- **Brand Style Consistency** - upload existing logo to generate matching assets
+- **Agentic Mode** (Dec 2025) - iterate through conversation
+
+#### The Blueprint Format
+
+```
+A <image style> of <main content>. <detailed description>. <background description>. <style description>.
+```
 
 **Example**:
 > "A vector logo of a sustainable energy company named 'VERIDIAN'. The word 'VERIDIAN' is in a bold, clean geometric sans-serif font. Above the text, a stylized green leaf integrated into a circular power icon. Pure white background, flat vector style, minimalist aesthetic."
 
-#### Key Features
+#### Logo Design Patterns
 
-- **Positioning Control**: Specify exact text placement
-  > "The word 'COFFEE' centered in large bold letters, with tagline 'Always Fresh' in smaller script below it"
+| Style | Prompt Pattern | When to Use |
+|-------|----------------|-------------|
+| **Minimalist** | `"BRAND" minimalist vector logo, clean lines, simple geometry, flat design` | Tech, modern brands |
+| **Vintage/Badge** | `"EST. 1920" vintage badge logo, circular emblem, ribbon banner, ornate border` | Craft, artisan brands |
+| **Negative Space** | `"PEAK" logo where the letter A forms a mountain, negative space design` | Clever, memorable marks |
+| **3D/Modern** | `"TECHCORP" bold 3D chrome letters, gradient fill, dark background` | Gaming, entertainment |
+| **Wordmark** | `"ACME" custom logotype, unique letterforms, balanced kerning` | Strong brand names |
 
-- **Artistic Level**: Control standard vs creative output
-  - **Low (0-2)**: Standard, direct compositions (clean logos)
-  - **High (8-10)**: Unconventional angles, creative perspectives
+#### Font Specification
 
-- **Font Control**: Specify font families or styles
-  > "Minimalist sans-serif", "Elegant serif with high contrast", "Bold condensed"
+Use typography terms for control:
 
-- **Brand Style**: Upload 3-5 images to establish consistent brand style
+| Term | Result |
+|------|--------|
+| `modern sans-serif` | Clean, geometric (like Helvetica) |
+| `elegant serif` | Traditional, refined (like Times) |
+| `bold condensed` | Impactful, space-efficient |
+| `blackletter` | Gothic, medieval feel |
+| `script/cursive` | Handwritten, elegant |
+| `monospace` | Technical, code-like |
+| `slab serif` | Strong, sturdy (like Rockwell) |
 
-### Ideogram V2 Best Practices
+#### Artistic Level Parameter
 
-#### Quotation Marks
-**Always enclose exact text in quotes**:
-> `A vibrant neon sign that says "NEON NIGHTS" in a retro 80s cursive font.`
+Control creativity vs. precision:
 
-#### Primary Positioning
-Mention text **early** in prompt:
-> "Headline says 'SALE' at top, subtext says '50% OFF' at bottom"
+| Level | Output | Use For |
+|-------|--------|---------|
+| Low (0-2) | Standard, direct compositions | Clean corporate logos |
+| Medium (4-6) | Balanced creativity | Most use cases |
+| High (8-10) | Unconventional, experimental | Creative exploration |
 
-#### Style Presets
-- `DESIGN`: Best for logos, icons, flat graphics
-- `REALISTIC`: Best for "text in wild" (signs, packaging)
+### Ideogram V3 Turbo Deep Dive
 
-#### Color Palettes
-Define colors precisely:
-> `color_palette: { members: [{ color_hex: "#2ecc71", color_weight: 1.0 }] }`
+**Upgraded from V2** (Q4 2025) with "Deep Typography" and layout awareness.
 
-### Common Tips (Both Models)
+#### Key Techniques
 
-1. **Avoid Negative Prompts**: Describe what should exist, not what to avoid
-   - ❌ "No flowers"
-   - ✅ "Minimalist and clinical"
+1. **Quotation Marks Required**:
+   > `A vibrant neon sign that says "NEON NIGHTS" in a retro 80s cursive font.`
 
-2. **Use Synonyms**: Clarify ambiguous nouns
-   - "A flying mammal bat" (clear) vs "A bat" (could be baseball bat)
+2. **Text-First Positioning**: Mention text in first 10 words
+   > `"SALE" headline at top, "50% OFF" subtext at bottom, vibrant red background`
 
-3. **Precision over Length**: Modern models prioritize descriptive precision
+3. **Style Presets**:
+   - `DESIGN`: Logos, icons, flat graphics
+   - `REALISTIC`: Signs, packaging, text in wild
 
-4. **Lighting and Material**: Define the "feel"
-   - "Flat vector", "Glossy 3D", "Embossed on paper"
+4. **Color Palette Control**:
+   ```
+   color_palette: { members: [{ color_hex: "#2ecc71", color_weight: 1.0 }] }
+   ```
+
+### Text Rendering in Flux-2
+
+**FLUX.2 Max** (Nov 2025) significantly improved text coherence over FLUX.1, but still ranks #3 behind Recraft/Ideogram for pure typography.
+
+**When Flux-2 Works for Text**:
+- Text ON objects in photorealistic scenes (signs, billboards, packaging)
+- Short phrases (1-3 words) integrated into environments
+- When you need photorealism more than text precision
+
+**When to Use Specialists Instead**:
+- Clean logos or brand marks → Recraft V3
+- Posters with complex typography → Ideogram V3
+- Any text longer than 3 words → Specialists
+- SVG/vector output needed → Recraft V3 + `--svg`
+
+### DO/DON'T for Text Generation
+
+| DO | DON'T |
+|----|-------|
+| Put text in "Double Quotes" at prompt START | Bury text in middle of prompt |
+| Specify font style explicitly | Say just "nice font" |
+| Use exact counts: "Three cats" | Use plurals: "cats" (random count) |
+| Clarify ambiguous words: "wooden baseball bat" | Just say "bat" |
+| Describe what you WANT | Use negatives: "no cake" (adds cake) |
 
 ---
 
-## Editing Prompting
+## Image Editing
 
-### Transformation-First Phrasing
-For image-to-image editing, **focus only on the change**:
+```bash
+bun scripts/edit.ts <image> <instruction> [-t TIER] [--mask <mask.png>] [--ref <img>...]
+```
 
-❌ **Weak**: "A woman in a red dress standing in a park."
-✅ **Strong**: "Change dress color to red."
+### Writing Edit Instructions
 
-### Context Preservation
-For models like Flux 2 Pro Edit, use instructions to maintain environment:
-> "Keep the background unchanged, only modify the subject's clothing."
+**Key Principle**: Describe the TARGET STATE, not the change.
 
-### Inpainting (--mask flag)
-White pixels in mask = edit area. Describe only the change, not the whole scene:
-> "Make the sky purple" (with mask covering sky only)
+| Bad Instruction | Good Instruction |
+|-----------------|------------------|
+| "change car to blue" | "A sleek blue metallic sports car, reflections of neon lights on wet asphalt" |
+| "add a hat" | "person wearing a vintage red fedora, matching the scene lighting" |
+| "remove background" | Use `rembg.ts` instead (FREE and better) |
+| "make it better" | Specify exactly what to improve |
 
-### Multi-Reference Composition
-When using 2+ `--ref` images, describe how to combine them:
-> "Take the subject from image 0 and place them in environment of image 1, but change their clothes to match the style of image 2."
+### Mask Best Practices
+
+| Task | Mask Strategy |
+|------|---------------|
+| **Object removal** | Mask 10-20px LARGER than object |
+| **Object addition** | Mask exact shape or slightly smaller |
+| **Outpainting** | Overlap 10-20px INTO original image |
+| **Sky replacement** | Include horizon line in mask |
+
+**Feathering**: Apply 12-16px Gaussian blur to masks. Sharp masks = visible seams.
+
+### Multi-Reference Editing
+
+Using 2+ `--ref` images auto-selects `max` tier (flux-2-flex).
+
+```bash
+# Style transfer
+bun scripts/edit.ts base.jpg "in the style of the reference" --ref style.jpg
+
+# Multi-reference blending
+bun scripts/edit.ts scene.jpg "forest sofa scene" --ref forest.jpg --ref sofa.jpg
+```
+
+**Blending Tip**: Describe the RELATIONSHIP between references:
+> "A velvet sofa placed in the center of a misty pine forest"
+
+### Common Edit Failures & Fixes
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| Identity drift (face changes) | Model hallucinating | Use ControlNet/structure preservation |
+| Seams visible | Sharp mask edges | Add 12-16px feather to mask |
+| Wrong area edited | Mask too large | Make mask more precise |
+| Style doesn't transfer | Weak reference signal | Use higher tier (max) |
 
 ---
 
-## Tier Selection Guidance
+## Upscaling
 
-| Tier | Cost | Use When |
-|-------|-------|-----------|
-| **iterate** | FREE (CF) / $0.005-0.008/MP | Quick drafts, many variations, testing concepts |
-| **default** | $0.008/MP | Daily driver, balanced quality/speed |
-| **premium** | $0.03/MP | Final assets, client deliverables, high fidelity |
-| **max** | $0.06-0.07/MP | Critical work, SOTA quality, multi-reference composition |
+```bash
+bun scripts/upscale.ts <image> [-t TIER] [--scale 2|4]
+```
 
-**Rule of Thumb**:
-- Iterate → **10+ variations** to explore
-- Default → **3-5 variations** for final selection
-- Premium → **1-2 refinements** for production
-- Max → **Single critical deliverable** where failure is unacceptable
+### 2x vs 4x Decision Matrix
+
+| Source Quality | Characteristics | Recommendation |
+|----------------|-----------------|----------------|
+| **High** | RAW, clean PNG, high-bitrate | 4x safe |
+| **Medium** | Standard JPEG, slight noise | 2x preferred |
+| **Low** | Heavy compression, blur | 2x maximum |
+
+**Rule of Thumb**: If image looks "crunchy" at 100% zoom, don't exceed 2x.
+
+### Use Case Guidelines
+
+| Output | Scale | Notes |
+|--------|-------|-------|
+| Web/UI | 2x | Improves perceived sharpness, manageable file size |
+| Print (300 DPI) | 4x | Calculate: target_px = target_inches × 300 |
+| Icons/Logos | 2x | Use `svg.ts` instead for infinite scaling |
+| Social media | 2x | Balances quality and upload limits |
+
+### Common Artifacts & Prevention
+
+| Artifact | Cause | Prevention |
+|----------|-------|------------|
+| Haloing (white edges) | Aggressive sharpening | Use iterate/default tier |
+| Plasticky skin | Over-smoothing | Use 2x, avoid premium on faces |
+| Grid patterns | Tile processing | Use higher tier models |
+| Oil painting effect | Low-quality source | Denoise before upscaling |
+
+### Pre-Upscaling Checklist
+
+1. **Denoise first** - Noise gets magnified
+2. **Remove JPEG artifacts** - Run artifact removal at 1x first
+3. **Fix white balance** - AI performs better with balanced contrast
+4. **Light sharpening** - Subtle unsharp mask (0.5-1.0 radius)
+
+---
+
+## SVG Vectorization
+
+```bash
+bun scripts/svg.ts <image>  # $0.01/img
+```
+
+### When to Vectorize
+
+| Use Case | Vectorize? |
+|----------|------------|
+| Logo for print/signage | ✅ Yes |
+| Icon for multiple sizes | ✅ Yes |
+| Illustration for web | ✅ Yes |
+| Photo | ❌ No (rasterize artifacts) |
+| Complex gradients | ⚠️ Maybe (test first) |
+
+### Best Source Images for SVG
+
+- Clean edges, solid colors
+- High contrast
+- Simple shapes
+- Generated with `--text` flag (already optimized)
+
+---
+
+## Tier Selection Guide
+
+### Quick Decision Matrix
+
+| Scenario | Tier | Why |
+|----------|------|-----|
+| Exploring 10+ variations | `iterate` | FREE, fast iteration |
+| Daily work, 3-5 variations | `default` | Best cost/quality |
+| Client deliverables | `premium` | Higher fidelity |
+| Critical assets, multi-ref | `max` | SOTA, advanced features |
+| Text/logos (standard) | `default` | Recraft V3 already excellent |
+| Text/logos (critical) | `premium` | Ideogram V3 for perfect typography |
+
+### Cost Optimization Workflow
+
+```
+❌ EXPENSIVE (avoid):
+  Generate at max → iterate on max → deliver
+  Cost: $0.07 × 10 attempts = $0.70
+
+✅ COST-EFFECTIVE (recommended):
+  Generate at iterate (FREE) → find best concept (10 tries)
+  → Regenerate winner at default → deliver
+  Cost: $0.00 + $0.008 = $0.008
+```
+
+### Exit Codes
+
+| Code | Meaning | Retryable | Action |
+|------|---------|-----------|--------|
+| 0 | Success | N/A | Image saved |
+| 1 | General error | Maybe | Check error message |
+| 2 | Config error | No | Fix API keys in `.env` |
+| 3 | Resource limit | Yes (after wait) | Quota exceeded |
+
+**CRITICAL**: Exit code 3 does NOT fall back to paid tier. This prevents accidental charges.
+
+---
+
+## Error Codes Reference
+
+### Cloudflare Errors
+
+| Code | Meaning | Fix |
+|------|---------|-----|
+| `CF_AUTH_MISSING` | API keys not configured | Add `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` to `.env` |
+| `CF_QUOTA_EXCEEDED` | Daily limit (~96/day) | Wait until midnight UTC or use `default` tier |
+| `CF_RATE_LIMIT` | Too many requests | Wait 60s and retry |
+| `CF_ERROR` | General API error | Check error message |
+
+### Fal.ai Errors
+
+| Code | Meaning | Fix |
+|------|---------|-----|
+| `FAL_AUTH_INVALID` | Invalid API key | Check `FAL_API_KEY` in `.env` |
+| `FAL_CREDITS_EXHAUSTED` | No credits | Add credits at [fal.ai/dashboard](https://fal.ai/dashboard) |
+| `FAL_RATE_LIMIT` | Rate limit hit | Wait 60s and retry |
+| `FAL_JOB_TIMEOUT` | Job took too long | Retry or use faster tier |
+| `FAL_NO_IMAGE` | No image in response | Retry with different prompt |
+| `FAL_ERROR` | General API error | Check error message |
 
 ---
 
@@ -225,19 +418,22 @@ When using 2+ `--ref` images, describe how to combine them:
 
 ### Common Ratios
 
-| Ratio | Best For | Example Usage |
-|--------|-----------|---------------|
-| **1:1** (1024x1024) | Portraits, logos, icons | Profile pictures, brand marks |
-| **16:9** (1920x1080) | Landscapes, presentations | Hero images, social media |
-| **9:16** (1080x1920) | Stories, mobile portraits | Instagram stories, phone wallpapers |
-| **4:5** (816x1024) | Documents, print | Book covers, ads |
+| Ratio | Dimensions | Best For |
+|-------|------------|----------|
+| **1:1** | 1024×1024 | Portraits, logos, icons |
+| **16:9** | 1920×1080 | Landscapes, presentations, hero images |
+| **9:16** | 1080×1920 | Stories, mobile, phone wallpapers |
+| **4:5** | 816×1024 | Documents, Instagram posts |
+| **3:2** | 1536×1024 | Photography, prints |
 
-### Positioning Subjects
+### Composition Keywords
 
-**Important**: Subject position affects rendering quality. Place subject descriptions **early** in prompt:
-
-> "A red sports car speeding..." (car is subject, comes first)
-> "...on a coastal highway at sunset" (context comes last)
+| Category | Keywords |
+|----------|----------|
+| **Viewpoint** | Bird's eye, low angle, worm's eye, over-the-shoulder, POV |
+| **Framing** | Extreme close-up, medium shot, full body, wide shot |
+| **Balance** | Symmetrical, rule of thirds, golden ratio, centered |
+| **Depth** | Shallow DOF, bokeh, deep focus, tilt-shift |
 
 ---
 
@@ -245,202 +441,140 @@ When using 2+ `--ref` images, describe how to combine them:
 
 ### Curated Databases
 
-- **[All-Image-Prompts](https://github.com/junxiaopang/all-image-prompts)**: Multi-model search (Flux, MJ, Grok) with modern web interface
-- **[Civitai Prompts](https://civitai.com/models)**: Open source model prompting, includes full generation metadata for Flux styles
-- **[Lexica.art](https://lexica.art)**: Visual search for cinematic and realistic prompts
-- **[PromptHero](https://prompthero.com)**: DALL-E 3 and Midjourney dedicated sections
+| Resource | Best For |
+|----------|----------|
+| [All-Image-Prompts](https://github.com/junxiaopang/all-image-prompts) | Multi-model search (Flux, MJ, Grok) |
+| [Civitai](https://civitai.com/models) | Full generation metadata, Flux styles |
+| [Lexica.art](https://lexica.art) | Visual search, cinematic prompts |
+| [PromptHero](https://prompthero.com) | DALL-E 3, Midjourney prompts |
 
 ### Specialized Collections
 
-- **[FLUX.1-pro Cheatsheet](https://github.com/AWTom/FLUX.1-pro-cheatsheet)**: Artist styles for 904 distinct artists
-- **[Kiko Flux 2 Prompt Builder](https://github.com/ComfyAssets/kiko-flux2-prompt-builder)**: JSON-style builder with camera/lens/lighting presets
-- **[Logo Design Prompts](https://github.com/friuns2/BlackFriday-GPTs-Prompts)**: Minimalist, vector, 3D logo templates
-
-### Learning Resources
-
-- **[LearnPrompt](https://www.learnprompt.pro)**: Systematic tutorials updated for 2026 standards
-- **[Fal.ai Learn](https://fal.ai/learn/devs)**: Official Flux.2, Recraft V3, Ideogram V2 documentation
+| Resource | Focus |
+|----------|-------|
+| [FLUX.1-pro Cheatsheet](https://github.com/AWTom/FLUX.1-pro-cheatsheet) | 904 artist styles |
+| [Kiko Flux 2 Prompt Builder](https://github.com/ComfyAssets/kiko-flux2-prompt-builder) | JSON builder with presets |
+| [Logo Design Prompts](https://github.com/friuns2/BlackFriday-GPTs-Prompts) | Minimalist, vector, 3D templates |
 
 ### Official Documentation
 
-- **[Flux.2 Guide](https://fal.ai/learn/devs/flux-2-prompt-guide)**: (Dec 2025)
-- **[Flux.2 Max Guide](https://fal.ai/learn/devs/flux-2-max-prompt-guide)**: (Dec 19, 2025)
-- **[Flux.2 Turbo Guide](https://fal.ai/learn/devs/flux-2-turbo-prompt-guide)**: (Jan 7, 2026)
-- **[Recraft V3 Docs](https://www.recraft.ai/docs/recraft-models/recraft-V3)**: (Jan 2026)
-- **[Ideogram V2 Docs](https://docs.ideogram.ai/using-ideogram/prompting-guide)**: (Late 2025)
+| Guide | Date |
+|-------|------|
+| [Flux.2 Guide](https://fal.ai/learn/devs/flux-2-prompt-guide) | Dec 2025 |
+| [Flux.2 Max Guide](https://fal.ai/learn/devs/flux-2-max-prompt-guide) | Dec 19, 2025 |
+| [Flux.2 Turbo Guide](https://fal.ai/learn/devs/flux-2-turbo-prompt-guide) | Jan 7, 2026 |
+| [Recraft V3 Docs](https://www.recraft.ai/docs/recraft-models/recraft-V3) | Jan 2026 |
+| [Ideogram V3 Docs](https://docs.ideogram.ai/using-ideogram/prompting-guide) | Late 2025 |
 
 ---
 
-## Error Recovery & Best Practices
+## Quick Reference Commands
 
-### Error Codes
-
-Scripts return structured error codes for programmatic handling:
-
-| Code | Meaning | Fix |
-|------|---------|-----|
-| `CF_AUTH_MISSING` | Cloudflare API keys not configured | Add `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` to `.env` |
-| `CF_QUOTA_EXCEEDED` | Daily limit reached (~96/day) | Wait until midnight UTC or use `default` tier |
-| `CF_RATE_LIMIT` | Too many requests in short period | Wait 60s and retry |
-| `CF_ERROR` | General Cloudflare API error | Check error message for details |
-| `FAL_AUTH_INVALID` | Invalid or missing API key | Check `FAL_API_KEY` in `.env` |
-| `FAL_CREDITS_EXHAUSTED` | No credits remaining | Add credits at [fal.ai/dashboard](https://fal.ai/dashboard) |
-| `FAL_RATE_LIMIT` | Rate limit hit | Wait 60s and retry |
-| `FAL_JOB_TIMEOUT` | Job took too long | Retry or use faster tier |
-| `FAL_NO_IMAGE` | No image in response | Retry with different prompt |
-| `FAL_ERROR` | General Fal.ai API error | Check error message for details |
-
-### Exit Codes
-
-| Exit Code | Meaning | Retryable |
-|-----------|---------|-----------|
-| 0 | Success | N/A |
-| 1 | General error | Maybe |
-| 2 | Config/auth error | No (fix config first) |
-| 3 | Resource limit (quota/rate) | Yes (after waiting) |
-
-### Provider Fallback
-
-**Important Change (v2.0)**: Cloudflare quota exceeded errors (CF_QUOTA_EXCEEDED, CF_RATE_LIMIT) now **do NOT fall back** to Fal.ai. This prevents accidentally consuming paid credits when you intended to use the FREE tier.
-
-**Previous Behavior**: Any Cloudflare failure triggered fallback
-**New Behavior**: Only non-quota errors trigger fallback
-
-**Handling Fallback**:
-```bash
-# If Cloudflare fails with non-quota error, output shows:
-"Cloudflare failed, falling back to fal.ai flux-2/flash..."
-
-# If Cloudflare quota exceeded, output shows:
-"❌ Cloudflare FREE quota exceeded for today"
-# Script exits with code 3, NO fallback
-```
-
-**Retry Strategy**:
-1. First attempt: Cloudflare (iterate tier)
-2. If quota exceeded: Exit with code 3, suggest using `default` tier
-3. If other failure: Automatic fallback to Fal.ai flux-2/flash
-4. If Fal.ai fails: Check API key configuration in `.env`
-
-### Common Issues
-
-| Issue | Cause | Solution |
-|--------|---------|----------|
-| **Text garbled** | Text not in quotes (Ideogram) or too long | Use quotation marks, chunk complex text |
-| **Wrong colors** | Vague color names | Use HEX codes: #FF5733 |
-| **Blurry output** | Low guidance scale or poor lighting description | Add "sharp focus", describe lighting quality |
-| **API rate limit** | Too many Cloudflare requests | Switch to default tier or use Fal.ai |
-| **No image generated** | Cloudflare API keys missing | Check CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN in `.env` |
-
----
-
-## Quick Reference
-
-### Flux.2 Command Cheat Sheet
+### Generation
 
 ```bash
-# Basic
-bun scripts/gen.ts "a sunset over mountains" -t default
+# FREE iteration (Cloudflare)
+bun scripts/gen.ts "a sunset over mountains" -t iterate
+
+# Standard quality (Fal.ai)
+bun scripts/gen.ts "cyberpunk city at night" -t default
 
 # With precise color
-bun scripts/gen.ts "A red sports car #FF0000" -t pro
+bun scripts/gen.ts "sports car #FF5733" -t premium
 
-# JSON prompt (Pro/Max only - via API)
-# Requires manual JSON structure in scripts/lib/config.ts or direct API call
+# Text/logo (Recraft V3)
+bun scripts/gen.ts '"ACME" bold modern logo' --text
 
-# Text/logo
-bun scripts/gen.ts '"SALE" in bold neon text' --text
+# Text/logo with vector output
+bun scripts/gen.ts '"ACME" minimalist logo' --text --svg
 
-# Vector output
-bun scripts/gen.ts "logo design" --text --svg
+# Premium text (Ideogram V3)
+bun scripts/gen.ts '"QUANTUM" futuristic poster' --text -t premium
 ```
 
-### Editing Command Cheat Sheet
+### Editing
 
 ```bash
-# Simple edit
-bun scripts/edit.ts photo.jpg "change sky to purple"
+# Simple instruction
+bun scripts/edit.ts photo.jpg "change sky to purple sunset"
 
-# Inpainting
+# With mask (inpainting)
 bun scripts/edit.ts photo.jpg "add sunglasses" --mask mask.png
 
+# Style transfer
+bun scripts/edit.ts photo.jpg "apply this style" --ref style.jpg
+
 # Multi-reference (auto max tier)
-bun scripts/edit.ts photo.jpg "match this style" --ref style1.jpg --ref style2.jpg
+bun scripts/edit.ts base.jpg "blend these" --ref ref1.jpg --ref ref2.jpg
 ```
 
----
+### Utilities
 
-## Summary of 2025-2026 Changes
+```bash
+# Upscale 2x
+bun scripts/upscale.ts image.jpg --scale 2
 
-| Old Approach (2023-2024) | Modern Approach (2025-2026) |
-|----------------------------|----------------------------|
-| Keyword tags, weights like `(Subject:1.5)` | Natural prose or Structured JSON |
-| "Blue shirt, red car" (often bleeds) | "Shirt #0000FF, Car #FF0000" |
-| Negative prompts: "no blur" | Positive description: "sharp focus throughout" |
-| Character LoRAs, FaceSwap | Omni Reference, Personalization |
-| Garbled text requiring inpainting | Native high-fidelity rendering |
+# Upscale 4x with quality
+bun scripts/upscale.ts image.jpg --scale 4 -t premium
 
-**Takeaway**: Focus on **descriptive precision**, **hierarchical structure**, and **positive framing** over negative constraints.
+# Remove background (FREE)
+bun scripts/rembg.ts photo.jpg
+
+# Vectorize to SVG
+bun scripts/svg.ts logo.png
+```
 
 ---
 
 ## Testing
 
-### Verify Output Directory Fix
-
-The OUTPUT_DIR bug was fixed in v2.0. Images now always save to repo root regardless of working directory.
+### Verify Output Directory
 
 ```bash
-# Test 1: Run from repo root
-cd /path/to/repo
-bun scripts/gen.ts "test sunset" -t iterate
-# Expected: Image saved to /path/to/repo/.ada/data/images/
+# Test from repo root
+bun scripts/gen.ts "test" -t iterate
+# Expected: .ada/data/images/...
 
-# Test 2: Run from subdirectory (MUST work)
-cd /path/to/repo/content/skills
-bun ../../content/skills/image-generation/scripts/gen.ts "test mountains" -t iterate
-# Expected: Image saved to /path/to/repo/.ada/data/images/ (NOT subdirectory)
-
-# Verify
-ls -la /path/to/repo/.ada/data/images/
+# Test from subdirectory (MUST work)
+cd content/skills
+bun ../../content/skills/image-generation/scripts/gen.ts "test" -t iterate
+# Expected: Still saves to repo root .ada/data/images/
 ```
 
 ### Verify Error Handling
 
 ```bash
-# Test 1: Missing Cloudflare keys
+# Missing Cloudflare keys
 unset CLOUDFLARE_ACCOUNT_ID
 bun scripts/gen.ts "test" -t iterate
-# Expected: Clear error message with setup instructions, exit code 2
+# Expected: Clear error, exit code 2
 
-# Test 2: Missing Fal.ai key
+# Missing Fal.ai key  
 unset FAL_API_KEY
 bun scripts/gen.ts "test" -t default
-# Expected: Clear error message with setup instructions, exit code 2
-
-# Test 3: Verify exit codes
-bun scripts/gen.ts "test" -t iterate; echo "Exit code: $?"
-# Expected: Exit code 0 (success), 1 (error), 2 (config), or 3 (quota)
+# Expected: Clear error, exit code 2
 ```
 
-### Full Feature Test Suite
+### Full Feature Test
 
 ```bash
-# Generation - Cloudflare FREE tier
-bun scripts/gen.ts "a sunset over mountains, golden hour, dramatic clouds" -t iterate
+# Generation tiers
+bun scripts/gen.ts "sunset mountains" -t iterate    # FREE
+bun scripts/gen.ts "cyberpunk city" -t default      # Paid
 
-# Generation - Fal.ai default tier
-bun scripts/gen.ts "cyberpunk city at night, neon lights, rain-slicked streets" -t default
+# Text/logo
+bun scripts/gen.ts '"LOGO" modern design' --text
+bun scripts/gen.ts '"LOGO" modern design' --text --svg
 
-# Generation - Text/logo specialist
-bun scripts/gen.ts '"ACME" in bold modern font, blue gradient background' --text
+# Edit
+bun scripts/edit.ts photo.jpg "make sky purple"
 
-# Editing
-bun scripts/edit.ts /path/to/photo.jpg "change the sky to purple sunset"
-
-# Upscaling
-bun scripts/upscale.ts /path/to/image.jpg -t default --scale 2
+# Upscale
+bun scripts/upscale.ts image.jpg --scale 2
 
 # Background removal
-bun scripts/rembg.ts /path/to/photo.jpg
+bun scripts/rembg.ts photo.jpg
+
+# Vectorize
+bun scripts/svg.ts logo.png
 ```
