@@ -14,6 +14,7 @@ Skills are organized directories containing `SKILL.md` files that follow the ope
 | [`docs-check`](./docs-check/SKILL.md) | Analyze git diff to identify code changes requiring documentation updates | `scripts/check-docs.sh` |
 | [`docs-write`](./docs-write/SKILL.md) | Write or update documentation with clear style, structure, visuals, API/ADR/runbook patterns | N/A (workflow skill) |
 | [`git-commit`](./git-commit/SKILL.md) | Write clear git commits with Conventional Commits format, detect project conventions | N/A (workflow skill) |
+| [`image-generation`](./image-generation/SKILL.md) | Generate, edit, and upscale AI images with quality tiers (FREE Cloudflare + Fal.ai) | `scripts/gen.ts`, `scripts/edit.ts`, `scripts/upscale.ts`, `scripts/rembg.ts` |
 | [`use-graphite`](./use-graphite/SKILL.md) | Manage stacked PRs with Graphite CLI, auto-detect Graphite repos, block conflicting git commands | `scripts/graphite*.sh` |
 | [`code-review`](./code-review/SKILL.md) | Review code changes using CodeRabbit - uncommitted files (task mode) or all PR files vs main (pr mode) | `scripts/review-run.sh` |
 | [`resolve-pr-comments`](./resolve-pr-comments/SKILL.md) | Multi-agent PR comment resolution for bot reviews (CodeRabbit, Copilot, Gemini) | `scripts/pr-resolver*.sh` |
