@@ -49,13 +49,12 @@ const resolveOpencodeConfigDir = () => {
   return configDir;
 };
 
-const isPluginEnabled = () => {
+const isPluginEnabled = (): boolean => {
   const configPath = join(resolveOpencodeConfigDir(), "plugin.json");
-  if (!existsSync(configPath)) {
-    return true;
-  }
   try {
-    const config = JSON.parse(readFileSync(configPath, "utf-8")) as PluginConfig;
+    const raw = JSON.parse(readFileSync(configPath, "utf-8"));
+    if (typeof raw !== "object" || raw === null) return true;
+    const config = raw as PluginConfig;
     return config.plugins?.[PLUGIN_NAME]?.enabled !== false;
   } catch {
     return true;
@@ -67,7 +66,10 @@ const remindedSessions = new Map<string, number>();
 const MAX_SESSIONS = 1000;
 const TTL_MS = 24 * 60 * 60 * 1000;
 
-const isExpired = (timestamp: number): boolean => Date.now() - timestamp > TTL_MS;
+const isExpired = (timestamp: number): boolean => {
+  const delta = Date.now() - timestamp;
+  return delta > TTL_MS || delta < 0;
+};
 
 const wasReminded = (sessionID: string): boolean => {
   const timestamp = remindedSessions.get(sessionID);
@@ -83,8 +85,9 @@ const wasReminded = (sessionID: string): boolean => {
 
 const evictOldestIfNeeded = (): void => {
   if (remindedSessions.size < MAX_SESSIONS) return;
-  const oldestKey = remindedSessions.keys().next().value;
-  if (oldestKey !== undefined) remindedSessions.delete(oldestKey);
+  const iterator = remindedSessions.keys();
+  const { value, done } = iterator.next();
+  if (!done) remindedSessions.delete(value);
 };
 
 const markReminded = (sessionID: string): void => {
@@ -103,7 +106,9 @@ export const SkillReminderPlugin: Plugin = async () => {
       output: { system: string[] },
     ) => {
       try {
+        if (!input.sessionID || !Array.isArray(output.system)) return;
         if (wasReminded(input.sessionID)) return;
+        
         markReminded(input.sessionID);
         output.system.push(SKILL_REMINDER);
       } catch {
@@ -112,12 +117,14 @@ export const SkillReminderPlugin: Plugin = async () => {
     },
 
     "experimental.session.compacting": async (
-      _input: { sessionID: string },
+      input: { sessionID: string },
       output: { context: string[]; prompt?: string },
     ) => {
       try {
-        if (!output.prompt && output.context && !output.context.includes(SKILL_REMINDER)) {
+        if (!Array.isArray(output.context)) return;
+        if (!output.prompt && !output.context.includes(SKILL_REMINDER)) {
           output.context.push(SKILL_REMINDER);
+          if (input.sessionID) markReminded(input.sessionID);
         }
       } catch {
         // Silent failure to keep session alive
