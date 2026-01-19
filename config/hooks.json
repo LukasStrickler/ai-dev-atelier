@@ -23,6 +23,24 @@
         "script": "content/hooks/release-block-hook.sh",
         "enabled": true
       }
+    ],
+    "SessionStart": [
+      {
+        "id": "skill-reminder-start",
+        "description": "Reminds agent to check and load relevant skills at session start",
+        "matcher": "*",
+        "script": "content/hooks/skill-reminder-session-start.sh",
+        "enabled": true
+      }
+    ],
+    "PreCompact": [
+      {
+        "id": "skill-reminder-compact",
+        "description": "Persists skill reminder through context compaction",
+        "matcher": "*",
+        "script": "content/hooks/skill-reminder-pre-compact.sh",
+        "enabled": true
+      }
     ]
   }
 }
