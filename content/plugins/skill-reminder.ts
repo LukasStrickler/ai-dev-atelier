@@ -81,15 +81,8 @@ const wasReminded = (sessionID: string): boolean => {
 
 const evictOldestIfNeeded = (): void => {
   if (remindedSessions.size < MAX_SESSIONS) return;
-  let oldestKey: string | null = null;
-  let oldestTime = Infinity;
-  for (const [key, time] of remindedSessions) {
-    if (time < oldestTime) {
-      oldestTime = time;
-      oldestKey = key;
-    }
-  }
-  if (oldestKey) remindedSessions.delete(oldestKey);
+  const oldestKey = remindedSessions.keys().next().value;
+  if (oldestKey !== undefined) remindedSessions.delete(oldestKey);
 };
 
 const markReminded = (sessionID: string): void => {
@@ -107,19 +100,25 @@ export const SkillReminderPlugin: Plugin = async () => {
       input: { sessionID: string },
       output: { system: string[] },
     ) => {
-      if (wasReminded(input.sessionID)) {
-        return;
+      try {
+        if (wasReminded(input.sessionID)) return;
+        markReminded(input.sessionID);
+        output.system.push(SKILL_REMINDER);
+      } catch {
+        // Silent failure to keep session alive
       }
-      markReminded(input.sessionID);
-      output.system.push(SKILL_REMINDER);
     },
 
     "experimental.session.compacting": async (
       _input: { sessionID: string },
       output: { context: string[]; prompt?: string },
     ) => {
-      if (!output.prompt) {
-        output.context.push(SKILL_REMINDER);
+      try {
+        if (!output.prompt && output.context && !output.context.includes(SKILL_REMINDER)) {
+          output.context.push(SKILL_REMINDER);
+        }
+      } catch {
+        // Silent failure to keep session alive
       }
     },
   };
