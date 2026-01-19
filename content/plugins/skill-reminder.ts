@@ -62,35 +62,58 @@ const isPluginEnabled = () => {
   }
 };
 
-// Track sessions that have already received the reminder (memory-only, resets on restart)
-const remindedSessions = new Set<string>();
+// Session state: Map<sessionID, timestamp> with TTL + LRU eviction to prevent memory leaks
+const remindedSessions = new Map<string, number>();
+const MAX_SESSIONS = 1000;
+const TTL_MS = 24 * 60 * 60 * 1000;
 
-/**
- * Skill Reminder Plugin
- *
- * Injects a skill check reminder:
- * 1. Once on the first message of each session (via system.transform with session tracking)
- * 2. Before each compaction (so it survives summarization)
- */
+const isExpired = (timestamp: number): boolean => Date.now() - timestamp > TTL_MS;
+
+const wasReminded = (sessionID: string): boolean => {
+  const timestamp = remindedSessions.get(sessionID);
+  if (timestamp === undefined) return false;
+  if (isExpired(timestamp)) {
+    remindedSessions.delete(sessionID);
+    return false;
+  }
+  return true;
+};
+
+const evictOldestIfNeeded = (): void => {
+  if (remindedSessions.size < MAX_SESSIONS) return;
+  let oldestKey: string | null = null;
+  let oldestTime = Infinity;
+  for (const [key, time] of remindedSessions) {
+    if (time < oldestTime) {
+      oldestTime = time;
+      oldestKey = key;
+    }
+  }
+  if (oldestKey) remindedSessions.delete(oldestKey);
+};
+
+const markReminded = (sessionID: string): void => {
+  evictOldestIfNeeded();
+  remindedSessions.set(sessionID, Date.now());
+};
+
 export const SkillReminderPlugin: Plugin = async () => {
   if (!isPluginEnabled()) {
     return {};
   }
 
   return {
-    // Inject into system prompt ONLY on first message of each session
     "experimental.chat.system.transform": async (
       input: { sessionID: string },
       output: { system: string[] },
     ) => {
-      if (remindedSessions.has(input.sessionID)) {
+      if (wasReminded(input.sessionID)) {
         return;
       }
-      remindedSessions.add(input.sessionID);
+      markReminded(input.sessionID);
       output.system.push(SKILL_REMINDER);
     },
 
-    // Re-inject before compaction so reminder survives summarization
     "experimental.session.compacting": async (
       _input: { sessionID: string },
       output: { context: string[]; prompt?: string },
