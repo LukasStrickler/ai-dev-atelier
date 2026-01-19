@@ -527,6 +527,10 @@ check_dependencies() {
     MISSING_OPTIONAL+=("jq")
   fi
 
+  if ! command -v bun > /dev/null 2>&1; then
+    MISSING_OPTIONAL+=("bun")
+  fi
+
   if [ ${#MISSING_DEPS[@]} -gt 0 ]; then
     log_error "Missing required dependencies: ${MISSING_DEPS[*]}"
     return 1

@@ -17,16 +17,7 @@
         "git-commit": {
           "install": true
         },
-        "code-review": {
-          "install": true
-        },
-        "resolve-pr-comments": {
-          "install": true
-        },
-        "use-graphite": {
-          "install": true
-        },
-        "search": {
+        "image-generation": {
           "install": true
         },
         "research": {
