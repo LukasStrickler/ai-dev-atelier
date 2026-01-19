@@ -10,6 +10,7 @@ TypeScript plugins for the OpenCode runtime, extending agent capabilities via li
 | File | Description |
 |------|-------------|
 | `skill-telemetry.ts` | Captures `tool.execute.before` events to log skill usage to `~/.ada/skill-events.jsonl`. |
+| `skill-reminder.ts` | Injects skill check reminder via `experimental.chat.system.transform` and `experimental.session.compacting`. |
 
 ## CONVENTIONS
 - **Runtime**: Node.js environment within OpenCode.

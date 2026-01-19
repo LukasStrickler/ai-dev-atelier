@@ -2,6 +2,9 @@
   "plugins": {
     "skill-telemetry": {
       "enabled": true
+    },
+    "skill-reminder": {
+      "enabled": true
     }
   },
   "agents": {}
