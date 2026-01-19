@@ -76,6 +76,8 @@ const wasReminded = (sessionID: string): boolean => {
     remindedSessions.delete(sessionID);
     return false;
   }
+  remindedSessions.delete(sessionID);
+  remindedSessions.set(sessionID, timestamp);
   return true;
 };
 
