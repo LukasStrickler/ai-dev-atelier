@@ -1,4 +1,4 @@
-export type Mode = "gen" | "edit" | "upscale" | "rembg";
+export type Mode = "gen" | "edit" | "upscale" | "rembg" | "svg";
 export type TierLabel = "iterate" | "default" | "premium" | "max" | "free";
 
 export function generateFilename(
