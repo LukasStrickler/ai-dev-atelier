@@ -1,0 +1,10 @@
+{
+  "name": "image-generation-skill",
+  "version": "1.0.0",
+  "description": "Zero-dependency image generation CLI (Cloudflare FREE + Fal.ai PRO)",
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "bun-types": "latest"
+  }
+}

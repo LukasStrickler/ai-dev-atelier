@@ -66,6 +66,7 @@ Disable redundant Z.AI tools in `~/.opencode/opencode.json` to save quota:
 
 ## CONVENTIONS
 - **Language**: Bash for logic, JSON for config, TypeScript for plugins.
+- **Runtime**: `bun` required for TypeScript-based skills (e.g., `image-generation`).
 - **No Build**: `install.sh` deploys directly to `~/.opencode`.
 - **Formatting**: `shfmt` (2 spaces), `prettier` (Markdown/JSON).
 - **Skill Standard**: Must have `SKILL.md` (YAML frontmatter) + `references/`.
