@@ -8,6 +8,9 @@
         "code-quality": {
           "install": true
         },
+        "code-review": {
+          "install": true
+        },
         "docs-check": {
           "install": true
         },
@@ -23,12 +26,16 @@
         "research": {
           "install": true
         },
+        "resolve-pr-comments": {
+          "install": true
+        },
+        "search": {
+          "install": true
+        },
         "ui-animation": {
           "install": true
-        }
-      },
-      "plugins": {
-        "skill-telemetry": {
+        },
+        "use-graphite": {
           "install": true
         }
       }
