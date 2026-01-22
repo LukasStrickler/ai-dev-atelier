@@ -18,7 +18,7 @@ The goal: queue a task from my phone, go to bed, wake up to a reviewed PR.
 
 | Layer | Tool | Does |
 |-------|------|------|
-| Orchestration | [Vibora](https://github.com/knowsuchagency/vibora) | Kanban for agents. Tasks, worktrees, Linear sync. |
+| Orchestration | [Fulcrum](https://github.com/knowsuchagency/fulcrum) | Kanban for agents. Tasks, worktrees, Linear sync. |
 | Agent | [OpenCode](https://github.com/sst/opencode) + [oh-my-opencode](https://github.com/code-yeongyu/oh-my-opencode) | AI that writes code. Multi-model routing, LSP tools, specialist delegation. |
 | Network | [Tailscale](https://tailscale.com) | Mesh VPN. SSH from anywhere. |
 | Skills | [AI Dev Atelier](https://github.com/LukasStrickler/ai-dev-atelier) | Quality, docs, review, research capabilities. |
@@ -27,7 +27,7 @@ The goal: queue a task from my phone, go to bed, wake up to a reviewed PR.
 
 ## Why These
 
-### Vibora
+### Fulcrum
 
 Git worktrees are the unlock. Every task gets its own isolated checkout, so agents can't step on each other. Three tasks running in parallel means three separate folders. No merge conflicts, no coordination headaches.
 
@@ -56,7 +56,7 @@ Without skills you review raw output. With skills, output has already passed gat
 ## Workflow
 
 1. Queue a task from anywhere (phone, laptop, wherever)
-2. Vibora creates a worktree and starts an agent
+2. Fulcrum creates a worktree and starts an agent
 3. Agent works, skills trigger as needed
 4. Task completes, notification sent
 5. Review the PR when convenient
@@ -73,8 +73,8 @@ About thirty minutes:
 # Tailscale (on your server)
 curl -fsSL https://tailscale.com/install.sh | sh && sudo tailscale up
 
-# Vibora
-npx vibora@latest up
+# Fulcrum
+npx @knowsuchagency/fulcrum@latest up
 
 # OpenCode
 curl -fsSL https://opencode.ai/install | bash
@@ -88,13 +88,13 @@ bash ~/ai-dev-atelier/install.sh
 bunx oh-my-opencode install
 ```
 
-Open Vibora, create a task, watch it work.
+Open Fulcrum, create a task, watch it work.
 
 ---
 
 ## Links
 
-- [Vibora](https://github.com/knowsuchagency/vibora)
+- [Fulcrum](https://github.com/knowsuchagency/fulcrum)
 - [OpenCode](https://github.com/sst/opencode)
 - [oh-my-opencode](https://github.com/code-yeongyu/oh-my-opencode)
 - [Tailscale](https://tailscale.com)
