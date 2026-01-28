@@ -171,8 +171,10 @@ main() {
   
   local blocked_cmd skill is_fork upstream_repo
   blocked_cmd="${matched%%:/*}"
-  local rest="${matched#*/}"
-  skill="${rest%%:*}"
+  
+  # Extract skill name from pattern: "<pattern>:/<skill-name>[:fork:<repo>]"
+  local with_prefix="${matched#*:\/}"
+  skill="${with_prefix%%:*}"
   
   is_fork=false
   upstream_repo=""
