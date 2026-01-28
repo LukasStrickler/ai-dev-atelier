@@ -8,7 +8,7 @@
 #   Follows open Agent Skills standard and OpenCode specifications.
 #
 # Features:
-#   - Installs skills to OpenCode (~/.opencode/skill)
+#   - Installs skills to OpenCode (~/.opencode/skills)
 #   - Configures MCPs for OpenCode with proper format conversion
 #   - Preserves existing configurations (never overwrites)
 #   - Smart diff-based confirmation for skill updates
@@ -70,7 +70,7 @@ ENV_EXAMPLE="${ATELIER_DIR}/.env.example"
 # ============================================================================
 
 # OpenCode paths (OpenCode specification)
-# Skills use "skill" (singular) per OpenCode docs: https://opencode.ai/docs/skills/
+# Skills use "skills" (plural) for OpenCode install path
 # Note: OPENCODE_SKILLS_DIR will be set by get_opencode_skills_path() function below
 if [ -n "${XDG_CONFIG_HOME:-}" ]; then
   OPENCODE_CONFIG_DIR="${XDG_CONFIG_HOME}/opencode"
@@ -355,11 +355,11 @@ load_env_file() {
 # Determines the global OpenCode skills directory.
 # Per OpenCode docs: https://opencode.ai/docs/skills/
 # Always uses global config location, not project-local.
-# - Global config: ~/.opencode/skill/<name>/SKILL.md
+# - Global config: ~/.opencode/skills/<name>/SKILL.md
 #
 # Returns: Path to global OpenCode skills directory
 get_opencode_skills_path() {
-  echo "${OPENCODE_CONFIG_DIR}/skill"
+  echo "${OPENCODE_CONFIG_DIR}/skills"
 }
 
 # Update OPENCODE_SKILLS_DIR to use the function result
@@ -1984,7 +1984,7 @@ main() {
   mkdir -p "$OPENCODE_SKILLS_DIR"
   log_success "Directories ready"
   echo ""
-  log_info "OpenCode skills: ${OPENCODE_SKILLS_DIR} (global, per OpenCode spec: skill/singular)"
+  log_info "OpenCode skills: ${OPENCODE_SKILLS_DIR} (global, skills/plural)"
   echo ""
   
   # Configure MCP servers for OpenCode
@@ -2056,5 +2056,4 @@ main() {
 
 # Run main function with all arguments
 main "$@"
-
 

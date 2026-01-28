@@ -116,7 +116,7 @@ const extractSkillVersion = (skillName: string): string | null => {
     return skillVersionCache.get(skillName) ?? null;
   }
 
-  const skillDir = join(resolveOpencodeConfigDir(), "skill", skillName);
+  const skillDir = join(resolveOpencodeConfigDir(), "skills", skillName);
   const skillMdPath = join(skillDir, "SKILL.md");
 
   if (!existsSync(skillMdPath)) {

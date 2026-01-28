@@ -73,7 +73,7 @@ Disable redundant Z.AI tools in `~/.opencode/opencode.json` to save quota:
 
 ## SKILL INVOCATION GUIDELINES (IMPORTANT)
 
-**Installation Path**: Skills are installed to `~/.opencode/skill/<name>/`
+**Installation Path**: Skills are installed to `~/.opencode/skills/<name>/`
 
 **Agent-Facing Paths**: When referencing skills in agent prompts, SKILL.md files, or custom agents:
 - ✅ Use: `skills/<name>/scripts/<script>.sh` (relative from skill directory)
