@@ -426,7 +426,7 @@ See [content/skills/README.md](./content/skills/README.md) for the skill loading
 | SKILL.md not found | Ensure you're running setup from the AI Dev Atelier root directory |
 | `bash: command not found` | Install Git Bash (Windows) or use WSL |
 | Permission denied | `chmod +x ~/ai-dev-atelier/install.sh` |
-| Skills not appearing in OpenCode | Verify skills are installed to `~/.opencode/skill` and restart OpenCode |
+| Skills not appearing in OpenCode | Verify skills are installed to `~/.opencode/skills` and restart OpenCode |
 | OpenCode doesn't recognize skills | Restart OpenCode after installation |
 | `gh: command not found` | Install GitHub CLI: `brew install gh && gh auth login` |
 | `coderabbit: command not found` | Install CodeRabbit CLI: `npm install -g @coderabbitai/cli && coderabbit auth login` |
@@ -447,7 +447,7 @@ git --version
 node --version  # OR bun --version
 
 # Check OpenCode skills directory
-ls -la ~/.opencode/skill
+ls -la ~/.opencode/skills
 
 # Check optional tools (if using PR/review features)
 gh --version

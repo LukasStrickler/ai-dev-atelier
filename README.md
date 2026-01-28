@@ -22,7 +22,7 @@
 
 ## Overview
 
-AI Dev Atelier is a curated skill pack for OpenCode. Agent Skills are a simple, open format for giving agents portable capabilities and expertise through reusable instructions, scripts, and resources. This repo provides those skills, installs them to `~/.opencode/skill`, and configures MCP servers for usage.
+AI Dev Atelier is a curated skill pack for OpenCode. Agent Skills are a simple, open format for giving agents portable capabilities and expertise through reusable instructions, scripts, and resources. This repo provides those skills, installs them to `~/.opencode/skills`, and configures MCP servers for usage.
 
 ## What You Get
 
