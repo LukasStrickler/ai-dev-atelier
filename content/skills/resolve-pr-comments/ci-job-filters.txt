@@ -14,6 +14,9 @@ vercel*
 netlify*
 
 # Visual/snapshot testing (often slow and non-blocking)
+# Chromatic visual approval jobs (run indefinitely, skip wait)
+chromatic
+chromatic-*
 *chromatic*
 *storybook*
 *visual-regression*
