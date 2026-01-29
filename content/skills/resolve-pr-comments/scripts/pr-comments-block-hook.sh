@@ -182,6 +182,7 @@ main() {
     is_fork=true
     upstream_repo="${rest_with_fork##*:fork:}"
   fi
+  >>>>>>> 1ebcd25 (fix: properly define rest variable used in fork detection)
   
   if [[ "$is_fork" == "true" ]]; then
     cat >&2 <<EOF
