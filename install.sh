@@ -2020,26 +2020,27 @@ main() {
   configure_opencode_plugins
   echo ""
   
-  # Install skills to OpenCode
+  # Install skills to each agent (OpenCode, Cursor)
   # Skills may be filtered per agent via skills.json
-  log_info "Installing skills to OpenCode..."
-  echo ""
-  
+  local agents=(opencode cursor)
+  local skills_dirs=("$OPENCODE_SKILLS_DIR" "$CURSOR_SKILLS_DIR")
+  local agent_label
   log_info "━━━ Cleaning Up Deprecated Skills ━━━"
-  cleanup_deprecated_skills "opencode" "$OPENCODE_SKILLS_DIR"
-  cleanup_deprecated_skills "cursor" "$CURSOR_SKILLS_DIR"
+  for i in "${!agents[@]}"; do
+    cleanup_deprecated_skills "${agents[i]}" "${skills_dirs[i]}"
+  done
   echo ""
-  
-  log_info "━━━ Installing Skills to OpenCode ━━━"
-  install_skills_to_agent "opencode" "$OPENCODE_SKILLS_DIR"
-  post_install_check "opencode" "$OPENCODE_SKILLS_DIR"
-  echo ""
-  
-  log_info "━━━ Installing Skills to Cursor ━━━"
-  install_skills_to_agent "cursor" "$CURSOR_SKILLS_DIR"
-  post_install_check "cursor" "$CURSOR_SKILLS_DIR"
-  
-  echo ""
+  for i in "${!agents[@]}"; do
+    case "${agents[i]}" in
+      opencode) agent_label="OpenCode" ;;
+      cursor)   agent_label="Cursor" ;;
+      *)        agent_label="${agents[i]}" ;;
+    esac
+    log_info "━━━ Installing Skills to ${agent_label} ━━━"
+    install_skills_to_agent "${agents[i]}" "${skills_dirs[i]}"
+    post_install_check "${agents[i]}" "${skills_dirs[i]}"
+    echo ""
+  done
   log_info "━━━ Configuring Agent Skills Hooks (oh-my-opencode) ━━━"
   configure_agent_hooks
   
