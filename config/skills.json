@@ -38,11 +38,6 @@
         "use-graphite": {
           "install": true
         }
-      },
-      "plugins": {
-        "skill-telemetry": {
-          "install": true
-        }
       }
     },
     "cursor": {
