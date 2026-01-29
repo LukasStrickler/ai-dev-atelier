@@ -32,6 +32,9 @@
         "search": {
           "install": true
         },
+        "tdd": {
+          "install": true
+        },
         "ui-animation": {
           "install": true
         },

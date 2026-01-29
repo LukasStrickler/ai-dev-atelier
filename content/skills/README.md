@@ -21,6 +21,7 @@ Skills are organized directories containing `SKILL.md` files that follow the ope
 | [`search`](./search/SKILL.md) | Search the web and library documentation using Tavily and Context7 MCPs | N/A (MCP-based skill) |
 | [`research`](./research/SKILL.md) | Conduct academic research using OpenAlex, PDF extraction, and paper search MCPs with evidence cards | `scripts/research-*.sh` |
 | [`ui-animation`](./ui-animation/SKILL.md) | Guide tasteful UI animation implementation with easing, springs, timing, and accessibility | N/A (workflow skill) |
+| [`tdd`](./tdd/SKILL.md) | Implement Test-Driven Development with red-green-refactor workflow, hermetic testing, and test pyramid standards | N/A (workflow skill) |
 
 ## Quick Reference
 
