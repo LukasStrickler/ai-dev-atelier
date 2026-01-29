@@ -22,7 +22,7 @@
 
 ## Overview
 
-AI Dev Atelier is a curated skill pack for OpenCode and Cursor. Agent Skills are a simple, open format for giving agents portable capabilities and expertise through reusable instructions, scripts, and resources. This repo provides those skills, installs them to `~/.opencode/skill` (OpenCode) and `~/.cursor/skills` (Cursor, [per Cursor docs](https://cursor.com/docs/context/skills)), and configures MCP servers for OpenCode.
+AI Dev Atelier is a curated skill pack for OpenCode and Cursor. Agent Skills are a simple, open format for giving agents portable capabilities and expertise through reusable instructions, scripts, and resources. This repo provides those skills, installs them to `~/.opencode/skills/` (OpenCode) and `~/.cursor/skills/` (Cursor, [per Cursor docs](https://cursor.com/docs/context/skills)), and configures MCP servers for OpenCode.
 
 ## What You Get
 

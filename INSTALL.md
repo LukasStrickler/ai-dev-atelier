@@ -395,8 +395,8 @@ Follow [README.md](./README.md) for quick start and install commands. See [AGENT
 
 **For OpenCode (Automatic):**
 - The `install.sh` script automatically configures all MCPs from `config/mcps.json` for OpenCode and installs skills to both OpenCode and Cursor (global).
-- **OpenCode**: MCP configuration is created/updated at `~/.opencode/opencode.json` (or `$XDG_CONFIG_HOME/opencode/opencode.json`). Skills go to `~/.opencode/skill`.
-- **Cursor**: Skills are installed to `~/.cursor/skills` (user-level per [Cursor docs](https://cursor.com/docs/context/skills)). Set `CURSOR_HOME` to override the Cursor base path.
+- **OpenCode**: MCP configuration is created/updated at `~/.opencode/opencode.json` (or `$XDG_CONFIG_HOME/opencode/opencode.json`). Skills go to `~/.opencode/skills/`.
+- **Cursor**: Skills are installed to `~/.cursor/skills/` (user-level per [Cursor docs](https://cursor.com/docs/context/skills)). Set `CURSOR_HOME` to override the Cursor base path.
 - Existing MCP configurations are preserved; only missing MCPs are added.
 - All MCPs from the example file are configured: Tavily, Context7, OpenAlex, PDF Reader, Paper-search, Grep, Z.AI, and Graphite.
 - Requires `jq` to be installed for automatic configuration.
@@ -427,8 +427,8 @@ See [content/skills/README.md](./content/skills/README.md) for the skill loading
 | SKILL.md not found | Ensure you're running setup from the AI Dev Atelier root directory |
 | `bash: command not found` | Install Git Bash (Windows) or use WSL |
 | Permission denied | `chmod +x ~/ai-dev-atelier/install.sh` |
-| Skills not appearing in OpenCode | Verify skills are installed to `~/.opencode/skill` and restart OpenCode |
-| Skills not appearing in Cursor | Verify skills in `~/.cursor/skills`; restart Cursor if needed |
+| Skills not appearing in OpenCode | Verify skills are installed to `~/.opencode/skills/` and restart OpenCode |
+| Skills not appearing in Cursor | Verify skills in `~/.cursor/skills/`; restart Cursor if needed |
 | OpenCode doesn't recognize skills | Restart OpenCode after installation |
 | `gh: command not found` | Install GitHub CLI: `brew install gh && gh auth login` |
 | `coderabbit: command not found` | Install CodeRabbit CLI: `npm install -g @coderabbitai/cli && coderabbit auth login` |
@@ -449,7 +449,7 @@ git --version
 node --version  # OR bun --version
 
 # Check OpenCode skills directory
-ls -la ~/.opencode/skill
+ls -la ~/.opencode/skills
 
 # Check Cursor skills directory (user-level, global)
 ls -la ~/.cursor/skills

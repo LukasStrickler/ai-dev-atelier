@@ -67,13 +67,13 @@ Disable redundant Z.AI tools in `~/.opencode/opencode.json` to save quota:
 ## CONVENTIONS
 - **Language**: Bash for logic, JSON for config, TypeScript for plugins.
 - **Runtime**: `bun` required for TypeScript-based skills (e.g., `image-generation`).
-- **No Build**: `install.sh` deploys skills to `~/.opencode` (OpenCode) and `~/.cursor/skills` (Cursor).
+- **No Build**: `install.sh` deploys skills to `~/.opencode/skills/` (OpenCode) and `~/.cursor/skills/` (Cursor).
 - **Formatting**: `shfmt` (2 spaces), `prettier` (Markdown/JSON).
 - **Skill Standard**: Must have `SKILL.md` (YAML frontmatter) + `references/`.
 
 ## SKILL INVOCATION GUIDELINES (IMPORTANT)
 
-**Installation Paths**: Skills are installed to `~/.opencode/skill/<name>/` (OpenCode) and `~/.cursor/skills/<name>/` (Cursor, user-level per [Cursor docs](https://cursor.com/docs/context/skills)). Set `CURSOR_HOME` to override Cursor's base path.
+**Installation Paths**: Skills are installed to `~/.opencode/skills/<name>/` (OpenCode) and `~/.cursor/skills/<name>/` (Cursor, user-level per [Cursor docs](https://cursor.com/docs/context/skills)). Set `CURSOR_HOME` to override Cursor's base path.
 
 **Agent-Facing Paths**: When referencing skills in agent prompts, SKILL.md files, or custom agents:
 - ✅ Use: `skills/<name>/scripts/<script>.sh` (relative from skill directory)
