@@ -16,7 +16,7 @@ skills/
 └── README.md          # Full usage documentation
 ```
 
-**Note**: Skills are installed to `~/.opencode/skills/`. When agents reference scripts, they use `skills/<name>/scripts/<script>.sh` (relative paths from the skill installation directory).
+**Note**: Skills are installed to `~/.opencode/skill/` (OpenCode) and `~/.cursor/skills/` (Cursor, user-level) when using this repo's `install.sh`. When agents reference scripts, they use `skills/<name>/scripts/<script>.sh` (relative paths from the skill installation directory).
 
 ## WHERE TO LOOK
 | Component | Path | Purpose |

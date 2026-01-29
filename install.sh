@@ -4,11 +4,11 @@
 # ============================================================================
 #
 # Description:
-#   Installs skills and MCP servers to OpenCode agent.
+#   Installs skills and MCP servers to OpenCode and Cursor.
 #   Follows open Agent Skills standard and OpenCode specifications.
 #
 # Features:
-#   - Installs skills to OpenCode (~/.opencode/skills)
+#   - Installs skills to OpenCode (~/.opencode/skill) and Cursor (~/.cursor/skills)
 #   - Configures MCPs for OpenCode with proper format conversion
 #   - Preserves existing configurations (never overwrites)
 #   - Smart diff-based confirmation for skill updates
@@ -70,7 +70,7 @@ ENV_EXAMPLE="${ATELIER_DIR}/.env.example"
 # ============================================================================
 
 # OpenCode paths (OpenCode specification)
-# Skills use "skills" (plural) for OpenCode install path
+# Skills use "skill" (singular) per OpenCode docs: https://opencode.ai/docs/skills/
 # Note: OPENCODE_SKILLS_DIR will be set by get_opencode_skills_path() function below
 if [ -n "${XDG_CONFIG_HOME:-}" ]; then
   OPENCODE_CONFIG_DIR="${XDG_CONFIG_HOME}/opencode"
@@ -355,15 +355,24 @@ load_env_file() {
 # Determines the global OpenCode skills directory.
 # Per OpenCode docs: https://opencode.ai/docs/skills/
 # Always uses global config location, not project-local.
-# - Global config: ~/.opencode/skills/<name>/SKILL.md
+# - Global config: ~/.opencode/skill/<name>/SKILL.md
 #
 # Returns: Path to global OpenCode skills directory
 get_opencode_skills_path() {
-  echo "${OPENCODE_CONFIG_DIR}/skills"
+  echo "${OPENCODE_CONFIG_DIR}/skill"
 }
 
-# Update OPENCODE_SKILLS_DIR to use the function result
+# ----------------------------------------------------------------------------
+# Cursor skills path (Cursor docs: https://cursor.com/docs/context/skills)
+# User-level (global): ~/.cursor/skills/
+# CURSOR_HOME overrides base when set.
+get_cursor_skills_path() {
+  echo "${CURSOR_HOME:-$HOME/.cursor}/skills"
+}
+
+# Update OPENCODE_SKILLS_DIR and CURSOR_SKILLS_DIR to use the function results
 OPENCODE_SKILLS_DIR=$(get_opencode_skills_path)
+CURSOR_SKILLS_DIR=$(get_cursor_skills_path)
 
 # ----------------------------------------------------------------------------
 # Argument Parsing
@@ -400,7 +409,7 @@ parse_args() {
 
 show_help() {
   cat << EOF
-Install AI Dev Atelier Skills and MCPs to OpenCode
+Install AI Dev Atelier Skills and MCPs to OpenCode and Cursor
 
 Usage: $0 [OPTIONS]
 
@@ -410,9 +419,12 @@ Options:
   --check      Run preflight checks only
   -h, --help   Show this help message
 
-This script installs skills and MCPs to OpenCode:
-  - Skills: ${OPENCODE_SKILLS_DIR}
-  - MCPs: ${OPENCODE_CONFIG} (JSON format)
+This script installs skills and MCPs:
+  OpenCode:
+    Skills: ${OPENCODE_SKILLS_DIR}
+    MCPs: ${OPENCODE_CONFIG} (JSON format)
+  Cursor (global):
+    Skills: ${CURSOR_SKILLS_DIR}
 
 Skills are installed following the open Agent Skills standard.
 Skills can be disabled per agent in skills.json.
@@ -639,6 +651,7 @@ preflight_checks() {
 
   local failed=0
   check_write_access "$OPENCODE_SKILLS_DIR" || failed=$((failed + 1))
+  check_write_access "$CURSOR_SKILLS_DIR" || failed=$((failed + 1))
   check_write_access "$(dirname "$OPENCODE_CONFIG")" || failed=$((failed + 1))
   check_write_access "$ATELIER_STATE_DIR" || failed=$((failed + 1))
 
@@ -1717,10 +1730,10 @@ install_skill_to_agent() {
   local source_skill="${SOURCE_SKILLS_DIR}/${skill_name}"
   local target_skill="${target_skills_dir}/${skill_name}"
   
-  # Validate skill name for OpenCode (per OpenCode spec)
-  if [ "$agent_type" = "opencode" ]; then
+  # Validate skill name for OpenCode and Cursor (same pattern per OpenCode/Cursor specs)
+  if [ "$agent_type" = "opencode" ] || [ "$agent_type" = "cursor" ]; then
     if ! validate_skill_name "$skill_name"; then
-      log_error "Skill '${skill_name}' has invalid name for OpenCode (must match: ^[a-z0-9]+(-[a-z0-9]+)*$)"
+      log_error "Skill '${skill_name}' has invalid name for ${agent_type} (must match: ^[a-z0-9]+(-[a-z0-9]+)*$)"
       return 1
     fi
   fi
@@ -1982,9 +1995,11 @@ main() {
   # Ensure target directories exist
   log_info "Preparing installation directories..."
   mkdir -p "$OPENCODE_SKILLS_DIR"
+  mkdir -p "$CURSOR_SKILLS_DIR"
   log_success "Directories ready"
   echo ""
-  log_info "OpenCode skills: ${OPENCODE_SKILLS_DIR} (global, skills/plural)"
+  log_info "OpenCode skills: ${OPENCODE_SKILLS_DIR} (global, per OpenCode spec: skill/singular)"
+  log_info "Cursor skills: ${CURSOR_SKILLS_DIR} (global)"
   echo ""
   
   # Configure MCP servers for OpenCode
@@ -2012,11 +2027,17 @@ main() {
   
   log_info "━━━ Cleaning Up Deprecated Skills ━━━"
   cleanup_deprecated_skills "opencode" "$OPENCODE_SKILLS_DIR"
+  cleanup_deprecated_skills "cursor" "$CURSOR_SKILLS_DIR"
   echo ""
   
   log_info "━━━ Installing Skills to OpenCode ━━━"
   install_skills_to_agent "opencode" "$OPENCODE_SKILLS_DIR"
   post_install_check "opencode" "$OPENCODE_SKILLS_DIR"
+  echo ""
+  
+  log_info "━━━ Installing Skills to Cursor ━━━"
+  install_skills_to_agent "cursor" "$CURSOR_SKILLS_DIR"
+  post_install_check "cursor" "$CURSOR_SKILLS_DIR"
   
   echo ""
   log_info "━━━ Configuring Agent Skills Hooks (oh-my-opencode) ━━━"
@@ -2042,11 +2063,15 @@ main() {
   echo "  Plugins: ${OPENCODE_CONFIG_DIR}/plugin"
   echo "  Agent Hooks: ${AGENT_CONFIG} (for oh-my-opencode)"
   echo ""
-  echo "To verify, ask your agent: 'What skills are available?'"
+  echo "Cursor (global):"
+  echo "  Skills: ${CURSOR_SKILLS_DIR}"
+  echo ""
+  echo "To verify, ask your agent: 'What skills are available?' or check Cursor Settings → Rules."
   echo ""
   echo "References:"
   echo "  - OpenCode Skills: https://opencode.ai/docs/skills/"
   echo "  - OpenCode MCPs: https://opencode.ai/docs/mcp-servers/"
+  echo "  - Cursor Skills: https://cursor.com/docs/context/skills"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 }
 
@@ -2056,4 +2081,5 @@ main() {
 
 # Run main function with all arguments
 main "$@"
+
 
