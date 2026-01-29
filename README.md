@@ -7,7 +7,7 @@
 
 > **Mastering the New Stack.** A production-ready pack of 10 skills for code quality, documentation, code review, and research, built on the open [Agent Skills standard](https://agentskills.io/specification) and designed for OpenCode.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue) ![License](https://img.shields.io/badge/license-BSL%201.1-blue) ![Agent Skills](https://img.shields.io/badge/Agent%20Skills-open-2ea043) ![OpenCode](https://img.shields.io/badge/OpenCode-supported-1f6feb)
+![Version](https://img.shields.io/badge/version-1.0.0-blue) ![License](https://img.shields.io/badge/license-MIT-blue) ![Agent Skills](https://img.shields.io/badge/Agent%20Skills-open-2ea043) ![OpenCode](https://img.shields.io/badge/OpenCode-supported-1f6feb)
 
 ## Table of Contents
 
@@ -92,7 +92,7 @@ bash ~/ai-dev-atelier/install.sh --no
 | [INSTALL.md](./INSTALL.md) | Dependencies and MCP setup |
 | [content/skills/README.md](./content/skills/README.md) | Skill catalog and usage reference |
 | [AGENTS.md](./AGENTS.md) | Developer workflow guide and MCP reference |
-| [MY_AGENTIC_DEV_SETUP.md](./MY_AGENTIC_DEV_SETUP.md) | OpenCode + Vibora + oh-my-opencode workflow |
+| [MY_AGENTIC_DEV_SETUP.md](./MY_AGENTIC_DEV_SETUP.md) | OpenCode + Fulcrum + oh-my-opencode workflow |
 
 ## Prerequisites
 
@@ -115,7 +115,7 @@ See [INSTALL.md](./INSTALL.md) for platform-specific installation commands and o
 
 ## License
 
-Business Source License 1.1. Change License: Apache 2.0. See [LICENSE](./LICENSE).
+MIT License. See [LICENSE](./LICENSE).
 
 ## Community
 
