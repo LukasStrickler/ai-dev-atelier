@@ -32,6 +32,7 @@ Production-grade skill pack for OpenCode agents. 10 skills (Agent Skills standar
 | `search` | Web + library docs + GitHub code search | MCP-based |
 | `research` | Academic research with evidence cards | `scripts/research-*.sh` |
 | `ui-animation` | Tasteful UI animation & accessibility | Workflow (no script) |
+| `tdd` | TDD (Red-Green-Refactor) & Hermetic Testing | Workflow (no script) |
 | `use-graphite` | Manage stacked PRs with Graphite CLI | `scripts/graphite*.sh` |
 
 ## CRITICAL WORKFLOWS

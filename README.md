@@ -39,6 +39,7 @@ AI Dev Atelier is a curated skill pack for OpenCode. Agent Skills are a simple, 
 - `resolve-pr-comments` — Multi-agent PR comment resolution
 - `search` — Web + library docs + GitHub code search
 - `research` — Academic research with evidence cards
+- `tdd` — Test-Driven Development with Testing Trophy workflow
 - `ui-animation` — Tasteful UI animation & accessibility
 - `use-graphite` — Manage stacked PRs with Graphite CLI
 

@@ -21,6 +21,7 @@ Skills are organized directories containing `SKILL.md` files that follow the ope
 | [`search`](./search/SKILL.md) | Search the web and library documentation using Tavily and Context7 MCPs | N/A (MCP-based skill) |
 | [`research`](./research/SKILL.md) | Conduct academic research using OpenAlex, PDF extraction, and paper search MCPs with evidence cards | `scripts/research-*.sh` |
 | [`ui-animation`](./ui-animation/SKILL.md) | Guide tasteful UI animation implementation with easing, springs, timing, and accessibility | N/A (workflow skill) |
+| [`tdd`](./tdd/SKILL.md) | Implement Test-Driven Development with red-green-refactor workflow, hermetic testing, and test pyramid standards | N/A (workflow skill) |
 
 ## Quick Reference
 
@@ -82,6 +83,11 @@ Skills are organized directories containing `SKILL.md` files that follow the ope
 - **When to use**: Implementing enter/exit animations, choosing easing curves, configuring springs, setting durations, ensuring accessibility
 - **How agents use it**: Agents follow instructions in `SKILL.md` (workflow skill, no scripts)
 - **Patterns**: CSS and Tailwind code examples for modals, buttons, accordions, tooltips, and more
+
+### TDD (Test-Driven Development)
+- **When to use**: Implementing new features test-first, fixing bugs with reproduction tests, refactoring with safety net, adding tests to legacy code
+- **How agents use it**: Agents follow instructions in `SKILL.md` (workflow skill, no scripts)
+- **References**: See `tdd/references/examples.md` for code examples (modes, test doubles, PBT, mutation testing)
 
 ## How Agents Call Skills
 
