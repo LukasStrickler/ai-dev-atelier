@@ -46,7 +46,7 @@ Strict Red-Green-Refactor workflow for robust, self-documenting, production-read
 ## Step 2: Select Mode
 
 | Mode | Entry Condition | FIRST Action Before Loop |
-|------|-----------------|--------------------------:|
+|------|-----------------|--------------------------|
 | **New Feature** | Adding functionality | Read existing module tests |
 | **Bug Fix** | Reproducing issue | Write failing reproduction test |
 | **Refactor** | Cleaning code | Ensure ≥80% coverage first |
