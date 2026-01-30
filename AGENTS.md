@@ -52,7 +52,7 @@ Disable redundant Z.AI tools in `~/.opencode/opencode.json` to save quota:
 | Task | Location | Notes |
 |------|----------|-------|
 | **Add New Skill** | `content/skills/` | See `content/skills/AGENTS.md` |
-| **Configure Tools** | `config/mcps.json` | See `config/AGENTS.md` |
+| **Configure Tools** | `config/mcps.json` | See `config/AGENTS.md`. Installer writes MCPs to OpenCode (`~/.opencode/opencode.json`) and Cursor (`~/.cursor/mcp.json`). |
 | **Edit Guardrails** | `config/hooks.json` | See `config/AGENTS.md` |
 | **Run Tests** | `.test/` | See `.test/AGENTS.md` |
 | **Plugin Logic** | `content/plugins/` | See `content/plugins/AGENTS.md` |

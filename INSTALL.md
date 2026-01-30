@@ -393,12 +393,12 @@ Follow [README.md](./README.md) for quick start and install commands. See [AGENT
 
 **Configuration:**
 
-**For OpenCode (Automatic):**
-- The `install.sh` script automatically configures all MCPs from `config/mcps.json` for OpenCode and installs skills to both OpenCode and Cursor (global).
+**For OpenCode and Cursor (Automatic):**
+- The `install.sh` script automatically configures all MCPs from `config/mcps.json` for OpenCode and Cursor, and installs skills to both (global).
 - **OpenCode**: MCP configuration is created/updated at `~/.opencode/opencode.json` (or `$XDG_CONFIG_HOME/opencode/opencode.json`). Skills go to `~/.opencode/skills/`.
-- **Cursor**: Skills are installed to `~/.cursor/skills/` (user-level per [Cursor docs](https://cursor.com/docs/context/skills)). Set `CURSOR_HOME` to override the Cursor base path.
+- **Cursor**: Skills are installed to `~/.cursor/skills/` (user-level per [Cursor docs](https://cursor.com/docs/context/skills)). MCP configuration is created/updated at `~/.cursor/mcp.json` ([Cursor MCP docs](https://cursor.com/docs/context/mcp)). Set `CURSOR_HOME` to override the Cursor base path.
 - Existing MCP configurations are preserved; only missing MCPs are added.
-- All MCPs from the example file are configured: Tavily, Context7, OpenAlex, PDF Reader, Paper-search, Grep, Z.AI, and Graphite.
+- All MCPs from the example file are configured for both agents: Tavily, Context7, OpenAlex, PDF Reader, Paper-search, Grep, Z.AI, and Graphite.
 - Requires `jq` to be installed for automatic configuration.
 - **Important:** After installation, update API keys in the `.env` file or directly in the config.
 
@@ -438,6 +438,7 @@ See [content/skills/README.md](./content/skills/README.md) for the skill loading
 | `bun: command not found` | Install Bun or use Node.js instead |
 | MCP configuration failed | Install jq: `brew install jq` (macOS) or `sudo apt-get install jq` (Linux) |
 | Grep MCP not working | Verify MCP config exists at `~/.opencode/opencode.json` and restart OpenCode |
+| Cursor MCPs not loading | Verify `~/.cursor/mcp.json` exists, restart Cursor, and check Cursor Settings → MCP |
 
 ### Verification Checklist
 
@@ -453,6 +454,9 @@ ls -la ~/.opencode/skills
 
 # Check Cursor skills directory (user-level, global)
 ls -la ~/.cursor/skills
+
+# Check Cursor MCP config (if jq was used)
+ls -la ~/.cursor/mcp.json
 
 # Check optional tools (if using PR/review features)
 gh --version
