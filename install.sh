@@ -2276,15 +2276,3 @@ main() {
 
 # Run main function with all arguments
 main "$@"
-
-o "  - Cursor MCPs: https://cursor.com/docs/context/mcp"
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-}
-
-# ============================================================================
-# SCRIPT ENTRY POINT
-# ============================================================================
-
-# Run main function with all arguments
-main "$@"
-
