@@ -93,7 +93,7 @@ Skills are organized directories containing `SKILL.md` files that follow the ope
 
 Skills follow the open [Agent Skills standard](https://agentskills.io/specification):
 
-1. **Discovery**: Agents scan skill directories (like `~/.opencode/skill`) for directories containing `SKILL.md` files
+1. **Discovery**: Agents scan skill directories (like `~/.opencode/skills`) for directories containing `SKILL.md` files
 2. **Loading**: Agents read `SKILL.md` files which contain:
    - YAML frontmatter with `name` and `description`
    - Detailed instructions on when and how to use the skill
