@@ -84,6 +84,11 @@ Skills are organized directories containing `SKILL.md` files that follow the ope
 - **How agents use it**: Agents follow instructions in `SKILL.md` (workflow skill, no scripts)
 - **Patterns**: CSS and Tailwind code examples for modals, buttons, accordions, tooltips, and more
 
+### TDD (Test-Driven Development)
+- **When to use**: Implementing new features test-first, fixing bugs with reproduction tests, refactoring with safety net, adding tests to legacy code
+- **How agents use it**: Agents follow instructions in `SKILL.md` (workflow skill, no scripts)
+- **References**: See `tdd/references/examples.md` for code examples (modes, test doubles, PBT, mutation testing)
+
 ## How Agents Call Skills
 
 Skills follow the open [Agent Skills standard](https://agentskills.io/specification):

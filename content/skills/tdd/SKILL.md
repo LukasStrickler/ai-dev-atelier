@@ -10,242 +10,389 @@ metadata:
 
 Strict Red-Green-Refactor workflow for robust, self-documenting, production-ready code.
 
-## Quick Start
+## Quick Navigation
 
-**The TDD Loop:**
-1. 🔴 **RED**: Write a failing test. Verify it fails for expected reason.
-2. 🟢 **GREEN**: Write minimal code to pass. Verify it passes.
-3. 🔵 **REFACTOR**: Clean up code and tests. Verify it still passes.
+| Situation | Go To |
+|-----------|-------|
+| New to this codebase | [Step 1: Explore Environment](#step-1-explore-test-environment) |
+| Know the framework, starting work | [Step 2: Select Mode](#step-2-select-mode) |
+| Need the core loop reference | [Step 3: Core TDD Loop](#step-3-the-core-tdd-loop) |
+| Complex edge cases to cover | [Property-Based Testing](#property-based-testing) |
+| Tests are flaky/unreliable | [Flaky Test Management](#flaky-test-management) |
+| Need isolated test environment | [Hermetic Testing](#hermetic-testing) |
+| Measuring test quality | [Mutation Testing](#mutation-testing) |
 
 ## The Three Rules (Robert C. Martin)
 
 1. **No Production Code** without a failing test
-2. **Write Only Enough Test to Fail** (compilation errors count as failure)
-3. **Write Only Enough Code to Pass** (one logical change, no optimizations)
+2. **Write Only Enough Test to Fail** (compilation errors count)
+3. **Write Only Enough Code to Pass** (no optimizations yet)
 
-## Step 1: Explore Test Environment (REQUIRED)
+**The Loop:** 🔴 RED (write failing test) → 🟢 GREEN (minimal code to pass) → 🔵 REFACTOR (clean up) → Repeat
 
-**Do NOT assume anything.** Explore the codebase to understand what exists.
+---
 
-**Exploration Checklist:**
-- [ ] Search for existing test files: `glob("**/*.test.*")`, `glob("**/*.spec.*")`, `glob("**/test_*.py")`
-- [ ] Check `package.json` for `scripts.test` field or `Makefile` for test targets
-- [ ] Review `.github/workflows/` for CI test commands
-- [ ] Look for config files: `vitest.config.*`, `jest.config.*`, `pytest.ini`, `go.mod`, `Cargo.toml`
-- [ ] If no setup found: Check `README.md`, `CONTRIBUTING.md`, or `.docs/`
+## Step 1: Explore Test Environment
+
+**Do NOT assume anything.** Explore the codebase first.
+
+**Checklist:**
+- [ ] Search for test files: `glob("**/*.test.*")`, `glob("**/*.spec.*")`, `glob("**/test_*.py")`
+- [ ] Check `package.json` scripts, `Makefile`, or CI workflows
+- [ ] Look for config: `vitest.config.*`, `jest.config.*`, `pytest.ini`, `Cargo.toml`
 
 **Framework Detection:**
 
-| Language | Look For | Try Command |
-|----------|----------|-------------|
-| **Node.js** | `package.json`, `vitest/jest.config` | `npm test`, `bun test` |
-| **Python** | `pyproject.toml`, `pytest.ini` | `pytest` |
-| **Go** | `go.mod`, `*_test.go` | `go test ./...` |
-| **Rust** | `Cargo.toml` | `cargo test` |
+| Language | Config Files | Test Command |
+|----------|--------------|--------------|
+| Node.js | `package.json`, `vitest.config.*` | `npm test`, `bun test` |
+| Python | `pyproject.toml`, `pytest.ini` | `pytest` |
+| Go | `go.mod`, `*_test.go` | `go test ./...` |
+| Rust | `Cargo.toml` | `cargo test` |
+
+---
 
 ## Step 2: Select Mode
 
-| Mode | Entry Condition | FIRST Action Before Loop |
-|------|-----------------|--------------------------|
-| **New Feature** | Adding functionality | Read existing module tests |
-| **Bug Fix** | Reproducing issue | Write failing reproduction test |
-| **Refactor** | Cleaning code | Ensure ≥80% coverage first |
-| **Legacy** | No tests exist | Add characterization tests first |
+| Mode | When | First Action |
+|------|------|--------------|
+| **New Feature** | Adding functionality | Read existing module tests, confirm green baseline |
+| **Bug Fix** | Reproducing issue | Write failing reproduction test FIRST |
+| **Refactor** | Cleaning code | Ensure ≥80% coverage on target code |
+| **Legacy** | No tests exist | Add characterization tests before changing |
 
-→ **Tie-breaker:** If coverage <20% or tests are absent, ALWAYS use **Legacy Mode** first.
-→ After mode's FIRST action, enter Core Loop (Step 3).
-
----
+**Tie-breaker:** If coverage <20% or tests absent → use **Legacy Mode** first.
 
 ### Mode: New Feature
-
-**Context:** Codebase exists with tests. Adding new functionality.
-
-**Workflow:**
-1. Read existing tests for the module you'll modify
-2. Run those specific tests to confirm green baseline
-3. Check coverage for that module
-4. → Enter Core Loop for new behavior
-
-**Verification:** Run full test suite after each GREEN phase. If existing tests break → you changed behavior.
-
-**Commits:** `test(module): add test for X` → `feat(module): implement X`
-
----
+1. Read existing tests for the module
+2. Run tests to confirm green baseline
+3. Enter Core Loop for new behavior
+4. **Commits:** `test(module): add test for X` → `feat(module): implement X`
 
 ### Mode: Bug Fix
-
-**Context:** Bug reported. Need to fix without breaking other things.
-
-**Workflow:**
-1. Write failing reproduction test FIRST (MUST fail before fix)
-2. Confirm failure matches bug behavior (assertion error, not syntax/import error)
-3. Write minimal fix - ONLY what's needed
-4. → Run full test suite
-
-**Verification:** Bug test passes + all other tests still pass. If other tests fail → fix has side effects.
-
-**Commits:** `test(cart): add failing test for bug #123` → `fix(cart): validate quantity is positive (#123)`
-
----
+1. Write failing reproduction test (MUST fail before fix)
+2. Confirm failure is assertion error, not syntax error
+3. Write minimal fix
+4. Run full test suite
+5. **Commits:** `test: add failing test for bug #123` → `fix: description (#123)`
 
 ### Mode: Refactor
-
-**Context:** Code works but needs cleanup. Tests already exist.
-
-**Workflow:**
-1. Run coverage on the **specific function/block** you'll refactor
-2. If coverage <80% **for that function** → add characterization tests first
+1. Run coverage on the specific function you'll refactor
+2. If coverage <80% → add characterization tests first
 3. Refactor in small steps (ONE change → run tests → repeat)
-4. → Never change behavior during refactor
-
-**Verification:** If tests fail → you changed behavior. Either revert or make behavior change a SEPARATE commit.
-
-**Commits:** `refactor(utils): extract validation helper` (tests stay green throughout)
-
----
+4. Never change behavior during refactor
 
 ### Mode: Legacy Code
+1. **Find Seams** - insertion points for tests (Sensing Seams, Separation Seams)
+2. **Break Dependencies** - use Sprout Method or Wrap Method
+3. Add characterization tests (capture current behavior)
+4. Build safety net: happy path + error cases + boundaries
+5. Then apply TDD for your changes
 
-**Context:** Existing code with NO tests. Need to modify safely.
-
-**Workflow:**
-1. **Find Seams** - Identify insertion points. Two types: **Sensing Seams** (observe behavior via returns/logs) and **Separation Seams** (isolate dependencies to run code in harness).
-2. **Break Dependencies** - If code is too tightly coupled, use:
-   - **Sprout Method**: Create new tested code in a new method, call it from the old code.
-   - **Wrap Method**: Rename old method, create new tested method with same name that calls the old one + new logic.
-3. Add characterization tests BEFORE changing anything (capture current behavior).
-4. Build safety net: happy path + error cases + boundary conditions.
-5. Only then apply TDD for your changes.
-6. → Focus on code paths YOU will touch (not 100% file coverage).
-
-**Verification:** Characterization tests pass before AND after your changes.
-
-**Commits:** `test(payment): add characterization tests` → `feat(payment): add refund support`
+→ See `references/examples.md` for full code examples of each mode.
 
 ---
 
 ## Step 3: The Core TDD Loop
 
-### Step 0: Scenario List (Canon TDD)
-Before writing any test, list all behaviors/scenarios you need to cover:
+### Before Starting: Scenario List
+List all behaviors to cover:
 - [ ] Happy path cases
-- [ ] Edge cases and boundary conditions  
+- [ ] Edge cases and boundaries
 - [ ] Error/failure cases
-- [ ] **Pessimism Phase**: List 3 ways this could fail (network, null input, invalid state)
-
-Check off scenarios one-by-one as you complete each RED-GREEN-REFACTOR cycle.
+- [ ] **Pessimism:** 3 ways this could fail (network, null, invalid state)
 
 ### 🔴 RED Phase
-1. **Write ONE Test**: Focus on one small behavior or edge case.
-2. **Use AAA Structure**: Arrange (setup) → Act (call) → Assert (verify).
-3. **Run Test**: Execute test runner.
-4. **VERIFY RED**: Ensure it **FAILS for the expected reason** (assertion error, not syntax/import error).
+1. Write ONE test (single behavior or edge case)
+2. Use AAA: Arrange → Act → Assert
+3. Run test, **verify it FAILS for expected reason**
 
-**Verification Questions:**
-- [ ] Did I write more than one test? (Should be NO)
-- [ ] Is the failure an assertion error? (Not `SyntaxError`/`ModuleNotFoundError`)
-- [ ] Can I explain why this test should fail? (Should be YES)
-- [ ] Does my test logic match the original requirement? (Cross-check before GREEN)
-
-**If test passes immediately** → **STOP.** Test is broken or feature already exists.
+**Checks:**
+- Is failure an assertion error? (Not `SyntaxError`/`ModuleNotFoundError`)
+- Can I explain why this should fail?
+- If test passes immediately → STOP. Test is broken or feature exists.
 
 ### 🟢 GREEN Phase
-1. **Write Minimal Code**: Just enough logic to satisfy the test.
-2. **Do NOT** implement "perfect" solution or extra features.
-3. **VERIFY GREEN**: Ensure the test **passes**.
+1. Write minimal code to pass
+2. Do NOT implement "perfect" solution
+3. **Verify test passes**
 
-**Verification Questions:**
-- [ ] Can I delete this code and have tests still pass? (Dead code check)
-- [ ] Is this the simplest solution? (Should be YES)
+**Checks:**
+- Is this the simplest solution?
+- Can I delete any of this code and still pass?
 
 ### 🔵 REFACTOR Phase
-1. **Analyze**: Look for duplication, messy logic, unclear naming.
-2. **Improve**: Clean up implementation **without changing behavior**.
-3. **VERIFY GREEN**: Ensure **no regressions**.
-
-**Refactoring Heuristics:**
-- Extract helper methods and consolidate logic.
-- Improve names for clarity.
-- Remove magic numbers/strings.
+1. Look for duplication, unclear names, magic values
+2. Clean up **without changing behavior**
+3. **Verify tests still pass**
 
 ### Repeat
-Select the next small behavior and return to the RED Phase.
+Select next scenario, return to RED.
 
-**Triangulation:** If your implementation is too specific (e.g., hardcoded value), write another test with different inputs to force a generalized solution.
+**Triangulation:** If implementation is too specific (hardcoded), write another test with different inputs to force generalization.
+
+---
 
 ## Stop Conditions
 
 | Signal | Response |
 |--------|----------|
-| **Test passes immediately** | Check assertions, ensure test is running, or verify feature isn't already built |
-| **Test fails for wrong reason** | Fix setup/imports. Red must be an assertion failure, not syntax error |
-| **Flaky Test** | **STOP.** Fix non-determinism immediately. Do not proceed |
-| **Slow Feedback** | If tests take >5s, optimize or mock external calls |
-| **Coverage decreased** | Add tests for uncovered paths before proceeding |
+| Test passes immediately | Check assertions, verify feature isn't already built |
+| Test fails for wrong reason | Fix setup/imports first |
+| Flaky test | **STOP.** Fix non-determinism immediately |
+| Slow feedback (>5s) | Optimize or mock external calls |
+| Coverage decreased | Add tests for uncovered paths |
 
-## Test Pyramid
+---
 
-| Level | % of Tests | Scope | Speed | Examples |
-|-------|------------|-------|-------|----------|
-| **Unit** | 70-80% | Single function/class | Milliseconds | `add(a, b) returns sum` |
-| **Integration** | 15-20% | Module interactions | Seconds | `User.create({name})` |
-| **E2E** | 5-10% | Full application | Minutes | `GET /api/users` |
+## Test Distribution: The Testing Trophy
 
-**Guidance:**
-- Push testing **down the pyramid**.
-- If error can be caught by unit test, **don't write integration test**.
-- Prefer **fakes over mocks** when feasible for higher fidelity.
-- Focus on test **quality** (SMURF: Sustainable, Maintainable, Useful, Resilient, Fast) not just ratios.
+The Testing Trophy (Kent C. Dodds) reflects modern testing reality: **integration tests give the best confidence-to-effort ratio**.
+
+```
+          _____________
+         /   System    \      ← Few, slow, high confidence; brittle (E2E)
+        /_______________\
+       /                 \
+      /    Integration    \   ← Real interactions between units — **BEST ROI** (Integration)
+      \                   /
+       \_________________/
+         \    Unit     /      ← Fast & cheap but test in isolation (Unit) 
+          \___________/
+          /   Static  \       ← Typecheck, linting — typos/types (Static)
+         /_____________\
+```
+
+### Layer Breakdown
+
+| Layer | What | Tools | When |
+|-------|------|-------|------|
+| **Static** | Type errors, syntax, linting | TypeScript, ESLint | Always on, catches 50%+ of bugs for free |
+| **Unit** | Pure functions, algorithms, utilities | vitest, jest, pytest | Isolated logic with no dependencies |
+| **Integration** | **Components + hooks + services together** | Testing Library, MSW, Testcontainers | Real user flows, real(ish) data |
+| **E2E** | Full app in browser | Playwright, Cypress | Critical paths only (login, checkout) |
+
+### Why Integration Tests Win
+
+**Unit tests** prove code works in isolation. **Integration tests** prove code works together.
+
+| Concern | Unit Test | Integration Test |
+|---------|-----------|------------------|
+| Component renders | ✅ | ✅ |
+| Component + hook works | ❌ | ✅ |
+| Component + API works | ❌ | ✅ |
+| User flow works | ❌ | ✅ |
+| Catches real bugs | Sometimes | Usually |
+
+**The insight**: Most bugs live in the **seams** between modules, not inside pure functions. Integration tests catch seam bugs; unit tests don't.
+
+### Practical Guidance
+
+1. **Start with integration tests** - Test the way users use your code
+2. **Drop to unit tests** for complex algorithms or edge cases
+3. **Use E2E sparingly** - Slow, flaky, expensive to maintain
+4. **Let static analysis do the heavy lifting** - TypeScript catches more bugs than most unit tests
+5. **Prefer fakes over mocks** - Fakes have real behavior; mocks just return canned data
+6. **SMURF quality**: Sustainable, Maintainable, Useful, Resilient, Fast
+
+---
 
 ## Anti-Patterns
 
-- ❌ **Mirror Blindness**: Same agent writes test AND code, replicating logic errors in both. **Mitigation:** (1) Summarize test intent in plain language before GREEN phase, (2) Use role isolation - have a separate review step or sub-agent verify test logic, (3) Clear context between RED and GREEN phases.
-- ❌ **Happy Path Bias**: Only testing successful scenarios. Always include error cases in your Scenario List.
-- ❌ **Refactoring While Red**: Changing structure while tests fail.
-- ❌ **The Big Bang**: Large implementation without incremental tests.
-- ❌ **The Mockery**: Over-mocking hides real integration bugs. Prefer fakes or real implementations when feasible.
-- ❌ **The Inspector**: Testing private state, not behavior.
-- ❌ **Coverage Theater**: Tests that don't assert meaningful behavior.
-- ❌ **The Multi-Test Step**: Writing multiple tests before implementing.
+| Pattern | Problem | Fix |
+|---------|---------|-----|
+| **Mirror Blindness** | Same agent writes test AND code | State test intent before GREEN |
+| **Happy Path Bias** | Only success scenarios | Include errors in Scenario List |
+| **Refactoring While Red** | Changing structure with failing tests | Get to GREEN first |
+| **The Mockery** | Over-mocking hides bugs | Prefer fakes or real implementations |
+| **Coverage Theater** | Tests without meaningful assertions | Assert behavior, not lines |
+| **Multi-Test Step** | Multiple tests before implementing | One test at a time |
+| **Verification Trap** 🤖 | AI tests *what code does* not *what it should do* | State intent in plain language; separate agent review |
+| **Test Exploitation** 🤖 | LLMs exploit weak assertions or overload operators | Use PBT alongside examples; strict equality |
+| **Assertion Omission** 🤖 | Missing edge cases (null, undefined, boundaries) | Scenario list with errors; `test.each` |
+| **Hallucinated Mock** 🤖 | AI generates fake mocks without proper setup | Testcontainers for integration; real Fakes for unit |
 
-## Hermetic Testing
+**Critical**: Verify tests by (1) running them, (2) having separate agent review, (3) never trusting generated tests blindly.
 
-- **Isolation**: Use unique temp directories/state for each test.
-- **Reset**: Clean up state in `setUp`/`tearDown`.
-- **Determinism**: Avoid time-based logic or shared mutable state.
-- **Mocking**: Mock slow/unreliable external services (DB, Network).
+---
 
-## Coverage Basics
+## Advanced Techniques
 
-**When to Check:**
-1. **Start of Task**: Identify gaps in existing code (`P0` critical paths).
-2. **During Refactor**: Ensure safety net (aim for >80% locally).
-3. **End of Task**: Verify no coverage regression.
+Use these techniques at specific points in your workflow:
 
-**Risk Prioritization:**
+| Technique | Use During | Purpose |
+|-----------|------------|---------|
+| Test Doubles | 🔴 RED phase | Isolate dependencies when writing tests |
+| Property-Based Testing | 🔴 RED phase | Cover edge cases for complex logic |
+| Contract Testing | 🔴 RED phase | Define API expectations between services |
+| Snapshot Testing | 🔴 RED phase | Capture UI/response structure |
+| Hermetic Testing | 🔵 Setup | Ensure test isolation and determinism |
+| Mutation Testing | ✅ After GREEN | Validate test suite effectiveness |
+| Coverage Analysis | ✅ After GREEN | Find untested code paths |
+| Flaky Test Management | 🔧 Maintenance | Fix unreliable tests blocking CI |
 
-| Priority | What to Test First |
-|----------|-------------------|
-| **P0 - Critical** | Auth, payments, data validation, error handling |
-| **P1 - High** | Core business logic, public APIs |
-| **P2 - Medium** | Helpers, transformers |
-| **P3 - Low** | Config, constants, simple getters |
+---
 
-**Key Principle:** Find what the project already uses. Match existing patterns.
+### Test Doubles (Use: Writing Tests with Dependencies)
 
-## Integration
+**When:** Your code depends on something slow, unreliable, or complex (DB, API, filesystem).
+
+| Type | Purpose | When |
+|------|---------|------|
+| **Stub** | Returns canned answers | Need specific return values |
+| **Mock** | Verifies interactions | Need to verify calls made |
+| **Fake** | Simplified implementation | Need real behavior without cost |
+| **Spy** | Records calls | Need to observe without changing |
+
+**Decision:** Dependency slow/unreliable? → Fake (complex) or Stub (simple). Need to verify calls? → Mock/Spy. Otherwise → real implementation.
+
+→ See `references/examples.md` → [Test Double Examples](#test-double-examples)
+
+---
+
+### Hermetic Testing (Use: Test Environment Setup)
+
+**When:** Setting up test infrastructure. Tests must be isolated and deterministic.
+
+**Principles:**
+- **Isolation**: Unique temp directories/state per test
+- **Reset**: Clean up in setUp/tearDown
+- **Determinism**: No time-based logic or shared mutable state
+
+**Database Strategies:**
+
+| Strategy | Speed | Fidelity | Use When |
+|----------|-------|----------|----------|
+| In-memory (SQLite) | Fast | Low | Unit tests, simple queries |
+| Testcontainers | Medium | High | Integration tests |
+| Transactional Rollback | Fast | High | Tests sharing schema (80x faster than TRUNCATE) |
+
+→ See `references/examples.md` → [Hermetic Testing Examples](#hermetic-testing-examples)
+
+---
+
+### Property-Based Testing (Use: Writing Tests for Complex Logic)
+
+**When:** Writing tests for algorithms, state machines, serialization, or code with many edge cases.
+
+**Tools:** fast-check (JS/TS), Hypothesis (Python), proptest (Rust)
+
+**Properties to Test:**
+- Commutativity: `f(a, b) == f(b, a)`
+- Associativity: `f(f(a, b), c) == f(a, f(b, c))`
+- Identity: `f(a, identity) == a`
+- Round-trip: `decode(encode(x)) == x`
+- Metamorphic: If input changes by X, output changes by Y (useful when you don't know expected output)
+
+**How:** Replace multiple example-based tests with one property test that generates random inputs.
+
+**Critical:** Always log the **seed** on failure. Without it, you cannot reproduce the failing case.
+
+→ See `references/examples.md` → [Property-Based Testing Examples](#property-based-testing-examples)
+
+---
+
+### Mutation Testing (Use: Validating Test Quality)
+
+**When:** After tests pass, to verify they actually catch bugs. Use for critical code (auth, payments) or before major refactors.
+
+**Tools:** Stryker (JS/TS), PIT (Java), mutmut (Python)
+
+**How:** Tool mutates your code (e.g., changes `>` to `>=`). If tests still pass → your tests are weak.
+
+**Interpretation:**
+- **>80% mutation score** = good test suite
+- **Survived mutants** = tests don't catch those changes → add tests for these
+
+**Equivalent Mutant Problem:** Some mutants change syntax but not behavior (e.g., `i < 10` → `i != 10` in a loop where i only increments). These can't be killed—100% score is often impossible. Focus on surviving mutants in *critical paths*, not chasing perfect scores.
+
+**When NOT to use:** Tool-generated code (OpenAPI clients, Protobuf stubs, ORM models), simple DTOs/getters, legacy code with slow tests, or CI pipelines that must finish in <5 minutes. Use `--incremental --since main` for PR-focused runs. Note: This does NOT mean skip mutation testing on code you (the agent) wrote—always validate your own work.
+
+→ See `references/examples.md` → [Mutation Testing Examples](#mutation-testing-examples)
+
+---
+
+### Flaky Test Management (Use: CI/CD Maintenance)
+
+**When:** Tests fail intermittently, blocking CI or eroding trust in the test suite.
+
+**Root Causes:**
+
+| Cause | Fix |
+|-------|-----|
+| Timing (`setTimeout`, races) | Fake timers, await properly |
+| Shared state | Isolate per test |
+| Randomness | Seed or mock |
+| Network | Use MSW or fakes |
+| Order dependency | Make tests independent |
+| Parallel transaction conflicts | Isolate DB connections per worker |
+
+**How:** Detect (`--repeat 10`) → Quarantine (separate suite) → Fix root cause → Restore
+
+**Quarantine Rules:**
+- **Issue-linked**: Every quarantined test MUST link to a tracking issue. Prevents "quarantine-and-forget."
+- **Mute, don't skip**: Prefer muting (runs but doesn't fail build) over skipping. You still collect failure data.
+- **Reintroduction criteria**: Test must pass N consecutive runs (e.g., 100) on main before leaving quarantine.
+
+→ See `references/examples.md` → [Flaky Test Examples](#flaky-test-examples)
+
+---
+
+### Contract Testing (Use: Writing Tests for Service Boundaries)
+
+**When:** Writing tests for code that calls or exposes APIs. Prevents integration breakage.
+
+**How (Pact):** Consumer defines expected interactions → Contract published → Provider verifies → CI fails if contract broken.
+
+→ See `references/examples.md` → [Contract Testing Examples](#contract-testing-examples)
+
+---
+
+### Coverage Analysis (Use: Finding Gaps After Tests Pass)
+
+**When:** After writing tests, to find untested code paths. NOT a goal in itself.
+
+| Metric | Measures | Threshold |
+|--------|----------|-----------|
+| Line | Lines executed | 70-80% |
+| Branch | Decision paths | 60-70% |
+| Mutation | Test effectiveness | >80% |
+
+**Risk-Based Prioritization:** P0 (auth, payments) → P1 (core logic) → P2 (helpers) → P3 (config)
+
+**Warning:** High coverage ≠ good tests. Tests must assert meaningful behavior.
+
+---
+
+### Snapshot Testing (Use: Writing Tests for UI/Output Structure)
+
+**When:** Writing tests for UI components, API responses, or error message formats.
+
+**Appropriate:** UI structure, API response shapes, error formats.
+**Avoid:** Behavior testing, dynamic content, entire pages.
+
+**How:** Capture output once, verify it doesn't change unexpectedly. Always review diffs carefully.
+
+→ See `references/examples.md` → [Snapshot Testing Examples](#snapshot-testing-examples)
+
+---
+
+## Integration with Other Skills
 
 | Task | Skill | Usage |
 |------|-------|-------|
-| **Committing** | `git-commit` | Use `test:` commits for RED, `feat:` for GREEN |
-| **Code Quality** | `code-quality` | Run lint/format during Refactor phase |
-| **Documentation** | `docs-check` | Check if behavior changes need docs |
+| Committing | `git-commit` | `test:` for RED, `feat:` for GREEN |
+| Code Quality | `code-quality` | Run during REFACTOR phase |
+| Documentation | `docs-check` | Check if behavior changes need docs |
+
+---
 
 ## References
 
-- [The Three Rules of TDD](https://butunclebob.com/ArticleS.UncleBob.TheThreeRulesOfTdd) - Robert C. Martin's foundational principles
-- [Test Pyramid](https://martinfowler.com/bliki/TestPyramid.html) - Martin Fowler on test distribution
-- [Test Sizes](https://testing.googleblog.com/2010/12/test-sizes.html) - Google Testing Blog on categorization
-- [Hermetic Servers](https://testing.googleblog.com/2012/10/hermetic-servers.html) - Google on isolated testing
-- [Working Effectively with Legacy Code](https://www.oreilly.com/library/view/working-effectively-with/0131177052/) - Michael Feathers on characterization tests
+**Foundational:**
+- [Three Rules of TDD](https://butunclebob.com/ArticleS.UncleBob.TheThreeRulesOfTdd) - Robert C. Martin
+- [Test Pyramid](https://martinfowler.com/bliki/TestPyramid.html) - Martin Fowler
+- [Testing Trophy](https://kentcdodds.com/blog/write-tests) - Kent C. Dodds
+- [Working Effectively with Legacy Code](https://www.oreilly.com/library/view/working-effectively-with/0131177052/) - Michael Feathers
+
+**Tools:** [Testcontainers](https://testcontainers.com/) | [fast-check](https://fast-check.dev/) | [Stryker](https://stryker-mutator.io/) | [MSW](https://mswjs.io/) | [Pact](https://pact.io/)
