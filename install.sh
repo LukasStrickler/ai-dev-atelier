@@ -76,7 +76,7 @@ fi
 ATELIER_DIR="$SCRIPT_DIR"
 
 # Global dry-run flag
-DRY_RUN=false
+export DRY_RUN=${DRY_RUN:-false}
 
 # Cleanup trap for temp files and backups
 cleanup_on_exit() {
@@ -85,14 +85,14 @@ cleanup_on_exit() {
   for dir in "$ATELIER_STATE_DIR" "$OPENCODE_CONFIG_DIR" "${CURSOR_HOME:-}"; do
     [ -d "$dir" ] || continue
     for tmp_file in "$dir"/*.tmp "$dir"/*.tmp.*; do
-      [ -f "$tmp_file" ] && rm -f "$tmp_file" && cleanup_needed=true
+      [ -f "$tmp_file" ] && dry_run_aware_rm -f "$tmp_file" && cleanup_needed=true
     done
   done
   
   for backup_dir in "$OPENCODE_CONFIG_DIR" "${CURSOR_HOME:-}"; do
     [ -d "$backup_dir" ] || continue
     while read -r old_backup; do
-      [ -f "$old_backup" ] && rm -f "$old_backup" && cleanup_needed=true
+      [ -f "$old_backup" ] && dry_run_aware_rm -f "$old_backup" && cleanup_needed=true
     done < <(find "$backup_dir" -maxdepth 1 -name ".*.backup" -type f -printf '%T@ %p\n' 2>/dev/null | sort -n | head -n -10 | cut -d' ' -f2)
   done
   
@@ -188,6 +188,162 @@ log_error() {
 }
 
 # ----------------------------------------------------------------------------
+# Dry Run Aware Operations
+# ----------------------------------------------------------------------------
+
+# Dry-run aware copy
+# Usage: dry_run_aware_cp [-r] source target
+dry_run_aware_cp() {
+  local args=()
+  while [[ $# -gt 2 ]]; do
+    args+=("$1")
+    shift
+  done
+  local src="$1"
+  local dest="$2"
+
+  if [ "$DRY_RUN" = true ]; then
+    log_info "[DRY RUN] Would copy: ${src} -> ${dest} (args: ${args[*]})"
+    return 0
+  fi
+  cp "${args[@]}" "$src" "$dest"
+}
+
+# Dry-run aware move
+# Usage: dry_run_aware_mv source target
+dry_run_aware_mv() {
+  if [ "$DRY_RUN" = true ]; then
+    log_info "[DRY RUN] Would move: $1 -> $2"
+    return 0
+  fi
+  mv "$1" "$2"
+}
+
+# Dry-run aware remove
+# Usage: dry_run_aware_rm [-rf] target
+dry_run_aware_rm() {
+  local args=()
+  while [[ $# -gt 1 ]]; do
+    args+=("$1")
+    shift
+  done
+  local target="$1"
+
+  if [ "$DRY_RUN" = true ]; then
+    log_info "[DRY RUN] Would remove: ${target} (args: ${args[*]})"
+    return 0
+  fi
+  rm "${args[@]}" "$target"
+}
+
+# Dry-run aware mkdir
+# Usage: dry_run_aware_mkdir [-p] target
+dry_run_aware_mkdir() {
+  local args=()
+  while [[ $# -gt 1 ]]; do
+    args+=("$1")
+    shift
+  done
+  local target="$1"
+
+  if [ "$DRY_RUN" = true ]; then
+    log_info "[DRY RUN] Would create directory: ${target} (args: ${args[*]})"
+    return 0
+  fi
+  mkdir "${args[@]}" "$target"
+}
+
+# Dry-run aware file write (redirection)
+# Usage: command | dry_run_aware_write target
+dry_run_aware_write() {
+  local target="$1"
+  if [ "$DRY_RUN" = true ]; then
+    log_info "[DRY RUN] Would write to: ${target}"
+    cat > /dev/null
+    return 0
+  fi
+  cat > "$target"
+}
+
+# ----------------------------------------------------------------------------
+# Dry Run Aware Operations
+# ----------------------------------------------------------------------------
+
+# Dry-run aware copy
+# Usage: dry_run_aware_cp [-r] source target
+dry_run_aware_cp() {
+  local args=()
+  while [[ $# -gt 2 ]]; do
+    args+=("$1")
+    shift
+  done
+  local src="$1"
+  local dest="$2"
+
+  if [ "$DRY_RUN" = true ]; then
+    log_info "[DRY RUN] Would copy: ${src} -> ${dest} (args: ${args[*]})"
+    return 0
+  fi
+  cp "${args[@]}" "$src" "$dest"
+}
+
+# Dry-run aware move
+# Usage: dry_run_aware_mv source target
+dry_run_aware_mv() {
+  if [ "$DRY_RUN" = true ]; then
+    log_info "[DRY RUN] Would move: $1 -> $2"
+    return 0
+  fi
+  mv "$1" "$2"
+}
+
+# Dry-run aware remove
+# Usage: dry_run_aware_rm [-rf] target
+dry_run_aware_rm() {
+  local args=()
+  while [[ $# -gt 1 ]]; do
+    args+=("$1")
+    shift
+  done
+  local target="$1"
+
+  if [ "$DRY_RUN" = true ]; then
+    log_info "[DRY RUN] Would remove: ${target} (args: ${args[*]})"
+    return 0
+  fi
+  rm "${args[@]}" "$target"
+}
+
+# Dry-run aware mkdir
+# Usage: dry_run_aware_mkdir [-p] target
+dry_run_aware_mkdir() {
+  local args=()
+  while [[ $# -gt 1 ]]; do
+    args+=("$1")
+    shift
+  done
+  local target="$1"
+
+  if [ "$DRY_RUN" = true ]; then
+    log_info "[DRY RUN] Would create directory: ${target} (args: ${args[*]})"
+    return 0
+  fi
+  mkdir "${args[@]}" "$target"
+}
+
+# Dry-run aware file write (redirection)
+# Usage: command | dry_run_aware_write target
+dry_run_aware_write() {
+  local target="$1"
+  if [ "$DRY_RUN" = true ]; then
+    log_info "[DRY RUN] Would write to: ${target}"
+    cat > /dev/null
+    return 0
+  fi
+  cat > "$target"
+}
+
+# ----------------------------------------------------------------------------
 # Atomic Copy Skill
 # ----------------------------------------------------------------------------
 # Copies a skill directory to a target location atomically by using a temporary
@@ -232,6 +388,13 @@ git_with_retry() {
   local delay=2
 
   while [ $attempt -le $max_attempts ]; do
+    if [ "$DRY_RUN" = true ]; then
+      log_info "[DRY RUN] Would execute git: git $*"
+      return 0
+    fi
+    if git "$@"; then
+      return 0
+    fi
     if git "$@"; then
       return 0
     fi
@@ -417,7 +580,7 @@ ensure_repo_checkout() {
     exit 1
   fi
 
-  if ! mkdir -p "$ATELIER_CACHE_DIR"; then
+  if ! dry_run_aware_mkdir -p "$ATELIER_CACHE_DIR"; then
     log_error "Failed to create cache directory: ${ATELIER_CACHE_DIR}"
     exit 1
   fi
@@ -437,8 +600,8 @@ resolve_skills_config() {
 
   if [ -f "$LEGACY_SKILLS_CONFIG" ]; then
     log_warning "Found legacy skills-config.json. Copying to skills.json."
-    cp "$LEGACY_SKILLS_CONFIG" "$SKILLS_CONFIG"
-    rm -f "$LEGACY_SKILLS_CONFIG"
+    dry_run_aware_cp "$LEGACY_SKILLS_CONFIG" "$SKILLS_CONFIG"
+    dry_run_aware_rm -f "$LEGACY_SKILLS_CONFIG"
     return 0
   fi
 }
@@ -773,7 +936,7 @@ preflight_checks() {
   check_optional_tools
 
   # Create ATELIER_STATE_DIR before checking write access
-  if ! mkdir -p "$ATELIER_STATE_DIR"; then
+  if ! dry_run_aware_mkdir -p "$ATELIER_STATE_DIR"; then
     log_error "Failed to create state directory: ${ATELIER_STATE_DIR}"
     exit 1
   fi
@@ -1213,9 +1376,14 @@ safe_json_update() {
   local backup="${file}.backup"
   
   # Create backup before modification
-  cp "$file" "$backup"
+  dry_run_aware_cp "$file" "$backup"
   
   # Atomic update: write to temp file, then move
+  if [ "$DRY_RUN" = true ]; then
+    log_info "[DRY RUN] Would update $label in $file"
+    return 0
+  fi
+
   if jq "$jq_filter" "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"; then
     log_success "Updated $label"
     return 0
@@ -1276,24 +1444,28 @@ configure_mcp_platform() {
   fi
   
   local config_dir=$(dirname "$config_path")
-  mkdir -p "$config_dir"
+  dry_run_aware_mkdir -p "$config_dir"
   
   # Handle existing or new config
   if [ -f "$config_path" ]; then
     # Existing config: validate and backup
     if ! jq empty "$config_path" 2>/dev/null; then
       log_error "Existing $platform config is not valid JSON. Creating backup and starting fresh..."
-      mv "$config_path" "${config_path}.invalid.$(date +%s).backup"
-      jq -n "{\"$section_key\": {}}" > "$config_path"
+      dry_run_aware_mv "$config_path" "${config_path}.invalid.$(date +%s).backup"
+      jq -n "{\"$section_key\": {}}" | dry_run_aware_write "$config_path"
     fi
     
     # Ensure section exists
     if ! jq -e ".$section_key" "$config_path" > /dev/null 2>&1; then
-      jq ".$section_key = {}" "$config_path" > "${config_path}.tmp" && \
-        mv "${config_path}.tmp" "$config_path"
+      if [ "$DRY_RUN" = true ]; then
+        log_info "[DRY RUN] Would ensure section $section_key exists in $config_path"
+      else
+        jq ".$section_key = {}" "$config_path" > "${config_path}.tmp" && \
+          mv "${config_path}.tmp" "$config_path"
+      fi
     fi
     
-    cp "$config_path" "${config_path}.backup"
+    dry_run_aware_cp "$config_path" "${config_path}.backup"
     log_info "Backup created: ${config_path}.backup"
     
     # Process servers using unified logic
@@ -1369,7 +1541,7 @@ configure_mcp_platform() {
     done <<< "$server_names"
     
     local new_config=$(jq -n --argjson mcp "$mcp_section" "{\"$section_key\": \$mcp}")
-    echo "$new_config" > "$config_path"
+    echo "$new_config" | dry_run_aware_write "$config_path"
     log_success "Created $platform MCP configuration at ${config_path}"
     log_info "Configured $(echo "$mcp_section" | jq 'length') MCP server(s)"
   fi
@@ -1458,7 +1630,7 @@ configure_mcp_cursor() {
   fi
 
   local cursor_config_dir=$(dirname "$CURSOR_MCP_CONFIG")
-  mkdir -p "$cursor_config_dir"
+  dry_run_aware_mkdir -p "$cursor_config_dir"
 
   if ! jq empty "$MCP_CONFIG" 2>/dev/null; then
     log_error "config/mcps.json is not valid JSON"
@@ -1476,16 +1648,20 @@ configure_mcp_cursor() {
   if [ -f "$CURSOR_MCP_CONFIG" ]; then
     if ! jq empty "$CURSOR_MCP_CONFIG" 2>/dev/null; then
       log_error "Existing Cursor MCP config is not valid JSON. Creating backup and starting fresh..."
-      mv "$CURSOR_MCP_CONFIG" "${CURSOR_MCP_CONFIG}.invalid.$(date +%s).backup"
-      echo '{$SECTION_MCPSERVERS: {}}' > "$CURSOR_MCP_CONFIG"
+      dry_run_aware_mv "$CURSOR_MCP_CONFIG" "${CURSOR_MCP_CONFIG}.invalid.$(date +%s).backup"
+      echo '{$SECTION_MCPSERVERS: {}}' | dry_run_aware_write "$CURSOR_MCP_CONFIG"
     fi
 
     if ! jq -e '.mcpServers' "$CURSOR_MCP_CONFIG" > /dev/null 2>&1; then
-      jq '.mcpServers = {}' "$CURSOR_MCP_CONFIG" > "${CURSOR_MCP_CONFIG}.tmp" && \
-        mv "${CURSOR_MCP_CONFIG}.tmp" "$CURSOR_MCP_CONFIG"
+      if [ "$DRY_RUN" = true ]; then
+        log_info "[DRY RUN] Would ensure mcpServers section exists in $CURSOR_MCP_CONFIG"
+      else
+        jq '.mcpServers = {}' "$CURSOR_MCP_CONFIG" > "${CURSOR_MCP_CONFIG}.tmp" && \
+          mv "${CURSOR_MCP_CONFIG}.tmp" "$CURSOR_MCP_CONFIG"
+      fi
     fi
 
-    cp "$CURSOR_MCP_CONFIG" "${CURSOR_MCP_CONFIG}.backup"
+    dry_run_aware_cp "$CURSOR_MCP_CONFIG" "${CURSOR_MCP_CONFIG}.backup"
     local added_count=0
     local skipped_count=0
 
@@ -1503,7 +1679,10 @@ configure_mcp_cursor() {
         local current=$(jq -c ".mcpServers.\"${server_name}\"" "$CURSOR_MCP_CONFIG")
         local current_str=$(echo "$current" | jq -r 'tostring')
         if cursor_has_literal_placeholders "$current_str"; then
-          if jq --arg name "$server_name" --argjson config "$cursor_config" \
+          if [ "$DRY_RUN" = true ]; then
+            log_info "[DRY RUN] Would update ${server_name} in $CURSOR_MCP_CONFIG"
+            updated_count=$((updated_count + 1))
+          elif jq --arg name "$server_name" --argjson config "$cursor_config" \
              '.mcpServers[$name] = $config' "$CURSOR_MCP_CONFIG" > "${CURSOR_MCP_CONFIG}.tmp" && \
              mv "${CURSOR_MCP_CONFIG}.tmp" "$CURSOR_MCP_CONFIG"; then
             log_success "  ${server_name}: updated to use \${env:VAR} (Cursor resolves at runtime)"
@@ -1517,7 +1696,10 @@ configure_mcp_cursor() {
       fi
 
       # Server doesn't exist, add it
-      if jq --arg name "$server_name" --argjson config "$cursor_config" \
+      if [ "$DRY_RUN" = true ]; then
+        log_info "[DRY RUN] Would add ${server_name} to $CURSOR_MCP_CONFIG"
+        added_count=$((added_count + 1))
+      elif jq --arg name "$server_name" --argjson config "$cursor_config" \
          '.mcpServers[$name] = $config' "$CURSOR_MCP_CONFIG" > "${CURSOR_MCP_CONFIG}.tmp" && \
          mv "${CURSOR_MCP_CONFIG}.tmp" "$CURSOR_MCP_CONFIG"; then
         log_success "  ${server_name}: added"
@@ -1554,7 +1736,7 @@ configure_mcp_cursor() {
     done <<< "$server_names"
 
     local new_config=$(jq -n --argjson mcp "$mcp_section" '{mcpServers: $mcp}')
-    echo "$new_config" > "$CURSOR_MCP_CONFIG"
+    echo "$new_config" | dry_run_aware_write "$CURSOR_MCP_CONFIG"
     log_success "Created Cursor MCP configuration at ${CURSOR_MCP_CONFIG}"
     log_info "Configured $(echo "$mcp_section" | jq 'length') MCP server(s)"
   fi
@@ -1586,12 +1768,16 @@ configure_opencode_tool_filtering() {
   done <<< "$(jq -r '.mcpServers | keys[]' "$MCP_CONFIG")"
   
   if [ "$tools_config" != "{}" ]; then
-    if jq -e '.tools' "$OPENCODE_CONFIG" > /dev/null 2>&1; then
-      jq --argjson new_tools "$tools_config" '.tools = (.tools + $new_tools)' "$OPENCODE_CONFIG" > "${OPENCODE_CONFIG}.tmp" && \
-        mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"
+    if [ "$DRY_RUN" = true ]; then
+      log_info "[DRY RUN] Would configure tool filtering in $OPENCODE_CONFIG"
     else
-      jq --argjson new_tools "$tools_config" '.tools = $new_tools' "$OPENCODE_CONFIG" > "${OPENCODE_CONFIG}.tmp" && \
-        mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"
+      if jq -e '.tools' "$OPENCODE_CONFIG" > /dev/null 2>&1; then
+        jq --argjson new_tools "$tools_config" '.tools = (.tools + $new_tools)' "$OPENCODE_CONFIG" > "${OPENCODE_CONFIG}.tmp" && \
+          mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"
+      else
+        jq --argjson new_tools "$tools_config" '.tools = $new_tools' "$OPENCODE_CONFIG" > "${OPENCODE_CONFIG}.tmp" && \
+          mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"
+      fi
     fi
     local disabled_count=$(echo "$tools_config" | jq 'length')
     log_info "Configured ${disabled_count} disabled tool(s) in OpenCode"
@@ -1615,7 +1801,7 @@ configure_opencode_plugins() {
   local opencode_config_dir
   opencode_config_dir=$(dirname "$OPENCODE_CONFIG")
   local opencode_plugin_dir="${opencode_config_dir}/plugin"
-  mkdir -p "$opencode_plugin_dir"
+  dry_run_aware_mkdir -p "$opencode_plugin_dir"
 
   local installed=0
   local updated=0
@@ -1633,13 +1819,13 @@ configure_opencode_plugins() {
         continue
       fi
       if confirm_action "Overwrite OpenCode plugin ${plugin_name}?"; then
-        cp "$plugin_file" "$target_file"
+        dry_run_aware_cp "$plugin_file" "$target_file"
         updated=$((updated + 1))
       else
         skipped=$((skipped + 1))
       fi
     else
-      cp "$plugin_file" "$target_file"
+      dry_run_aware_cp "$plugin_file" "$target_file"
       installed=$((installed + 1))
     fi
   done
@@ -1654,7 +1840,7 @@ configure_opencode_plugins() {
   if ! command -v jq &> /dev/null; then
     log_warning "jq not found. Skipping plugin.json merge."
     if [ ! -f "${opencode_config_dir}/plugin.json" ]; then
-      cp "$plugin_config_source" "${opencode_config_dir}/plugin.json"
+      dry_run_aware_cp "$plugin_config_source" "${opencode_config_dir}/plugin.json"
       log_success "Copied plugin.json to ${opencode_config_dir}/plugin.json"
     fi
     return 0
@@ -1669,13 +1855,15 @@ configure_opencode_plugins() {
   if [ -f "$target_plugin_config" ]; then
     if ! jq empty "$target_plugin_config" 2>/dev/null; then
       log_error "Existing plugin.json is not valid JSON. Creating backup and replacing."
-      mv "$target_plugin_config" "${target_plugin_config}.invalid.$(date +%s).backup"
-      cp "$plugin_config_source" "$target_plugin_config"
+      dry_run_aware_mv "$target_plugin_config" "${target_plugin_config}.invalid.$(date +%s).backup"
+      dry_run_aware_cp "$plugin_config_source" "$target_plugin_config"
       return 0
     fi
 
-    cp "$target_plugin_config" "${target_plugin_config}.backup"
-    if jq -s '.[0] * .[1]' "$plugin_config_source" "$target_plugin_config" > "${target_plugin_config}.tmp" && \
+    dry_run_aware_cp "$target_plugin_config" "${target_plugin_config}.backup"
+    if [ "$DRY_RUN" = true ]; then
+      log_info "[DRY RUN] Would merge plugin.json into ${target_plugin_config}"
+    elif jq -s '.[0] * .[1]' "$plugin_config_source" "$target_plugin_config" > "${target_plugin_config}.tmp" && \
       mv "${target_plugin_config}.tmp" "$target_plugin_config"; then
       log_success "Merged plugin.json into ${target_plugin_config} (source values override existing)"
     else
@@ -1684,7 +1872,7 @@ configure_opencode_plugins() {
       return 1
     fi
   else
-    cp "$plugin_config_source" "$target_plugin_config"
+    dry_run_aware_cp "$plugin_config_source" "$target_plugin_config"
     log_success "Installed plugin.json to ${target_plugin_config}"
   fi
 }
@@ -1783,14 +1971,18 @@ configure_opencode_agents() {
   done <<< "$agent_names"
   
   # Merge agents into opencode.json
-  if jq -e '.agent' "$OPENCODE_CONFIG" > /dev/null 2>&1; then
-    # Merge with existing agents
-    jq --argjson new_agents "$agents_data" '.agent = (.agent + $new_agents)' "$OPENCODE_CONFIG" > "${OPENCODE_CONFIG}.tmp" && \
-      mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"
+  if [ "$DRY_RUN" = true ]; then
+    log_info "[DRY RUN] Would merge custom agents into $OPENCODE_CONFIG"
   else
-    # Create agent section
-    jq --argjson new_agents "$agents_data" '.agent = $new_agents' "$OPENCODE_CONFIG" > "${OPENCODE_CONFIG}.tmp" && \
-      mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"
+    if jq -e '.agent' "$OPENCODE_CONFIG" > /dev/null 2>&1; then
+      # Merge with existing agents
+      jq --argjson new_agents "$agents_data" '.agent = (.agent + $new_agents)' "$OPENCODE_CONFIG" > "${OPENCODE_CONFIG}.tmp" && \
+        mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"
+    else
+      # Create agent section
+      jq --argjson new_agents "$agents_data" '.agent = $new_agents' "$OPENCODE_CONFIG" > "${OPENCODE_CONFIG}.tmp" && \
+        mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"
+    fi
   fi
   
   local agent_count
@@ -2385,6 +2577,11 @@ main() {
   # Parse arguments
   parse_args "$@"
 
+  if [ "$DRY_RUN" = true ]; then
+    log_info "DRY RUN MODE ENABLED. No changes will be made to the filesystem."
+    echo ""
+  fi
+
   if [ "$CHECK_ONLY" = true ]; then
     preflight_checks
     log_success "Dependency checks complete."
@@ -2410,8 +2607,8 @@ main() {
   
   # Ensure target directories exist
   log_info "Preparing installation directories..."
-  mkdir -p "$OPENCODE_SKILLS_DIR"
-  mkdir -p "$CURSOR_SKILLS_DIR"
+  dry_run_aware_mkdir -p "$OPENCODE_SKILLS_DIR"
+  dry_run_aware_mkdir -p "$CURSOR_SKILLS_DIR"
   log_success "Directories ready"
   echo ""
   log_info "OpenCode skills: ${OPENCODE_SKILLS_DIR} (global)"
