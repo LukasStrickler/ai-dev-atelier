@@ -187,6 +187,45 @@ log_error() {
   echo -e "${RED}❌${NC} $1" >&2
 }
 
+# ----------------------------------------------------------------------------
+# Atomic Copy Skill
+# ----------------------------------------------------------------------------
+# Copies a skill directory to a target location atomically by using a temporary
+# directory and mv. This prevents partial copies on interruption.
+#
+# Parameters:
+#   $1 - Source directory path
+#   $2 - Target directory path
+#
+# Returns:
+#   0 on success, 1 on failure
+atomic_copy_skill() {
+  local source="$1"
+  local target="$2"
+  local temp_target="${target}.tmp.$$"
+
+  if [ "$DRY_RUN" = true ]; then
+    log_info "[DRY RUN] Would copy skill atomically: ${source} -> ${target}"
+    return 0
+  fi
+
+  # Copy to temp location
+  if ! cp -r "$source" "$temp_target"; then
+    log_error "Failed to copy skill to temp location"
+    rm -rf "$temp_target" 2>/dev/null
+    return 1
+  fi
+
+  # Atomic move
+  if ! mv "$temp_target" "$target"; then
+    log_error "Failed to move skill to final location"
+    rm -rf "$temp_target" 2>/dev/null
+    return 1
+  fi
+
+  return 0
+}
+
 git_with_retry() {
   local max_attempts=3
   local attempt=1
@@ -2169,17 +2208,21 @@ install_skill_to_agent() {
     fi
     
     # Remove existing skill before installing new version
-    rm -rf "$target_skill"
+    dry_run_aware_rm -rf "$target_skill"
     log_info "Removed existing skill '${skill_name}'"
   fi
   
-  # Copy skill to target directory
-  # Use cp -r to preserve directory structure and permissions
-  if cp -r "$source_skill" "$target_skill" 2>/dev/null; then
-  if [ "$exists" = true ]; then
-    log_success "Updated skill '${skill_name}'"
-  else
-    log_success "Installed skill '${skill_name}'"
+  # Copy skill to target directory atomically
+  if [ "$DRY_RUN" = true ]; then
+    log_info "[DRY RUN] Would copy skill '${skill_name}' to ${target_skills_dir}"
+    return 0
+  fi
+
+  if atomic_copy_skill "$source_skill" "$target_skill"; then
+    if [ "$exists" = true ]; then
+      log_success "Updated skill '${skill_name}'"
+    else
+      log_success "Installed skill '${skill_name}'"
     fi
     return 0
   else
