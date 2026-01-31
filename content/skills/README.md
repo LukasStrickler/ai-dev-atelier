@@ -93,7 +93,7 @@ Skills are organized directories containing `SKILL.md` files that follow the ope
 
 Skills follow the open [Agent Skills standard](https://agentskills.io/specification):
 
-1. **Discovery**: Agents scan skill directories (like `~/.opencode/skills`) for directories containing `SKILL.md` files
+1. **Discovery**: Agents scan skill directories (e.g. `~/.opencode/skills/` for OpenCode, `~/.cursor/skills/` for Cursor) for directories containing `SKILL.md` files
 2. **Loading**: Agents read `SKILL.md` files which contain:
    - YAML frontmatter with `name` and `description`
    - Detailed instructions on when and how to use the skill
@@ -102,6 +102,8 @@ Skills follow the open [Agent Skills standard](https://agentskills.io/specificat
    - Reads the skill instructions from `SKILL.md`
    - Executes scripts via `bash skills/<skill-name>/scripts/<script-name>.sh`
    - Scripts are called directly, not through npm or package.json
+
+**Install locations**: Running `install.sh` installs skills to **OpenCode** (`~/.opencode/skills/`) and **Cursor** (`~/.cursor/skills/`, user-level per [Cursor docs](https://cursor.com/docs/context/skills)). Use `CURSOR_HOME` to override the Cursor base path.
 
 **Key Points:**
 - Scripts are embedded within skill directories (`scripts/` subdirectory)

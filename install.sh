@@ -4,12 +4,12 @@
 # ============================================================================
 #
 # Description:
-#   Installs skills and MCP servers to OpenCode agent.
+#   Installs skills and MCP servers to OpenCode and Cursor.
 #   Follows open Agent Skills standard and OpenCode specifications.
 #
 # Features:
-#   - Installs skills to OpenCode (~/.opencode/skills)
-#   - Configures MCPs for OpenCode with proper format conversion
+#   - Installs skills to OpenCode (~/.opencode/skills) and Cursor (~/.cursor/skills)
+#   - Configures MCPs for OpenCode and Cursor (~/.cursor/mcp.json)
 #   - Preserves existing configurations (never overwrites)
 #   - Smart diff-based confirmation for skill updates
 #   - Agent-specific skill filtering via skills.json
@@ -70,7 +70,7 @@ ENV_EXAMPLE="${ATELIER_DIR}/.env.example"
 # ============================================================================
 
 # OpenCode paths (OpenCode specification)
-# Skills use "skills" (plural) for OpenCode install path
+# OpenCode skills dir: ~/.opencode/skills (or $XDG_CONFIG_HOME/opencode/skills)
 # Note: OPENCODE_SKILLS_DIR will be set by get_opencode_skills_path() function below
 if [ -n "${XDG_CONFIG_HOME:-}" ]; then
   OPENCODE_CONFIG_DIR="${XDG_CONFIG_HOME}/opencode"
@@ -362,8 +362,24 @@ get_opencode_skills_path() {
   echo "${OPENCODE_CONFIG_DIR}/skills"
 }
 
-# Update OPENCODE_SKILLS_DIR to use the function result
+# ----------------------------------------------------------------------------
+# Cursor skills path (Cursor docs: https://cursor.com/docs/context/skills)
+# User-level (global): ~/.cursor/skills/
+# CURSOR_HOME overrides base when set.
+get_cursor_skills_path() {
+  echo "${CURSOR_HOME:-$HOME/.cursor}/skills"
+}
+
+# Cursor MCP config path (Cursor docs: https://cursor.com/docs/context/mcp)
+# Global: ~/.cursor/mcp.json
+get_cursor_mcp_config_path() {
+  echo "${CURSOR_HOME:-$HOME/.cursor}/mcp.json"
+}
+
+# Update OPENCODE_SKILLS_DIR and CURSOR_SKILLS_DIR to use the function results
 OPENCODE_SKILLS_DIR=$(get_opencode_skills_path)
+CURSOR_SKILLS_DIR=$(get_cursor_skills_path)
+CURSOR_MCP_CONFIG=$(get_cursor_mcp_config_path)
 
 # ----------------------------------------------------------------------------
 # Argument Parsing
@@ -400,7 +416,7 @@ parse_args() {
 
 show_help() {
   cat << EOF
-Install AI Dev Atelier Skills and MCPs to OpenCode
+Install AI Dev Atelier Skills and MCPs to OpenCode and Cursor
 
 Usage: $0 [OPTIONS]
 
@@ -410,9 +426,13 @@ Options:
   --check      Run preflight checks only
   -h, --help   Show this help message
 
-This script installs skills and MCPs to OpenCode:
-  - Skills: ${OPENCODE_SKILLS_DIR}
-  - MCPs: ${OPENCODE_CONFIG} (JSON format)
+This script installs skills and MCPs:
+  OpenCode:
+    Skills: ${OPENCODE_SKILLS_DIR}
+    MCPs: ${OPENCODE_CONFIG} (JSON format)
+  Cursor (global):
+    Skills: ${CURSOR_SKILLS_DIR}
+    MCPs: ${CURSOR_MCP_CONFIG}
 
 Skills are installed following the open Agent Skills standard.
 Skills can be disabled per agent in skills.json.
@@ -639,7 +659,9 @@ preflight_checks() {
 
   local failed=0
   check_write_access "$OPENCODE_SKILLS_DIR" || failed=$((failed + 1))
+  check_write_access "$CURSOR_SKILLS_DIR" || failed=$((failed + 1))
   check_write_access "$(dirname "$OPENCODE_CONFIG")" || failed=$((failed + 1))
+  check_write_access "$(dirname "$CURSOR_MCP_CONFIG")" || failed=$((failed + 1))
   check_write_access "$ATELIER_STATE_DIR" || failed=$((failed + 1))
 
   if [ "$failed" -gt 0 ]; then
@@ -948,6 +970,91 @@ convert_mcp_to_opencode() {
 }
 
 # ----------------------------------------------------------------------------
+# Get MCP server names from config (shared prelude for OpenCode/Cursor)
+# ----------------------------------------------------------------------------
+# Validates jq, MCP_CONFIG file, JSON; loads .env; outputs server name list.
+# Call: server_names=$(get_mcp_server_names "OpenCode") || return 1
+get_mcp_server_names() {
+  local label="${1:-MCP}"
+  if ! command -v jq &> /dev/null; then
+    log_warning "jq not found. Skipping ${label} MCP configuration."
+    log_info "Install jq to enable automatic MCP configuration:"
+    log_info "  macOS: brew install jq"
+    log_info "  Linux: sudo apt-get install jq"
+    return 1
+  fi
+  if [ ! -f "$MCP_CONFIG" ]; then
+    log_warning "config/mcps.json not found at ${MCP_CONFIG}"
+    log_info "Skipping ${label} MCP configuration"
+    return 1
+  fi
+  if ! jq empty "$MCP_CONFIG" 2>/dev/null; then
+    log_error "config/mcps.json is not valid JSON"
+    return 1
+  fi
+  load_env_file || true
+  local server_names
+  server_names=$(jq -r '.mcpServers | keys[]' "$MCP_CONFIG")
+  if [ -z "$server_names" ]; then
+    log_error "No mcpServers found in config/mcps.json"
+    return 1
+  fi
+  echo "$server_names"
+  return 0
+}
+
+# ----------------------------------------------------------------------------
+# Apply Cursor env interpolation (${env:VAR})
+# ----------------------------------------------------------------------------
+# Replaces placeholder API key values with ${env:VAR} so Cursor resolves them
+# at runtime. Cursor docs: https://cursor.com/docs/context/mcp (Config interpolation)
+#
+# Parameters:
+#   $1 - Server config (JSON string, already stripped of _ keys)
+#
+# Returns:
+#   JSON with placeholder values replaced by ${env:VAR}
+apply_cursor_env_interpolation() {
+  local config="$1"
+  local rep placeholder
+  # Authorization header: placeholder -> ${env:VAR} (loop over known placeholders)
+  for placeholder in TAVILY_API_KEY Z_AI_API_KEY; do
+    if echo "$config" | jq -e ".headers.Authorization | strings | test(\"$placeholder\")" > /dev/null 2>&1; then
+      rep='${env:'"$placeholder"'}'
+      config=$(echo "$config" | jq --arg r "$rep" '.headers.Authorization |= gsub("'"$placeholder"'"; $r)')
+    fi
+  done
+  # Direct key = ${env:VAR} (single jq for all optional keys)
+  config=$(echo "$config" | jq '
+    (if .headers.CONTEXT7_API_KEY then .headers.CONTEXT7_API_KEY = "${env:CONTEXT7_API_KEY}" else . end) |
+    (if .env.Z_AI_API_KEY then .env.Z_AI_API_KEY = "${env:Z_AI_API_KEY}" else . end) |
+    (if .env.OPENALEX_EMAIL then .env.OPENALEX_EMAIL = "${env:OPENALEX_EMAIL}" else . end)
+  ')
+  echo "$config"
+}
+
+# ----------------------------------------------------------------------------
+# Convert MCP to Cursor Format
+# ----------------------------------------------------------------------------
+# Produces Cursor-native mcpServers entry: strip _-prefixed keys, then apply
+# ${env:VAR} interpolation so Cursor resolves API keys at runtime (no secrets
+# written to disk). Cursor docs: https://cursor.com/docs/context/mcp
+#
+# Parameters:
+#   $1 - Server name
+#   $2 - Server config (JSON string from config/mcps.json)
+#
+# Returns:
+#   Clean JSON config via stdout (no _* keys, ${env:VAR} for API keys)
+convert_mcp_to_cursor() {
+  local server_name="$1"
+  local server_config="$2"
+  # Strip keys starting with _
+  local clean=$(echo "$server_config" | jq -c 'with_entries(select(.key | startswith("_") | not))')
+  apply_cursor_env_interpolation "$clean"
+}
+
+# ----------------------------------------------------------------------------
 # Configure MCP Servers for OpenCode
 # ----------------------------------------------------------------------------
 # Configures MCP servers for OpenCode agent using OpenCode format.
@@ -973,47 +1080,11 @@ convert_mcp_to_opencode() {
 #   - OpenCode MCP docs: https://opencode.ai/docs/mcp-servers/
 configure_mcp_opencode() {
   log_info "Checking MCP configuration for OpenCode..."
-  
-  # Check if jq is available (required for JSON manipulation)
-  if ! command -v jq &> /dev/null; then
-    log_warning "jq not found. Skipping OpenCode MCP configuration."
-    log_info "Install jq to enable automatic MCP configuration:"
-    log_info "  macOS: brew install jq"
-    log_info "  Linux: sudo apt-get install jq"
-    log_info "  Or manually configure MCPs using config/mcps.json"
-    return
-  fi
-  
-  # Check if config/mcps.json exists
-  if [ ! -f "$MCP_CONFIG" ]; then
-    log_warning "config/mcps.json not found at ${MCP_CONFIG}"
-    log_info "Skipping OpenCode MCP configuration"
-    return
-  fi
-  
-  # Ensure OpenCode config directory exists
+  local server_names
+  server_names=$(get_mcp_server_names "OpenCode") || return
   local opencode_config_dir=$(dirname "$OPENCODE_CONFIG")
   mkdir -p "$opencode_config_dir"
-  
-  # Validate config is valid JSON
-  if ! jq empty "$MCP_CONFIG" 2>/dev/null; then
-    log_error "config/mcps.json is not valid JSON"
-    return 1
-  fi
-  
-  # Load .env file for API keys
-  load_env_file || true
-  
-  # Extract MCP servers from config
-  local mcp_servers=$(jq -c '.mcpServers' "$MCP_CONFIG")
-  if [ -z "$mcp_servers" ] || [ "$mcp_servers" = "null" ]; then
-    log_error "No mcpServers found in config/mcps.json"
-    return 1
-  fi
-  
-  # Get list of server names from config
-  local server_names=$(jq -r '.mcpServers | keys[]' "$MCP_CONFIG")
-  
+
   if [ -f "$OPENCODE_CONFIG" ]; then
     # Config exists, check and add missing servers (preserve existing configs)
     log_info "Updating existing OpenCode configuration (preserving existing MCPs)..."
@@ -1134,6 +1205,134 @@ configure_mcp_opencode() {
   
   # Configure tool filtering from _disabledTools metadata in config/mcps.json
   configure_opencode_tool_filtering
+}
+
+# ----------------------------------------------------------------------------
+# Configure MCP Servers for Cursor
+# ----------------------------------------------------------------------------
+# Configures MCP servers for Cursor (global ~/.cursor/mcp.json).
+# Reads from config/mcps.json, strips _-prefixed keys, substitutes API keys,
+# and merges into Cursor config. Only adds missing servers; never overwrites.
+#
+# Format: ~/.cursor/mcp.json with mcpServers (Cursor native)
+#   { "mcpServers": { "server-name": { "url" | "command", ... } } }
+#
+# References: https://cursor.com/docs/context/mcp
+configure_mcp_cursor() {
+  log_info "Checking MCP configuration for Cursor..."
+
+  if ! command -v jq &> /dev/null; then
+    log_warning "jq not found. Skipping Cursor MCP configuration."
+    log_info "Install jq to enable automatic MCP configuration (see OpenCode MCP section above)."
+    return
+  fi
+
+  if [ ! -f "$MCP_CONFIG" ]; then
+    log_warning "config/mcps.json not found at ${MCP_CONFIG}. Skipping Cursor MCP configuration"
+    return
+  fi
+
+  local cursor_config_dir=$(dirname "$CURSOR_MCP_CONFIG")
+  mkdir -p "$cursor_config_dir"
+
+  if ! jq empty "$MCP_CONFIG" 2>/dev/null; then
+    log_error "config/mcps.json is not valid JSON"
+    return 1
+  fi
+
+  load_env_file || true
+
+  local server_names=$(jq -r '.mcpServers | keys[]' "$MCP_CONFIG")
+  if [ -z "$server_names" ]; then
+    log_error "No mcpServers found in config/mcps.json"
+    return 1
+  fi
+
+  if [ -f "$CURSOR_MCP_CONFIG" ]; then
+    if ! jq empty "$CURSOR_MCP_CONFIG" 2>/dev/null; then
+      log_error "Existing Cursor MCP config is not valid JSON. Creating backup and starting fresh..."
+      mv "$CURSOR_MCP_CONFIG" "${CURSOR_MCP_CONFIG}.invalid.$(date +%s).backup"
+      echo '{"mcpServers": {}}' > "$CURSOR_MCP_CONFIG"
+    fi
+
+    if ! jq -e '.mcpServers' "$CURSOR_MCP_CONFIG" > /dev/null 2>&1; then
+      jq '.mcpServers = {}' "$CURSOR_MCP_CONFIG" > "${CURSOR_MCP_CONFIG}.tmp" && \
+        mv "${CURSOR_MCP_CONFIG}.tmp" "$CURSOR_MCP_CONFIG"
+    fi
+
+    cp "$CURSOR_MCP_CONFIG" "${CURSOR_MCP_CONFIG}.backup"
+    local added_count=0
+    local skipped_count=0
+
+    local updated_count=0
+    while IFS= read -r server_name; do
+      local server_config=$(jq -c ".mcpServers.\"${server_name}\"" "$MCP_CONFIG")
+      if [ -z "$server_config" ] || [ "$server_config" = "null" ]; then
+        continue
+      fi
+
+      local cursor_config=$(convert_mcp_to_cursor "$server_name" "$server_config")
+
+      if jq -e ".mcpServers.\"${server_name}\"" "$CURSOR_MCP_CONFIG" > /dev/null 2>&1; then
+        # Server already exists: update if it has literal placeholders (so Cursor resolves ${env:VAR} at runtime)
+        local current=$(jq -c ".mcpServers.\"${server_name}\"" "$CURSOR_MCP_CONFIG")
+        local current_str=$(echo "$current" | jq -r 'tostring')
+        if cursor_has_literal_placeholders "$current_str"; then
+          if jq --arg name "$server_name" --argjson config "$cursor_config" \
+             '.mcpServers[$name] = $config' "$CURSOR_MCP_CONFIG" > "${CURSOR_MCP_CONFIG}.tmp" && \
+             mv "${CURSOR_MCP_CONFIG}.tmp" "$CURSOR_MCP_CONFIG"; then
+            log_success "  ${server_name}: updated to use \${env:VAR} (Cursor resolves at runtime)"
+            updated_count=$((updated_count + 1))
+          fi
+        else
+          log_info "  ${server_name}: already configured, preserving existing configuration"
+          skipped_count=$((skipped_count + 1))
+        fi
+        continue
+      fi
+
+      # Server doesn't exist, add it
+      if jq --arg name "$server_name" --argjson config "$cursor_config" \
+         '.mcpServers[$name] = $config' "$CURSOR_MCP_CONFIG" > "${CURSOR_MCP_CONFIG}.tmp" && \
+         mv "${CURSOR_MCP_CONFIG}.tmp" "$CURSOR_MCP_CONFIG"; then
+        log_success "  ${server_name}: added"
+        added_count=$((added_count + 1))
+      else
+        mv "${CURSOR_MCP_CONFIG}.backup" "$CURSOR_MCP_CONFIG"
+        log_error "  ${server_name}: failed to add; restored backup"
+        return 1
+      fi
+    done <<< "$server_names"
+
+    if [ $added_count -gt 0 ]; then
+      log_success "Added ${added_count} MCP server(s) to ${CURSOR_MCP_CONFIG}"
+    fi
+    if [ $updated_count -gt 0 ]; then
+      log_success "Updated ${updated_count} server(s) to use \${env:VAR} (set Z_AI_API_KEY etc. in your environment or Cursor settings)"
+    fi
+    if [ $skipped_count -gt 0 ]; then
+      log_info "Preserved ${skipped_count} already configured server(s)"
+    fi
+    if [ $added_count -eq 0 ] && [ $skipped_count -eq 0 ]; then
+      log_info "No changes needed - all MCPs from config are already configured"
+    fi
+  else
+    log_info "Creating new Cursor MCP configuration from config/mcps.json..."
+    local mcp_section='{}'
+    while IFS= read -r server_name; do
+      local server_config=$(jq -c ".mcpServers.\"${server_name}\"" "$MCP_CONFIG")
+      if [ -z "$server_config" ] || [ "$server_config" = "null" ]; then
+        continue
+      fi
+      local cursor_config=$(convert_mcp_to_cursor "$server_name" "$server_config")
+      mcp_section=$(echo "$mcp_section" | jq --arg name "$server_name" --argjson config "$cursor_config" '.[$name] = $config')
+    done <<< "$server_names"
+
+    local new_config=$(jq -n --argjson mcp "$mcp_section" '{mcpServers: $mcp}')
+    echo "$new_config" > "$CURSOR_MCP_CONFIG"
+    log_success "Created Cursor MCP configuration at ${CURSOR_MCP_CONFIG}"
+    log_info "Configured $(echo "$mcp_section" | jq 'length') MCP server(s)"
+  fi
 }
 
 # ----------------------------------------------------------------------------
@@ -1717,10 +1916,10 @@ install_skill_to_agent() {
   local source_skill="${SOURCE_SKILLS_DIR}/${skill_name}"
   local target_skill="${target_skills_dir}/${skill_name}"
   
-  # Validate skill name for OpenCode (per OpenCode spec)
-  if [ "$agent_type" = "opencode" ]; then
+  # Validate skill name for OpenCode and Cursor (same pattern per OpenCode/Cursor specs)
+  if [ "$agent_type" = "opencode" ] || [ "$agent_type" = "cursor" ]; then
     if ! validate_skill_name "$skill_name"; then
-      log_error "Skill '${skill_name}' has invalid name for OpenCode (must match: ^[a-z0-9]+(-[a-z0-9]+)*$)"
+      log_error "Skill '${skill_name}' has invalid name for ${agent_type} (must match: ^[a-z0-9]+(-[a-z0-9]+)*$)"
       return 1
     fi
   fi
@@ -1982,9 +2181,11 @@ main() {
   # Ensure target directories exist
   log_info "Preparing installation directories..."
   mkdir -p "$OPENCODE_SKILLS_DIR"
+  mkdir -p "$CURSOR_SKILLS_DIR"
   log_success "Directories ready"
   echo ""
-  log_info "OpenCode skills: ${OPENCODE_SKILLS_DIR} (global, skills/plural)"
+  log_info "OpenCode skills: ${OPENCODE_SKILLS_DIR} (global)"
+  log_info "Cursor skills: ${CURSOR_SKILLS_DIR} (global)"
   echo ""
   
   # Configure MCP servers for OpenCode
@@ -1996,6 +2197,12 @@ main() {
     log_warning "OpenCode MCP configuration failed"
   fi
   echo ""
+
+  log_info "━━━ Cursor MCP Configuration ━━━"
+  if ! configure_mcp_cursor; then
+    log_warning "Cursor MCP configuration failed"
+  fi
+  echo ""
   
   log_info "━━━ OpenCode Custom Agents ━━━"
   configure_opencode_agents
@@ -2005,20 +2212,27 @@ main() {
   configure_opencode_plugins
   echo ""
   
-  # Install skills to OpenCode
+  # Install skills to each agent (OpenCode, Cursor)
   # Skills may be filtered per agent via skills.json
-  log_info "Installing skills to OpenCode..."
-  echo ""
-  
+  local agents=(opencode cursor)
+  local skills_dirs=("$OPENCODE_SKILLS_DIR" "$CURSOR_SKILLS_DIR")
+  local agent_label
   log_info "━━━ Cleaning Up Deprecated Skills ━━━"
-  cleanup_deprecated_skills "opencode" "$OPENCODE_SKILLS_DIR"
+  for i in "${!agents[@]}"; do
+    cleanup_deprecated_skills "${agents[i]}" "${skills_dirs[i]}"
+  done
   echo ""
-  
-  log_info "━━━ Installing Skills to OpenCode ━━━"
-  install_skills_to_agent "opencode" "$OPENCODE_SKILLS_DIR"
-  post_install_check "opencode" "$OPENCODE_SKILLS_DIR"
-  
-  echo ""
+  for i in "${!agents[@]}"; do
+    case "${agents[i]}" in
+      opencode) agent_label="OpenCode" ;;
+      cursor)   agent_label="Cursor" ;;
+      *)        agent_label="${agents[i]}" ;;
+    esac
+    log_info "━━━ Installing Skills to ${agent_label} ━━━"
+    install_skills_to_agent "${agents[i]}" "${skills_dirs[i]}"
+    post_install_check "${agents[i]}" "${skills_dirs[i]}"
+    echo ""
+  done
   log_info "━━━ Configuring Agent Skills Hooks (oh-my-opencode) ━━━"
   configure_agent_hooks
   
@@ -2042,11 +2256,17 @@ main() {
   echo "  Plugins: ${OPENCODE_CONFIG_DIR}/plugin"
   echo "  Agent Hooks: ${AGENT_CONFIG} (for oh-my-opencode)"
   echo ""
-  echo "To verify, ask your agent: 'What skills are available?'"
+  echo "Cursor (global):"
+  echo "  Skills: ${CURSOR_SKILLS_DIR}"
+  echo "  MCPs: ${CURSOR_MCP_CONFIG}"
+  echo ""
+  echo "To verify, ask your agent: 'What skills are available?' or check Cursor Settings → Rules."
   echo ""
   echo "References:"
   echo "  - OpenCode Skills: https://opencode.ai/docs/skills/"
   echo "  - OpenCode MCPs: https://opencode.ai/docs/mcp-servers/"
+  echo "  - Cursor Skills: https://cursor.com/docs/context/skills"
+  echo "  - Cursor MCPs: https://cursor.com/docs/context/mcp"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 }
 
@@ -2056,4 +2276,3 @@ main() {
 
 # Run main function with all arguments
 main "$@"
-

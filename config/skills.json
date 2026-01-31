@@ -42,6 +42,44 @@
           "install": true
         }
       }
+    },
+    "cursor": {
+      "_description": "Cursor IDE agent configuration (user-level skills: ~/.cursor/skills/ per Cursor docs)",
+      "skills": {
+        "code-quality": {
+          "install": true
+        },
+        "code-review": {
+          "install": true
+        },
+        "docs-check": {
+          "install": true
+        },
+        "docs-write": {
+          "install": true
+        },
+        "git-commit": {
+          "install": true
+        },
+        "image-generation": {
+          "install": true
+        },
+        "research": {
+          "install": true
+        },
+        "resolve-pr-comments": {
+          "install": true
+        },
+        "search": {
+          "install": true
+        },
+        "ui-animation": {
+          "install": true
+        },
+        "use-graphite": {
+          "install": true
+        }
+      }
     }
   }
 }
