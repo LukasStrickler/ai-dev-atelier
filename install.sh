@@ -619,9 +619,12 @@ resolve_skills_config() {
 # installation to proceed even when .env is missing (users can configure
 # MCP servers later via OpenCode settings).
 #
+# Arguments:
+#   $1 - Optional path to env file (defaults to $ENV_FILE)
 # Returns:
 #   0 (always) - success whether or not .env file exists
 load_env_file() {
+  # shellcheck disable=SC2120
   local env_file="${1:-$ENV_FILE}"
   if [ -f "$env_file" ]; then
     while IFS='=' read -r key value || [ -n "$key" ]; do
@@ -1214,11 +1217,11 @@ convert_mcp_to_opencode() {
   # Check if it's a local MCP (has "command" field or metadata says local)
   if [ "$server_type" = "local" ] || echo "$server_config" | jq -e '.command' > /dev/null 2>&1; then
     local command=$(echo "$server_config" | jq -r '.command')
-    local args=$(echo "$server_config" | jq -c '.args // []')
+    local cmd_args=$(echo "$server_config" | jq -c '.args // []')
     local env=$(echo "$server_config" | jq -c '.env // {}')
     
     # Build command array: [command, ...args] using jq
-    local cmd_array=$(echo "$args" | jq -c --arg cmd "$command" '[$cmd] + .')
+    local cmd_array=$(echo "$cmd_args" | jq -c --arg cmd "$command" '[$cmd] + .')
     
     # Build OpenCode local MCP format
     jq -n \
