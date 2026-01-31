@@ -36,6 +36,36 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# ============================================================================
+# Platform & Configuration Constants
+# ============================================================================
+
+# Platform identifiers
+PLATFORM_OPENCODE="opencode"
+PLATFORM_CURSOR="cursor"
+
+# Config file section keys
+SECTION_MCP="mcp"                      # OpenCode uses "mcp"
+SECTION_MCPSERVERS="mcpServers"         # Cursor uses "mcpServers"
+SECTION_AGENT="agent"
+SECTION_HOOKS="hooks"
+SECTION_PLUGINS="plugins"
+
+# API key environment variable names
+ENV_TAVILY_API_KEY="TAVILY_API_KEY"
+ENV_ZAI_API_KEY="Z_AI_API_KEY"
+ENV_CONTEXT7_API_KEY="CONTEXT7_API_KEY"
+ENV_OPENALEX_EMAIL="OPENALEX_EMAIL"
+
+# API key placeholder strings for recognition
+PLACEHOLDER_TAVILY="TAVILY_API_KEY"
+PLACEHOLDER_ZAI="Z_AI_API_KEY"
+PLACEHOLDER_CONTEXT7="CONTEXT7_API_KEY"
+
+# Exit codes
+EXIT_SUCCESS=0
+EXIT_ERROR=1
+
 # Script directory (where this script is located)
 SCRIPT_SOURCE="${BASH_SOURCE[0]-${0}}"
 if [ -n "$SCRIPT_SOURCE" ] && [ -f "$SCRIPT_SOURCE" ]; then
@@ -44,6 +74,35 @@ else
   SCRIPT_DIR="$(pwd)"
 fi
 ATELIER_DIR="$SCRIPT_DIR"
+
+# Global dry-run flag
+DRY_RUN=false
+
+# Cleanup trap for temp files and backups
+cleanup_on_exit() {
+  local cleanup_needed=false
+  
+  # Remove temporary files
+  for tmp_file in "${WORK_DIR:-.}"/*.tmp; do
+    [ -f "$tmp_file" ] && rm -f "$tmp_file" && cleanup_needed=true
+  done
+  
+  # Clean up stale backups (keep last 10)
+  for backup_file in "${WORK_DIR:-.}"/.*.backup; do
+    [ -f "$backup_file" ] && {
+      # Keep the most recent 10 backups
+      backups=($(ls -t "${backup_file%.*}" 2>/dev/null | tail -n 10))
+      for old_backup in "${backups[@]}"; do
+        [[ "$backup_file" != "$old_backup" ]] && rm -f "$old_backup" && cleanup_needed=true
+      done
+    }
+  done
+  
+  [ "$cleanup_needed" = true ] && echo -e "\033[0;32m[CLEANUP]\033[0m" "Cleaned up temporary files and old backups"
+}
+
+# Register cleanup trap
+trap cleanup_on_exit EXIT
 REPO_URL="https://github.com/LukasStrickler/ai-dev-atelier.git"
 REPO_REF="${AI_DEV_ATELIER_REF:-main}"
 DEFAULT_INSTALL_DIR="${AI_DEV_ATELIER_DIR:-${HOME}/ai-dev-atelier}"  # Reserved for backward compatibility; not used in current implementation
@@ -128,29 +187,6 @@ log_warning() {
 
 log_error() {
   echo -e "${RED}❌${NC} $1" >&2
-}
-
-git_with_retry() {
-  local max_attempts=3
-  local attempt=1
-  local delay=2
-
-  while [ $attempt -le $max_attempts ]; do
-    if git "$@"; then
-      return 0
-    fi
-
-    if [ $attempt -lt $max_attempts ]; then
-      log_warning "Git operation failed (attempt $attempt/$max_attempts), retrying in ${delay}s..."
-      sleep $delay
-      delay=$((delay * 2))
-    fi
-
-    attempt=$((attempt + 1))
-  done
-
-  log_error "Git operation failed after $max_attempts attempts"
-  return 1
 }
 
 confirm_action() {
@@ -305,7 +341,7 @@ ensure_repo_checkout() {
       if ! git -C "$target_dir" diff --quiet || ! git -C "$target_dir" diff --cached --quiet; then
         log_warning "Local changes detected in cached checkout; resetting to ${REPO_REF}"
       fi
-      if git_with_retry -C "$target_dir" fetch --depth=1 origin "$REPO_REF" >/dev/null 2>&1; then
+      if git -C "$target_dir" fetch --depth=1 origin "$REPO_REF" >/dev/null 2>&1; then
         if ! git -C "$target_dir" checkout -B "$REPO_REF" FETCH_HEAD >/dev/null 2>&1; then
           log_warning "Failed to update cached checkout"
         fi
@@ -326,7 +362,7 @@ ensure_repo_checkout() {
     exit 1
   fi
 
-  if ! git_with_retry clone --depth=1 --branch "$REPO_REF" "$REPO_URL" "$target_dir"; then
+  if ! git clone --depth=1 --branch "$REPO_REF" "$REPO_URL" "$target_dir"; then
     log_error "Failed to clone ${REPO_URL}"
     exit 1
   fi
@@ -845,51 +881,35 @@ get_mcp_server_type() {
 #   Modified JSON string via stdout
 substitute_api_keys() {
   local server_config="$1"
-  local server_name="$2"
-  local result="$server_config"
 
-  # Load .env if available
-  load_env_file
+  # Load environment values (or empty if not set)
+  local tavily_val="${TAVILY_API_KEY:-}"
+  local context7_val="${CONTEXT7_API_KEY:-}"
+  local zai_val="${Z_AI_API_KEY:-}"
+  local openalex_val="${OPENALEX_EMAIL:-}"
 
-  if echo "$result" | jq -e '.headers.Authorization' > /dev/null 2>&1; then
-    local auth_value=$(echo "$result" | jq -r '.headers.Authorization')
-    if [[ "$auth_value" == *"TAVILY_API_KEY"* ]] && [ -n "${TAVILY_API_KEY:-}" ] && [ "$TAVILY_API_KEY" != "your_tavily_api_key_here" ]; then
-      local new_auth="Bearer ${TAVILY_API_KEY}"
-      result=$(echo "$result" | jq --arg new_auth "$new_auth" '.headers.Authorization = $new_auth')
-    fi
-  fi
-  
-  # Replace CONTEXT7_API_KEY in headers
-  if echo "$result" | jq -e '.headers.CONTEXT7_API_KEY' > /dev/null 2>&1; then
-    if [ -n "${CONTEXT7_API_KEY:-}" ] && [ "$CONTEXT7_API_KEY" != "your_context7_api_key_here" ]; then
-      result=$(echo "$result" | jq --arg key "$CONTEXT7_API_KEY" \
-        '.headers.CONTEXT7_API_KEY = $key')
-    fi
-  fi
-
-  if echo "$result" | jq -e '.headers.Authorization | strings | test("Z_AI_API_KEY")' > /dev/null 2>&1; then
-    if [ -n "${Z_AI_API_KEY:-}" ] && [ "$Z_AI_API_KEY" != "your_zai_api_key_here" ]; then
-      result=$(echo "$result" | jq --arg key "$Z_AI_API_KEY" \
-        '.headers.Authorization |= gsub("Z_AI_API_KEY"; $key)')
-    fi
-  fi
-
-  if echo "$result" | jq -e '.env.Z_AI_API_KEY' > /dev/null 2>&1; then
-    if [ -n "${Z_AI_API_KEY:-}" ] && [ "$Z_AI_API_KEY" != "your_zai_api_key_here" ]; then
-      result=$(echo "$result" | jq --arg key "$Z_AI_API_KEY" \
-        '.env.Z_AI_API_KEY = $key')
-    fi
-  fi
-  
-  # Replace OPENALEX_EMAIL in env
-  if echo "$result" | jq -e '.env.OPENALEX_EMAIL' > /dev/null 2>&1; then
-    if [ -n "${OPENALEX_EMAIL:-}" ] && [ "$OPENALEX_EMAIL" != "your_email@example.com" ]; then
-      result=$(echo "$result" | jq --arg email "$OPENALEX_EMAIL" \
-        '.env.OPENALEX_EMAIL = $email')
-    fi
-  fi
-  
-  echo "$result"
+  # Optimized: Single jq call with all --arg parameters for safety and performance
+  echo "$server_config" | jq \
+    --arg tavily "$tavily_val" \
+    --arg context7 "$context7_val" \
+    --arg zai "$zai_val" \
+    --arg openalex "$openalex_val" \
+    --arg env_context7 '${env:CONTEXT7_API_KEY}' \
+    --arg env_zai '${env:Z_AI_API_KEY}' \
+    --arg env_openalex '${env:OPENALEX_EMAIL}' \
+    '
+    # Authorization: replace TAVILY_API_KEY or Z_AI_API_KEY with Bearer ${env:VAR}
+    if (.headers.Authorization // "" | test("TAVILY_API_KEY|Z_AI_API_KEY")) and $tavily != "" then
+      .headers.Authorization = "Bearer " + $tavily
+    elif (.headers.AUTHORIZATION // "" | test("TAVILY_API_KEY|Z_AI_API_KEY")) and $zai != "" then
+      .headers.AUTHORIZATION = "Bearer " + $zai
+    else .
+    end
+    # Direct key replacement: ${env:VAR} format for each optional key
+    if (.headers.CONTEXT7_API_KEY // null) and $context7 != "" then .headers.CONTEXT7_API_KEY = $env_context7 else . end
+    | if (.env.Z_AI_API_KEY // null) and $zai != "" then .env.Z_AI_API_KEY = $env_zai else . end
+    | if (.env.OPENALEX_EMAIL // null) and $openalex != "" then .env.OPENALEX_EMAIL = $env_openalex else . end
+  '
 }
 
 # ----------------------------------------------------------------------------
@@ -920,8 +940,8 @@ convert_mcp_to_opencode() {
   # Get server type by detecting from config (url = remote, command = local)
   local server_type=$(get_mcp_server_type "$server_config")
   
-  # Handle remote MCPs
-  if [ "$server_type" = "remote" ]; then
+  # Handle remote MCPs (detected by type or URL field)
+  if [ "$server_type" = "remote" ] || { [ -z "$server_type" ] && echo "$server_config" | jq -e '.url' > /dev/null 2>&1; }; then
     local url=""
     local headers="{}"
     
@@ -933,24 +953,6 @@ convert_mcp_to_opencode() {
       log_error "Remote MCP ${server_name} requires URL but none found in config"
       return 1
     fi
-    
-    # Build OpenCode remote MCP format
-    jq -n \
-      --arg url "$url" \
-      --argjson headers "$headers" \
-      '{
-        type: "remote",
-        url: $url,
-        headers: $headers,
-        enabled: true
-      }'
-    return $?
-  fi
-  
-  # Check if it's a remote MCP (has "url" field in config)
-  if [ -z "$server_type" ] && echo "$server_config" | jq -e '.url' > /dev/null 2>&1; then
-    local url=$(echo "$server_config" | jq -r '.url')
-    local headers=$(echo "$server_config" | jq -c '.headers // {}')
     
     # Build OpenCode remote MCP format
     jq -n \
@@ -1048,12 +1050,74 @@ apply_cursor_env_interpolation() {
     fi
   done
   # Direct key = ${env:VAR} (single jq for all optional keys)
-  config=$(echo "$config" | jq '
-    (if .headers.CONTEXT7_API_KEY then .headers.CONTEXT7_API_KEY = "${env:CONTEXT7_API_KEY}" else . end) |
-    (if .env.Z_AI_API_KEY then .env.Z_AI_API_KEY = "${env:Z_AI_API_KEY}" else . end) |
-    (if .env.OPENALEX_EMAIL then .env.OPENALEX_EMAIL = "${env:OPENALEX_EMAIL}" else . end)
+  config=$(echo "$config" | jq \
+    --arg env_context7 '${env:CONTEXT7_API_KEY}' \
+    --arg env_zai '${env:Z_AI_API_KEY}' \
+    --arg env_openalex '${env:OPENALEX_EMAIL}' \
+    '
+    if (.headers.CONTEXT7_API_KEY // null) then .headers.CONTEXT7_API_KEY = $env_context7 else . end
+    | if (.env.Z_AI_API_KEY // null) then .env.Z_AI_API_KEY = $env_zai else . end
+    | if (.env.OPENALEX_EMAIL // null) then .env.OPENALEX_EMAIL = $env_openalex else . end
   ')
   echo "$config"
+}
+
+# ----------------------------------------------------------------------------
+# Check if Cursor Config Has Literal Placeholders
+# ----------------------------------------------------------------------------
+# Checks if a Cursor MCP configuration contains literal placeholder values that
+# should be replaced with ${env:VAR} format so Cursor resolves them at runtime.
+#
+# Parameters:
+#   $1 - Cursor config as string (from jq tostring)
+#
+# Returns:
+#   0 (true) if config has literal placeholders that need updating
+#   1 (false) if config already uses ${env:VAR} format
+#
+# Validate JSON File or Exit
+# ----------------------------------------------------------------------------
+#
+# Parameters:
+#   $1 - Cursor config as string (from jq tostring)
+#
+# Returns:
+#   0 (true) if config has literal placeholders that need updating
+#   1 (false) if config already uses ${env:VAR} format
+cursor_has_literal_placeholders() {
+  local config_str="$1"
+  
+  # Check if Authorization header contains literal placeholder strings (not ${env:VAR})
+  # The placeholders TAVILY_API_KEY and Z_AI_API_KEY should be ${env:TAVILY_API_KEY} etc.
+  if echo "$config_str" | jq -e '.headers.Authorization | strings | test("TAVILY_API_KEY|Z_AI_API_KEY")' > /dev/null 2>&1; then
+    return 0  # Has literal placeholders
+  fi
+  
+  # Check if any of these keys exist and are NOT already in ${env:VAR} format
+  # Test if string values start with "${env:" pattern
+  if echo "$config_str" | jq -e '
+    (.headers.CONTEXT7_API_KEY // false | type == "string") and
+    (.headers.CONTEXT7_API_KEY | test("^\\$\\{env:") == false)
+  ' > /dev/null 2>&1; then
+    return 0
+  fi
+  
+  if echo "$config_str" | jq -e '
+    (.env.Z_AI_API_KEY // false | type == "string") and
+    (.env.Z_AI_API_KEY | test("^\\$\\{env:") == false)
+  ' > /dev/null 2>&1; then
+    return 0
+  fi
+  
+  if echo "$config_str" | jq -e '
+    (.env.OPENALEX_EMAIL // false | type == "string") and
+    (.env.OPENALEX_EMAIL | test("^\\$\\{env:") == false)
+  ' > /dev/null 2>&1; then
+    return 0
+  fi
+  
+  # No literal placeholders found
+  return 1
 }
 
 # ----------------------------------------------------------------------------
@@ -1078,7 +1142,242 @@ convert_mcp_to_cursor() {
 }
 
 # ----------------------------------------------------------------------------
+# Safe JSON Update with Backup and Rollback
+# ----------------------------------------------------------------------------
+# Performs atomic JSON file updates with automatic backup creation.
+# If update fails, automatically restores from backup.
+#
+# Parameters:
+#   $1 - Target file path
+#   $2 - jq filter/expression to apply
+#   $3 - Description/label for logging (optional)
+#
+# Returns:
+#   0 on success, 1 on failure (with backup restored)
+safe_json_update() {
+  local file="$1"
+  local jq_filter="$2"
+  local label="${3:-JSON update}"
+  local backup="${file}.backup"
+  
+  # Create backup before modification
+  cp "$file" "$backup"
+  
+  # Atomic update: write to temp file, then move
+  if jq "$jq_filter" "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"; then
+    log_success "Updated $label"
+    return 0
+  else
+    log_error "Failed to update $label, restoring from backup"
+    mv "$backup" "$file"
+    return 1
+  fi
+}
+
+# ----------------------------------------------------------------------------
+# Validate JSON File or Exit
+# ----------------------------------------------------------------------------
+# Configure MCP Servers for Generic Platform
+# ----------------------------------------------------------------------------
+# Configures MCP servers for any platform (OpenCode or Cursor).
+# Reads from config/mcps.json, converts to platform format, and updates config file.
+#
+# IMPORTANT: Preserves existing MCP configurations and only adds missing ones.
+# It will NEVER overwrite an existing MCP server configuration.
+#
+# Parameters:
+#   $1 - Platform: $PLATFORM_OPENCODE or $PLATFORM_CURSOR
+#   $2 - Config file path (OPENCODE_CONFIG or CURSOR_MCP_CONFIG)
+#   $3 - Section key: $SECTION_MCP (OpenCode) or $SECTION_MCPSERVERS (Cursor)
+#   $4 - Format conversion function name (e.g., "convert_mcp_to_opencode")
+#
+# Returns:
+#   0 on success, 1 on failure
+configure_mcp_platform() {
+  local platform="$1"
+  local config_path="$2"
+  local section_key="$3"
+  local format_converter="$4"
+  
+  log_info "━━━ ${platform^} MCP Configuration ━━━"
+  log_info "Checking MCP configuration for $platform..."  
+  # Common preflight checks
+  if ! command -v jq &> /dev/null; then
+    log_warning "jq not found. Skipping $platform MCP configuration."
+    return 0
+  fi
+  
+  if [ ! -f "$MCP_CONFIG" ]; then
+    log_warning "config/mcps.json not found at ${MCP_CONFIG}. Skipping $platform MCP configuration."
+    return 0
+  fi
+  
+  if ! jq empty "$MCP_CONFIG" 2>/dev/null; then
+    log_error "config/mcps.json is not valid JSON"
+    return 1
+  fi
+  
+  load_env_file || true
+  
+  local server_names=$(jq -r '.mcpServers | keys[]' "$MCP_CONFIG")
+  if [ -z "$server_names" ]; then
+    log_error "No mcpServers found in config/mcps.json"
+    return 1
+  fi
+  
+  local config_dir=$(dirname "$config_path")
+  mkdir -p "$config_dir"
+  
+  # Handle existing or new config
+  if [ -f "$config_path" ]; then
+    # Existing config: validate and backup
+    if ! jq empty "$config_path" 2>/dev/null; then
+      log_error "Existing $platform config is not valid JSON. Creating backup and starting fresh..."
+      mv "$config_path" "${config_path}.invalid.$(date +%s).backup"
+      jq -n "{\"$section_key\": {}}" > "$config_path"
+    fi
+    
+    # Ensure section exists
+    if ! jq -e ".$section_key" "$config_path" > /dev/null 2>&1; then
+      jq ".$section_key = {}" "$config_path" > "${config_path}.tmp" && \
+        mv "${config_path}.tmp" "$config_path"
+    fi
+    
+    cp "$config_path" "${config_path}.backup"
+    log_info "Backup created: ${config_path}.backup"
+    
+    # Process servers using unified logic
+    local added_count=0
+    local skipped_count=0
+    local updated_count=0
+    
+    while IFS= read -r server_name; do
+      local server_config=$(jq -c ".mcpServers.\"${server_name}\"" "$MCP_CONFIG")
+      if [ -z "$server_config" ] || [ "$server_config" = "null" ]; then
+        continue
+      fi
+      
+      # Use: provided format converter (function passed as argument)
+      local platform_config=$($format_converter "$server_name" "$server_config")
+      
+      if jq -e ".${section_key}.\"${server_name}\"" "$config_path" > /dev/null 2>&1; then
+        # Server exists: check if needs update
+        if [ "$platform" = $PLATFORM_CURSOR ] && command -v cursor_has_literal_placeholders 2>/dev/null; then
+          local current=$(jq -c ".${section_key}.\"${server_name}\"" "$config_path")
+          local current_str=$(jq -r ".${section_key}.\"${server_name}\" | tostring" "$config_path")
+          if cursor_has_literal_placeholders "$current_str"; then
+            if safe_json_update "$config_path" ".${section_key}.\"${server_name}\" = \$platform_config" "$server_name"; then
+              updated_count=$((updated_count + 1))
+            fi
+          else
+            log_info "  ${server_name}: already configured, preserving existing configuration"
+            skipped_count=$((skipped_count + 1))
+          fi
+        else
+          log_info "  ${server_name}: already configured, preserving existing configuration"
+          skipped_count=$((skipped_count + 1))
+        fi
+      else
+        # Server doesn't exist: add it
+        if safe_json_update "$config_path" ".${section_key}.\"${server_name}\" = \$platform_config" "$server_name"; then
+          log_success "  ${server_name}: added"
+          added_count=$((added_count + 1))
+        else
+          log_error "  ${server_name}: failed to add; restoring backup"
+          return 1
+        fi
+      fi
+    done <<< "$server_names"
+    
+    # Summary output
+    if [ $added_count -gt 0 ]; then
+      log_success "Added ${added_count} MCP server(s) to ${config_path}"
+    fi
+    if [ "$platform" = $PLATFORM_CURSOR ] && [ $updated_count -gt 0 ]; then
+      log_success "Updated ${updated_count} server(s) to use \${env:VAR} (set Z_AI_API_KEY etc. in your environment or Cursor settings)"
+    fi
+    if [ $skipped_count -gt 0 ]; then
+      log_info "Preserved ${skipped_count} already configured server(s)"
+    fi
+    if [ $added_count -eq 0 ] && [ $skipped_count -eq 0 ]; then
+      log_info "No changes needed - all MCPs from config are already configured"
+    fi
+  
+  else
+    # New config: create from scratch
+    log_info "Creating new $platform MCP configuration from config/mcps.json..."
+    local mcp_section='{}'
+    
+    while IFS= read -r server_name; do
+      local server_config=$(jq -c ".mcpServers.\"${server_name}\"" "$MCP_CONFIG")
+      if [ -z "$server_config" ] || [ "$server_config" = "null" ]; then
+        continue
+      fi
+      
+      local platform_config=$($format_converter "$server_name" "$server_config")
+      mcp_section=$(echo "$mcp_section" | jq --arg name "$server_name" --argjson config "$platform_config" '.[$name] = $config')
+    done <<< "$server_names"
+    
+    local new_config=$(jq -n --argjson mcp "$mcp_section" "{\"$section_key\": \$mcp}")
+    echo "$new_config" > "$config_path"
+    log_success "Created $platform MCP configuration at ${config_path}"
+    log_info "Configured $(echo "$mcp_section" | jq 'length') MCP server(s)"
+  fi
+}
+
+# ----------------------------------------------------------------------------
 # Configure MCP Servers for OpenCode
+# Checks if a file exists and contains valid JSON.
+#
+# Parameters:
+#   $1 - File path to validate
+#   $2 - Label/description for error message (optional)
+#
+# Returns:
+#   0 if valid, 1 if invalid or missing
+validate_json_file() {
+  local file="$1"
+  local label="${2:-config file}"
+  
+  if [[ ! -f "$file" ]]; then
+    log_error "$label not found: $file"
+    return 1
+  fi
+  
+  if ! jq empty "$file" 2>/dev/null; then
+    log_error "$label ($file) is not valid JSON"
+    return 1
+  fi
+  
+  return 0
+}
+
+# ----------------------------------------------------------------------------
+# Check if Cursor Config Has Literal Placeholders
+# ----------------------------------------------------------------------------
+# Checks if a Cursor MCP configuration contains literal placeholder values that
+# should be replaced with ${env:} format so Cursor resolves them at runtime.
+# Configures MCP servers for OpenCode agent using OpenCode format.
+# Reads from config/mcps.json, converts to OpenCode format, and updates opencode.json.
+#
+# IMPORTANT: Preserves existing MCP configurations and only adds missing ones.
+# It will NEVER overwrite an existing MCP server configuration.
+#
+# Format: opencode.json with mcp section
+#   {
+#     "$schema": "https://opencode.ai/config.json",
+#     $SECTION_MCP: {
+#       "server-name": {
+#         "type": "local" | "remote",
+#         "command": [...] | "url": "...",
+#         "environment": {} | "headers": {},
+#         "enabled": true
+#       }
+#     }
+#   }
+#
+# References:
+#   - OpenCode MCP docs: https://opencode.ai/docs/mcp-servers/
 # ----------------------------------------------------------------------------
 # Configures MCP servers for OpenCode agent using OpenCode format.
 # Reads from config/mcps.json, converts to OpenCode format, and updates opencode.json.
@@ -1089,7 +1388,7 @@ convert_mcp_to_cursor() {
 # Format: opencode.json with mcp section
 #   {
 #     "$schema": "https://opencode.ai/config.json",
-#     "mcp": {
+#     $SECTION_MCP: {
 #       "server-name": {
 #         "type": "local" | "remote",
 #         "command": [...] | "url": "...",
@@ -1102,132 +1401,8 @@ convert_mcp_to_cursor() {
 # References:
 #   - OpenCode MCP docs: https://opencode.ai/docs/mcp-servers/
 configure_mcp_opencode() {
-  log_info "Checking MCP configuration for OpenCode..."
-  local server_names
-  server_names=$(get_mcp_server_names "OpenCode") || return
-  local opencode_config_dir=$(dirname "$OPENCODE_CONFIG")
-  mkdir -p "$opencode_config_dir"
-
-  if [ -f "$OPENCODE_CONFIG" ]; then
-    # Config exists, check and add missing servers (preserve existing configs)
-    log_info "Updating existing OpenCode configuration (preserving existing MCPs)..."
-    
-    # Validate existing config
-    if ! jq empty "$OPENCODE_CONFIG" 2>/dev/null; then
-      log_error "Existing OpenCode config is not valid JSON. Creating backup and starting fresh..."
-      mv "$OPENCODE_CONFIG" "${OPENCODE_CONFIG}.invalid.$(date +%s).backup"
-      # Create empty config structure with schema
-      echo '{"$schema": "https://opencode.ai/config.json", "mcp": {}}' > "$OPENCODE_CONFIG"
-    fi
-    
-    # Ensure mcp section exists
-    if ! jq -e '.mcp' "$OPENCODE_CONFIG" > /dev/null 2>&1; then
-      log_info "Adding mcp section to OpenCode config..."
-      # Preserve schema if it exists
-      if jq -e '."$schema"' "$OPENCODE_CONFIG" > /dev/null 2>&1; then
-        jq '.mcp = {}' "$OPENCODE_CONFIG" > "${OPENCODE_CONFIG}.tmp" && \
-          mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"
-      else
-        jq '{"$schema": "https://opencode.ai/config.json", mcp: {}} + . | .mcp = (if .mcp then .mcp else {} end)' "$OPENCODE_CONFIG" > "${OPENCODE_CONFIG}.tmp" && \
-          mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"
-      fi
-    fi
-    
-    # Create backup before any modifications
-    cp "$OPENCODE_CONFIG" "${OPENCODE_CONFIG}.backup"
-    log_info "Backup created: ${OPENCODE_CONFIG}.backup"
-    
-    local added_count=0
-    local skipped_count=0
-    
-    # Process each server from example
-    while IFS= read -r server_name; do
-      # IMPORTANT: Check if server already exists - if so, preserve it and skip
-      if jq -e ".mcp.\"${server_name}\"" "$OPENCODE_CONFIG" > /dev/null 2>&1; then
-        log_info "  ${server_name}: already configured, preserving existing configuration"
-        skipped_count=$((skipped_count + 1))
-        continue
-      fi
-      
-      # Server doesn't exist, safe to add from config
-      # Get server config from config/mcps.json
-      local server_config=$(jq -c ".mcpServers.\"${server_name}\"" "$MCP_CONFIG")
-      
-      if [ -z "$server_config" ] || [ "$server_config" = "null" ]; then
-        log_warning "  ${server_name}: not found in config/mcps.json, skipping"
-        continue
-      fi
-      
-      # Convert to OpenCode format (substitutes API keys from .env internally)
-      local opencode_config=$(convert_mcp_to_opencode "$server_name" "$server_config")
-      if [ $? -ne 0 ]; then
-        log_error "  ${server_name}: failed to convert format"
-        continue
-      fi
-      
-      # Add server to config (only adds if it doesn't exist - already verified above)
-      if jq --arg name "$server_name" --argjson config "$opencode_config" \
-         '.mcp[$name] = $config' "$OPENCODE_CONFIG" > "${OPENCODE_CONFIG}.tmp" && \
-         mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"; then
-        log_success "  ${server_name}: added"
-        added_count=$((added_count + 1))
-      else
-        log_error "  ${server_name}: failed to add"
-        # Restore backup on failure
-        mv "${OPENCODE_CONFIG}.backup" "$OPENCODE_CONFIG"
-        log_error "Restored backup due to failure"
-        return 1
-      fi
-    done <<< "$server_names"
-    
-    if [ $added_count -gt 0 ]; then
-      log_success "Added ${added_count} MCP server(s) to ${OPENCODE_CONFIG}"
-    fi
-    if [ $skipped_count -gt 0 ]; then
-      log_info "Preserved ${skipped_count} already configured server(s) (not overwritten)"
-    fi
-    if [ $added_count -eq 0 ] && [ $skipped_count -eq 0 ]; then
-      log_info "No changes needed - all MCPs from example are already configured"
-    fi
-    
-  else
-    # Config doesn't exist, create new one from config/mcps.json
-    log_info "Creating new OpenCode configuration from config/mcps.json..."
-    
-    # Initialize OpenCode config structure with schema
-    local opencode_base='{
-      "$schema": "https://opencode.ai/config.json",
-      "mcp": {}
-    }'
-    
-    # Process each server and convert to OpenCode format
-    local mcp_section='{}'
-    while IFS= read -r server_name; do
-      local server_config=$(jq -c ".mcpServers.\"${server_name}\"" "$MCP_CONFIG")
-      if [ -z "$server_config" ] || [ "$server_config" = "null" ]; then
-        continue
-      fi
-      
-      # Convert to OpenCode format (substitutes API keys from .env internally)
-      local opencode_config=$(convert_mcp_to_opencode "$server_name" "$server_config")
-      if [ $? -eq 0 ]; then
-        mcp_section=$(echo "$mcp_section" | jq --arg name "$server_name" --argjson config "$opencode_config" '.[$name] = $config')
-      fi
-    done <<< "$server_names"
-    
-    # Create final config
-    local new_config=$(echo "$opencode_base" | jq --argjson mcp "$mcp_section" '.mcp = $mcp')
-    
-    echo "$new_config" > "$OPENCODE_CONFIG"
-    log_success "Created OpenCode configuration at ${OPENCODE_CONFIG}"
-    
-    # Count servers added
-    local server_count=$(jq '.mcp | length' "$OPENCODE_CONFIG")
-    log_info "Configured ${server_count} MCP server(s)"
-  fi
-  
-  # Configure tool filtering from _disabledTools metadata in config/mcps.json
-  configure_opencode_tool_filtering
+  # Call unified MCP platform configuration (preserves backward compatibility)
+  configure_mcp_platform "$PLATFORM_OPENCODE" "$OPENCODE_CONFIG" "$SECTION_MCP" "convert_mcp_to_opencode"
 }
 
 # ----------------------------------------------------------------------------
@@ -1238,16 +1413,16 @@ configure_mcp_opencode() {
 # and merges into Cursor config. Only adds missing servers; never overwrites.
 #
 # Format: ~/.cursor/mcp.json with mcpServers (Cursor native)
-#   { "mcpServers": { "server-name": { "url" | "command", ... } } }
+#   { $SECTION_MCPSERVERS: { "server-name": { "url" | "command", ... } } }
 #
 # References: https://cursor.com/docs/context/mcp
 configure_mcp_cursor() {
   log_info "Checking MCP configuration for Cursor..."
-
+  
   if ! command -v jq &> /dev/null; then
     log_warning "jq not found. Skipping Cursor MCP configuration."
     log_info "Install jq to enable automatic MCP configuration (see OpenCode MCP section above)."
-    return
+    return 0
   fi
 
   if [ ! -f "$MCP_CONFIG" ]; then
@@ -1275,7 +1450,7 @@ configure_mcp_cursor() {
     if ! jq empty "$CURSOR_MCP_CONFIG" 2>/dev/null; then
       log_error "Existing Cursor MCP config is not valid JSON. Creating backup and starting fresh..."
       mv "$CURSOR_MCP_CONFIG" "${CURSOR_MCP_CONFIG}.invalid.$(date +%s).backup"
-      echo '{"mcpServers": {}}' > "$CURSOR_MCP_CONFIG"
+      echo '{$SECTION_MCPSERVERS: {}}' > "$CURSOR_MCP_CONFIG"
     fi
 
     if ! jq -e '.mcpServers' "$CURSOR_MCP_CONFIG" > /dev/null 2>&1; then
@@ -1296,35 +1471,30 @@ configure_mcp_cursor() {
 
       local cursor_config=$(convert_mcp_to_cursor "$server_name" "$server_config")
 
-      local msg=""
-      local is_update=false
       if jq -e ".mcpServers.\"${server_name}\"" "$CURSOR_MCP_CONFIG" > /dev/null 2>&1; then
         # Server already exists: update if it has literal placeholders (so Cursor resolves ${env:VAR} at runtime)
         local current=$(jq -c ".mcpServers.\"${server_name}\"" "$CURSOR_MCP_CONFIG")
         local current_str=$(echo "$current" | jq -r 'tostring')
         if cursor_has_literal_placeholders "$current_str"; then
-          msg="updated to use \${env:VAR} (Cursor resolves at runtime)"
-          is_update=true
+          if jq --arg name "$server_name" --argjson config "$cursor_config" \
+             '.mcpServers[$name] = $config' "$CURSOR_MCP_CONFIG" > "${CURSOR_MCP_CONFIG}.tmp" && \
+             mv "${CURSOR_MCP_CONFIG}.tmp" "$CURSOR_MCP_CONFIG"; then
+            log_success "  ${server_name}: updated to use \${env:VAR} (Cursor resolves at runtime)"
+            updated_count=$((updated_count + 1))
+          fi
         else
           log_info "  ${server_name}: already configured, preserving existing configuration"
           skipped_count=$((skipped_count + 1))
-          continue
         fi
-      else
-        msg="added"
-        is_update=false
+        continue
       fi
 
-      # Add or update server in config
+      # Server doesn't exist, add it
       if jq --arg name "$server_name" --argjson config "$cursor_config" \
          '.mcpServers[$name] = $config' "$CURSOR_MCP_CONFIG" > "${CURSOR_MCP_CONFIG}.tmp" && \
          mv "${CURSOR_MCP_CONFIG}.tmp" "$CURSOR_MCP_CONFIG"; then
-        log_success "  ${server_name}: ${msg}"
-        if [ "$is_update" = true ]; then
-          updated_count=$((updated_count + 1))
-        else
-          added_count=$((added_count + 1))
-        fi
+        log_success "  ${server_name}: added"
+        added_count=$((added_count + 1))
       else
         mv "${CURSOR_MCP_CONFIG}.backup" "$CURSOR_MCP_CONFIG"
         log_error "  ${server_name}: failed to add; restored backup"
@@ -1402,8 +1572,13 @@ configure_opencode_tool_filtering() {
 }
 
 configure_opencode_plugins() {
-  local plugin_source_dir="${SOURCE_PLUGINS_DIR}"
+  local plugin_source_dir="${CONTENT_DIR}/plugins"
   local plugin_config_source="${PLUGIN_CONFIG}"
+
+  if [ ! -d "${CONTENT_DIR}/plugins" ]; then
+    log_info "No local ${CONTENT_DIR} plugins found, skipping plugin installation"
+    return 0
+  fi
 
   if [ ! -d "$plugin_source_dir" ]; then
     log_info "No local OpenCode plugins found, skipping plugin installation"
@@ -1945,7 +2120,7 @@ install_skill_to_agent() {
   local target_skill="${target_skills_dir}/${skill_name}"
   
   # Validate skill name for OpenCode and Cursor (same pattern per OpenCode/Cursor specs)
-  if [ "$agent_type" = "opencode" ] || [ "$agent_type" = "cursor" ]; then
+  if [ "$agent_type" = $PLATFORM_OPENCODE ] || [ "$agent_type" = $PLATFORM_CURSOR ]; then
     if ! validate_skill_name "$skill_name"; then
       log_error "Skill '${skill_name}' has invalid name for ${agent_type} (must match: ^[a-z0-9]+(-[a-z0-9]+)*$)"
       return 1
@@ -2005,33 +2180,24 @@ install_skill_to_agent() {
       esac
     fi
     
-  fi
-
-  local temp_target="${target_skill}.tmp.$$"
-
-  if ! cp -r "$source_skill" "$temp_target" 2>/dev/null; then
-    log_error "Failed to copy skill to temp location"
-    rm -rf "$temp_target" 2>/dev/null
-    return 1
-  fi
-
-  if [ "$exists" = true ]; then
+    # Remove existing skill before installing new version
     rm -rf "$target_skill"
     log_info "Removed existing skill '${skill_name}'"
   fi
-
-  if ! mv "$temp_target" "$target_skill" 2>/dev/null; then
-    log_error "Failed to move skill to final location"
-    rm -rf "$temp_target" 2>/dev/null
-    return 1
-  fi
-
+  
+  # Copy skill to target directory
+  # Use cp -r to preserve directory structure and permissions
+  if cp -r "$source_skill" "$target_skill" 2>/dev/null; then
   if [ "$exists" = true ]; then
     log_success "Updated skill '${skill_name}'"
   else
     log_success "Installed skill '${skill_name}'"
+    fi
+    return 0
+  else
+    log_error "Failed to copy skill '${skill_name}' to ${target_skills_dir}"
+    return 1
   fi
-  return 0
 }
 
 # ----------------------------------------------------------------------------
@@ -2173,12 +2339,6 @@ post_install_check() {
 #   0 - Success
 #   1 - Error (invalid source, missing dependencies, etc.)
 main() {
-  if [[ "${BASH_VERSINFO:-0}" -lt 4 ]]; then
-    log_error "Bash 4.0+ is required. You are running: $BASH_VERSION"
-    log_info "Please upgrade Bash or use a compatible shell."
-    exit 1
-  fi
-
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo "AI Dev Atelier Skills & MCP Installer"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
