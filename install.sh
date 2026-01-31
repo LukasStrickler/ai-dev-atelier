@@ -1074,16 +1074,6 @@ apply_cursor_env_interpolation() {
 # Returns:
 #   0 (true) if config has literal placeholders that need updating
 #   1 (false) if config already uses ${env:VAR} format
-#
-# Validate JSON File or Exit
-# ----------------------------------------------------------------------------
-#
-# Parameters:
-#   $1 - Cursor config as string (from jq tostring)
-#
-# Returns:
-#   0 (true) if config has literal placeholders that need updating
-#   1 (false) if config already uses ${env:VAR} format
 cursor_has_literal_placeholders() {
   local config_str="$1"
   
@@ -1174,8 +1164,6 @@ safe_json_update() {
   fi
 }
 
-# ----------------------------------------------------------------------------
-# Validate JSON File or Exit
 # ----------------------------------------------------------------------------
 # Configure MCP Servers for Generic Platform
 # ----------------------------------------------------------------------------
@@ -1326,7 +1314,8 @@ configure_mcp_platform() {
 }
 
 # ----------------------------------------------------------------------------
-# Configure MCP Servers for OpenCode
+# Validate JSON File
+# ----------------------------------------------------------------------------
 # Checks if a file exists and contains valid JSON.
 #
 # Parameters:
@@ -1353,31 +1342,7 @@ validate_json_file() {
 }
 
 # ----------------------------------------------------------------------------
-# Check if Cursor Config Has Literal Placeholders
-# ----------------------------------------------------------------------------
-# Checks if a Cursor MCP configuration contains literal placeholder values that
-# should be replaced with ${env:} format so Cursor resolves them at runtime.
-# Configures MCP servers for OpenCode agent using OpenCode format.
-# Reads from config/mcps.json, converts to OpenCode format, and updates opencode.json.
-#
-# IMPORTANT: Preserves existing MCP configurations and only adds missing ones.
-# It will NEVER overwrite an existing MCP server configuration.
-#
-# Format: opencode.json with mcp section
-#   {
-#     "$schema": "https://opencode.ai/config.json",
-#     $SECTION_MCP: {
-#       "server-name": {
-#         "type": "local" | "remote",
-#         "command": [...] | "url": "...",
-#         "environment": {} | "headers": {},
-#         "enabled": true
-#       }
-#     }
-#   }
-#
-# References:
-#   - OpenCode MCP docs: https://opencode.ai/docs/mcp-servers/
+# Configure MCP Servers for OpenCode
 # ----------------------------------------------------------------------------
 # Configures MCP servers for OpenCode agent using OpenCode format.
 # Reads from config/mcps.json, converts to OpenCode format, and updates opencode.json.
