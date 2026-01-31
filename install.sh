@@ -130,6 +130,29 @@ log_error() {
   echo -e "${RED}❌${NC} $1" >&2
 }
 
+git_with_retry() {
+  local max_attempts=3
+  local attempt=1
+  local delay=2
+
+  while [ $attempt -le $max_attempts ]; do
+    if git "$@"; then
+      return 0
+    fi
+
+    if [ $attempt -lt $max_attempts ]; then
+      log_warning "Git operation failed (attempt $attempt/$max_attempts), retrying in ${delay}s..."
+      sleep $delay
+      delay=$((delay * 2))
+    fi
+
+    attempt=$((attempt + 1))
+  done
+
+  log_error "Git operation failed after $max_attempts attempts"
+  return 1
+}
+
 confirm_action() {
   local prompt="$1"
 
@@ -282,7 +305,7 @@ ensure_repo_checkout() {
       if ! git -C "$target_dir" diff --quiet || ! git -C "$target_dir" diff --cached --quiet; then
         log_warning "Local changes detected in cached checkout; resetting to ${REPO_REF}"
       fi
-      if git -C "$target_dir" fetch --depth=1 origin "$REPO_REF" >/dev/null 2>&1; then
+      if git_with_retry -C "$target_dir" fetch --depth=1 origin "$REPO_REF" >/dev/null 2>&1; then
         if ! git -C "$target_dir" checkout -B "$REPO_REF" FETCH_HEAD >/dev/null 2>&1; then
           log_warning "Failed to update cached checkout"
         fi
@@ -303,7 +326,7 @@ ensure_repo_checkout() {
     exit 1
   fi
 
-  if ! git clone --depth=1 --branch "$REPO_REF" "$REPO_URL" "$target_dir"; then
+  if ! git_with_retry clone --depth=1 --branch "$REPO_REF" "$REPO_URL" "$target_dir"; then
     log_error "Failed to clone ${REPO_URL}"
     exit 1
   fi
@@ -1273,30 +1296,35 @@ configure_mcp_cursor() {
 
       local cursor_config=$(convert_mcp_to_cursor "$server_name" "$server_config")
 
+      local msg=""
+      local is_update=false
       if jq -e ".mcpServers.\"${server_name}\"" "$CURSOR_MCP_CONFIG" > /dev/null 2>&1; then
         # Server already exists: update if it has literal placeholders (so Cursor resolves ${env:VAR} at runtime)
         local current=$(jq -c ".mcpServers.\"${server_name}\"" "$CURSOR_MCP_CONFIG")
         local current_str=$(echo "$current" | jq -r 'tostring')
         if cursor_has_literal_placeholders "$current_str"; then
-          if jq --arg name "$server_name" --argjson config "$cursor_config" \
-             '.mcpServers[$name] = $config' "$CURSOR_MCP_CONFIG" > "${CURSOR_MCP_CONFIG}.tmp" && \
-             mv "${CURSOR_MCP_CONFIG}.tmp" "$CURSOR_MCP_CONFIG"; then
-            log_success "  ${server_name}: updated to use \${env:VAR} (Cursor resolves at runtime)"
-            updated_count=$((updated_count + 1))
-          fi
+          msg="updated to use \${env:VAR} (Cursor resolves at runtime)"
+          is_update=true
         else
           log_info "  ${server_name}: already configured, preserving existing configuration"
           skipped_count=$((skipped_count + 1))
+          continue
         fi
-        continue
+      else
+        msg="added"
+        is_update=false
       fi
 
-      # Server doesn't exist, add it
+      # Add or update server in config
       if jq --arg name "$server_name" --argjson config "$cursor_config" \
          '.mcpServers[$name] = $config' "$CURSOR_MCP_CONFIG" > "${CURSOR_MCP_CONFIG}.tmp" && \
          mv "${CURSOR_MCP_CONFIG}.tmp" "$CURSOR_MCP_CONFIG"; then
-        log_success "  ${server_name}: added"
-        added_count=$((added_count + 1))
+        log_success "  ${server_name}: ${msg}"
+        if [ "$is_update" = true ]; then
+          updated_count=$((updated_count + 1))
+        else
+          added_count=$((added_count + 1))
+        fi
       else
         mv "${CURSOR_MCP_CONFIG}.backup" "$CURSOR_MCP_CONFIG"
         log_error "  ${server_name}: failed to add; restored backup"
@@ -1977,24 +2005,33 @@ install_skill_to_agent() {
       esac
     fi
     
-    # Remove existing skill before installing new version
+  fi
+
+  local temp_target="${target_skill}.tmp.$$"
+
+  if ! cp -r "$source_skill" "$temp_target" 2>/dev/null; then
+    log_error "Failed to copy skill to temp location"
+    rm -rf "$temp_target" 2>/dev/null
+    return 1
+  fi
+
+  if [ "$exists" = true ]; then
     rm -rf "$target_skill"
     log_info "Removed existing skill '${skill_name}'"
   fi
-  
-  # Copy skill to target directory
-  # Use cp -r to preserve directory structure and permissions
-  if cp -r "$source_skill" "$target_skill" 2>/dev/null; then
+
+  if ! mv "$temp_target" "$target_skill" 2>/dev/null; then
+    log_error "Failed to move skill to final location"
+    rm -rf "$temp_target" 2>/dev/null
+    return 1
+  fi
+
   if [ "$exists" = true ]; then
     log_success "Updated skill '${skill_name}'"
   else
     log_success "Installed skill '${skill_name}'"
-    fi
-    return 0
-  else
-    log_error "Failed to copy skill '${skill_name}' to ${target_skills_dir}"
-    return 1
   fi
+  return 0
 }
 
 # ----------------------------------------------------------------------------
