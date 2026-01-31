@@ -2724,6 +2724,35 @@ main() {
   echo ""
   echo "To verify, ask your agent: 'What skills are available?' or check Cursor Settings → Rules."
   echo ""
+  
+  # Credential configuration guidance
+  local env_file_display=""
+  if [ -f "${ATELIER_DIR}/.env" ] && [ "${ATELIER_DIR}" != "${ATELIER_STATE_DIR}/repo" ]; then
+    # Local development (make install) - using repo .env
+    env_file_display="${ATELIER_DIR}/.env"
+  else
+    # Remote install (curl | bash) - using state dir .env
+    env_file_display="${ATELIER_STATE_DIR}/.env"
+  fi
+  
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  log_info "Next Steps: Configure API Keys"
+  echo ""
+  echo "Some skills require API keys. Configure them in:"
+  echo "  ${env_file_display}"
+  echo ""
+  echo "Required for full functionality:"
+  echo "  - TAVILY_API_KEY     (for web search skill)"
+  echo "  - Z_AI_API_KEY       (for Z.AI vision features)"
+  echo "  - CONTEXT7_API_KEY   (for documentation lookup)"
+  echo "  - OPENALEX_EMAIL     (for academic research)"
+  echo ""
+  echo "Copy from example file:"
+  echo "  cp ${ATELIER_DIR}/.env.example ${env_file_display}"
+  echo ""
+  echo "Then edit ${env_file_display} with your credentials."
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
   echo "References:"
   echo "  - OpenCode Skills: https://opencode.ai/docs/skills/"
   echo "  - OpenCode MCPs: https://opencode.ai/docs/mcp-servers/"
