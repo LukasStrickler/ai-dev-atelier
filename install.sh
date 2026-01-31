@@ -82,23 +82,21 @@ DRY_RUN=false
 cleanup_on_exit() {
   local cleanup_needed=false
   
-  # Remove temporary files
-  for tmp_file in "${WORK_DIR:-.}"/*.tmp; do
-    [ -f "$tmp_file" ] && rm -f "$tmp_file" && cleanup_needed=true
+  for dir in "$ATELIER_STATE_DIR" "$OPENCODE_CONFIG_DIR" "${CURSOR_HOME:-}"; do
+    [ -d "$dir" ] || continue
+    for tmp_file in "$dir"/*.tmp "$dir"/*.tmp.*; do
+      [ -f "$tmp_file" ] && rm -f "$tmp_file" && cleanup_needed=true
+    done
   done
   
-  # Clean up stale backups (keep last 10)
-  for backup_file in "${WORK_DIR:-.}"/.*.backup; do
-    [ -f "$backup_file" ] && {
-      # Keep the most recent 10 backups
-      backups=($(ls -t "${backup_file%.*}" 2>/dev/null | tail -n 10))
-      for old_backup in "${backups[@]}"; do
-        [[ "$backup_file" != "$old_backup" ]] && rm -f "$old_backup" && cleanup_needed=true
-      done
-    }
+  for backup_dir in "$OPENCODE_CONFIG_DIR" "${CURSOR_HOME:-}"; do
+    [ -d "$backup_dir" ] || continue
+    while read -r old_backup; do
+      [ -f "$old_backup" ] && rm -f "$old_backup" && cleanup_needed=true
+    done < <(find "$backup_dir" -maxdepth 1 -name ".*.backup" -type f -printf '%T@ %p\n' 2>/dev/null | sort -n | head -n -10 | cut -d' ' -f2)
   done
   
-  [ "$cleanup_needed" = true ] && echo -e "\033[0;32m[CLEANUP]\033[0m" "Cleaned up temporary files and old backups"
+  [ "$cleanup_needed" = true ] && log_info "Cleaned up temporary files and old backups"
 }
 
 # Register cleanup trap
@@ -187,6 +185,29 @@ log_warning() {
 
 log_error() {
   echo -e "${RED}❌${NC} $1" >&2
+}
+
+git_with_retry() {
+  local max_attempts=3
+  local attempt=1
+  local delay=2
+
+  while [ $attempt -le $max_attempts ]; do
+    if git "$@"; then
+      return 0
+    fi
+
+    if [ $attempt -lt $max_attempts ]; then
+      log_warning "Git operation failed (attempt $attempt/$max_attempts), retrying in ${delay}s..."
+      sleep $delay
+      delay=$((delay * 2))
+    fi
+
+    attempt=$((attempt + 1))
+  done
+
+  log_error "Git operation failed after $max_attempts attempts"
+  return 1
 }
 
 confirm_action() {
@@ -341,7 +362,7 @@ ensure_repo_checkout() {
       if ! git -C "$target_dir" diff --quiet || ! git -C "$target_dir" diff --cached --quiet; then
         log_warning "Local changes detected in cached checkout; resetting to ${REPO_REF}"
       fi
-      if git -C "$target_dir" fetch --depth=1 origin "$REPO_REF" >/dev/null 2>&1; then
+      if git_with_retry -C "$target_dir" fetch --depth=1 origin "$REPO_REF" >/dev/null 2>&1; then
         if ! git -C "$target_dir" checkout -B "$REPO_REF" FETCH_HEAD >/dev/null 2>&1; then
           log_warning "Failed to update cached checkout"
         fi
@@ -362,7 +383,7 @@ ensure_repo_checkout() {
     exit 1
   fi
 
-  if ! git clone --depth=1 --branch "$REPO_REF" "$REPO_URL" "$target_dir"; then
+  if ! git_with_retry clone --depth=1 --branch "$REPO_REF" "$REPO_URL" "$target_dir"; then
     log_error "Failed to clone ${REPO_URL}"
     exit 1
   fi
@@ -696,13 +717,15 @@ check_write_access() {
 }
 
 preflight_checks() {
-  check_dependencies || true
-
-  if [ ${#MISSING_DEPS[@]} -gt 0 ] || [ ${#MISSING_OPTIONAL[@]} -gt 0 ]; then
-    if install_missing_dependencies; then
-      check_dependencies || true
+  local i
+  for i in 1 2; do
+    check_dependencies || true
+    [ ${#MISSING_DEPS[@]} -eq 0 ] && [ ${#MISSING_OPTIONAL[@]} -eq 0 ] && break
+    [ "$i" -eq 2 ] && break
+    if [ ${#MISSING_DEPS[@]} -gt 0 ] || [ ${#MISSING_OPTIONAL[@]} -gt 0 ]; then
+      install_missing_dependencies || break
     fi
-  fi
+  done
 
   if [ ${#MISSING_DEPS[@]} -gt 0 ]; then
     exit 1
@@ -2313,18 +2336,7 @@ main() {
   parse_args "$@"
 
   if [ "$CHECK_ONLY" = true ]; then
-    check_dependencies || true
-    if [ ${#MISSING_DEPS[@]} -gt 0 ] || [ ${#MISSING_OPTIONAL[@]} -gt 0 ]; then
-      if install_missing_dependencies; then
-        check_dependencies || true
-      fi
-    fi
-
-    if [ ${#MISSING_DEPS[@]} -gt 0 ]; then
-      exit 1
-    fi
-
-    check_optional_tools
+    preflight_checks
     log_success "Dependency checks complete."
     exit 0
   fi
