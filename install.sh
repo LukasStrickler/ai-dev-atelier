@@ -1676,15 +1676,15 @@ configure_mcp_cursor() {
         log_info "[DRY RUN] Would ensure mcpServers section exists in $CURSOR_MCP_CONFIG"
       else
         jq '.mcpServers = {}' "$CURSOR_MCP_CONFIG" > "${CURSOR_MCP_CONFIG}.tmp" && \
-          mv "${CURSOR_MCP_CONFIG}.tmp" "$CURSOR_MCP_CONFIG"
+          dry_run_aware_mv "${CURSOR_MCP_CONFIG}.tmp" "$CURSOR_MCP_CONFIG"
       fi
     fi
 
     dry_run_aware_cp "$CURSOR_MCP_CONFIG" "${CURSOR_MCP_CONFIG}.backup"
     local added_count=0
     local skipped_count=0
-
     local updated_count=0
+
     while IFS= read -r server_name; do
       local server_config=$(jq -c ".mcpServers.\"${server_name}\"" "$MCP_CONFIG")
       if [ -z "$server_config" ] || [ "$server_config" = "null" ]; then
@@ -1703,7 +1703,7 @@ configure_mcp_cursor() {
             updated_count=$((updated_count + 1))
           elif jq --arg name "$server_name" --argjson config "$cursor_config" \
              '.mcpServers[$name] = $config' "$CURSOR_MCP_CONFIG" > "${CURSOR_MCP_CONFIG}.tmp" && \
-             mv "${CURSOR_MCP_CONFIG}.tmp" "$CURSOR_MCP_CONFIG"; then
+             dry_run_aware_mv "${CURSOR_MCP_CONFIG}.tmp" "$CURSOR_MCP_CONFIG"; then
             log_success "  ${server_name}: updated to use \${env:VAR} (Cursor resolves at runtime)"
             updated_count=$((updated_count + 1))
           fi
@@ -1720,11 +1720,11 @@ configure_mcp_cursor() {
         added_count=$((added_count + 1))
       elif jq --arg name "$server_name" --argjson config "$cursor_config" \
          '.mcpServers[$name] = $config' "$CURSOR_MCP_CONFIG" > "${CURSOR_MCP_CONFIG}.tmp" && \
-         mv "${CURSOR_MCP_CONFIG}.tmp" "$CURSOR_MCP_CONFIG"; then
+         dry_run_aware_mv "${CURSOR_MCP_CONFIG}.tmp" "$CURSOR_MCP_CONFIG"; then
         log_success "  ${server_name}: added"
         added_count=$((added_count + 1))
       else
-        mv "${CURSOR_MCP_CONFIG}.backup" "$CURSOR_MCP_CONFIG"
+        dry_run_aware_mv "${CURSOR_MCP_CONFIG}.backup" "$CURSOR_MCP_CONFIG"
         log_error "  ${server_name}: failed to add; restored backup"
         return 1
       fi
@@ -1792,10 +1792,10 @@ configure_opencode_tool_filtering() {
     else
       if jq -e '.tools' "$OPENCODE_CONFIG" > /dev/null 2>&1; then
         jq --argjson new_tools "$tools_config" '.tools = (.tools + $new_tools)' "$OPENCODE_CONFIG" > "${OPENCODE_CONFIG}.tmp" && \
-          mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"
+          dry_run_aware_mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"
       else
         jq --argjson new_tools "$tools_config" '.tools = $new_tools' "$OPENCODE_CONFIG" > "${OPENCODE_CONFIG}.tmp" && \
-          mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"
+          dry_run_aware_mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"
       fi
     fi
     local disabled_count=$(echo "$tools_config" | jq 'length')
@@ -1883,10 +1883,10 @@ configure_opencode_plugins() {
     if [ "$DRY_RUN" = true ]; then
       log_info "[DRY RUN] Would merge plugin.json into ${target_plugin_config}"
     elif jq -s '.[0] * .[1]' "$plugin_config_source" "$target_plugin_config" > "${target_plugin_config}.tmp" && \
-      mv "${target_plugin_config}.tmp" "$target_plugin_config"; then
+      dry_run_aware_mv "${target_plugin_config}.tmp" "$target_plugin_config"; then
       log_success "Merged plugin.json into ${target_plugin_config} (source values override existing)"
     else
-      mv "$target_plugin_config" "${target_plugin_config}.backup"
+      dry_run_aware_mv "$target_plugin_config" "${target_plugin_config}.backup"
       log_error "Failed to merge plugin.json, restored backup"
       return 1
     fi
@@ -1996,11 +1996,11 @@ configure_opencode_agents() {
     if jq -e '.agent' "$OPENCODE_CONFIG" > /dev/null 2>&1; then
       # Merge with existing agents
       jq --argjson new_agents "$agents_data" '.agent = (.agent + $new_agents)' "$OPENCODE_CONFIG" > "${OPENCODE_CONFIG}.tmp" && \
-        mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"
+        dry_run_aware_mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"
     else
       # Create agent section
       jq --argjson new_agents "$agents_data" '.agent = $new_agents' "$OPENCODE_CONFIG" > "${OPENCODE_CONFIG}.tmp" && \
-        mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"
+        dry_run_aware_mv "${OPENCODE_CONFIG}.tmp" "$OPENCODE_CONFIG"
     fi
   fi
   
@@ -2048,7 +2048,7 @@ add_or_update_hook() {
           --arg tool_matcher "$tool_matcher" \
           '(.hooks[$hook_type][] | select(.matcher == $tool_matcher)).hooks += [{ type: "command", command: $hook_script }]' \
           "$AGENT_CONFIG" > "${AGENT_CONFIG}.tmp" && \
-          mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
+          dry_run_aware_mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
       fi
     else
       new_hook=$(jq -n --arg hook_script "$full_command" --arg tool_matcher "$tool_matcher" '{
@@ -2061,7 +2061,7 @@ add_or_update_hook() {
         jq --argjson new_hook "$new_hook" --arg hook_type "$hook_type" \
           '.hooks[$hook_type] += [$new_hook]' \
           "$AGENT_CONFIG" > "${AGENT_CONFIG}.tmp" && \
-          mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
+          dry_run_aware_mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
       fi
     fi
     return 0
@@ -2077,10 +2077,10 @@ ensure_hook_array() {
     else
       if jq -e '.hooks' "$AGENT_CONFIG" > /dev/null 2>&1; then
         jq --arg hook_type "$hook_type" '.hooks[$hook_type] = []' "$AGENT_CONFIG" > "${AGENT_CONFIG}.tmp" && \
-          mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
+          dry_run_aware_mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
       else
         jq --arg hook_type "$hook_type" '.hooks = { ($hook_type): [] }' "$AGENT_CONFIG" > "${AGENT_CONFIG}.tmp" && \
-          mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
+          dry_run_aware_mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
       fi
     fi
   fi
@@ -2106,7 +2106,7 @@ configure_agent_hooks() {
     return 1
   fi
   
-  mkdir -p "$AGENT_CONFIG_DIR"
+  dry_run_aware_mkdir -p "$AGENT_CONFIG_DIR"
   
   if [ -f "$AGENT_CONFIG" ]; then
     if ! jq empty "$AGENT_CONFIG" 2>/dev/null; then
@@ -2219,7 +2219,7 @@ configure_agent_hooks() {
         jq --arg hook_type "$hook_type" --arg hook_script "${full_path}" \
           '.hooks[$hook_type] |= map(.hooks |= map(select((.command // "") | endswith($hook_script) | not)))' \
           "$AGENT_CONFIG" > "${AGENT_CONFIG}.tmp" && \
-          mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
+          dry_run_aware_mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
       fi
       
       if add_or_update_hook "$full_path" "$hook_type" "$hook_matcher"; then
@@ -2277,7 +2277,7 @@ cleanup_deprecated_skills() {
       
       if [ "$SKIP_CONFIRM" = true ]; then
         # Auto-remove in --yes mode
-        rm -rf "$old_skill_path"
+        dry_run_aware_rm -rf "$old_skill_path"
         log_success "Removed deprecated skill '${old_name}'"
         cleaned=$((cleaned + 1))
       else
@@ -2288,7 +2288,7 @@ cleanup_deprecated_skills() {
             log_info "Kept deprecated skill '${old_name}'"
             ;;
           *)
-            rm -rf "$old_skill_path"
+            dry_run_aware_rm -rf "$old_skill_path"
             log_success "Removed deprecated skill '${old_name}'"
             cleaned=$((cleaned + 1))
             ;;
@@ -2704,7 +2704,7 @@ main() {
   # the repo, hooks are installed from local paths instead of temp downloads.
   if [ ! -f "$HOOKS_CONFIG" ]; then
     for hook_id in "${TEMP_HOOK_IDS[@]}"; do
-      rm -f "${AGENT_CONFIG_DIR}/hook-${hook_id}.sh" 2>/dev/null || true
+      dry_run_aware_rm -f "${AGENT_CONFIG_DIR}/hook-${hook_id}.sh" 2>/dev/null || true
     done
   fi
   
