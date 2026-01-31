@@ -366,16 +366,16 @@ atomic_copy_skill() {
   fi
 
   # Copy to temp location
-  if ! cp -r "$source" "$temp_target"; then
+  if ! dry_run_aware_cp -r "$source" "$temp_target"; then
     log_error "Failed to copy skill to temp location"
-    rm -rf "$temp_target" 2>/dev/null
+    dry_run_aware_rm -rf "$temp_target" 2>/dev/null
     return 1
   fi
 
   # Atomic move
-  if ! mv "$temp_target" "$target"; then
+  if ! dry_run_aware_mv "$temp_target" "$target"; then
     log_error "Failed to move skill to final location"
-    rm -rf "$temp_target" 2>/dev/null
+    dry_run_aware_rm -rf "$temp_target" 2>/dev/null
     return 1
   fi
 
@@ -622,11 +622,24 @@ resolve_skills_config() {
 # Returns:
 #   0 (always) - success whether or not .env file exists
 load_env_file() {
-  if [ -f "$ENV_FILE" ]; then
-    # Source .env file (export variables)
-    set -a
-    source "$ENV_FILE" 2>/dev/null || { set +a; return 1; }
-    set +a
+  local env_file="${1:-$ENV_FILE}"
+  if [ -f "$env_file" ]; then
+    while IFS='=' read -r key value || [ -n "$key" ]; do
+      # Skip comments and empty lines
+      [[ "$key" =~ ^[[:space:]]*# ]] && continue
+      [[ -z "$key" ]] && continue
+
+      # Trim whitespace
+      key=$(echo "$key" | xargs)
+      value=$(echo "$value" | xargs)
+
+      # Security: Validate key is valid identifier
+      if [[ "$key" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
+        export "$key=$value"
+      else
+        log_warning "Skipping invalid env key: $key"
+      fi
+    done < "$env_file"
   fi
   return 0
 }
@@ -863,6 +876,14 @@ check_optional_tools() {
   else
     log_warning "CodeRabbit CLI not found. code-review skill will not be functional."
     echo "         Install with: npm install -g @coderabbitai/cli"
+  fi
+
+  if command -v gh > /dev/null 2>&1; then
+    log_success "GitHub CLI (gh) found"
+  else
+    log_warning "GitHub CLI (gh) not found. resolve-pr-comments skill will not be functional."
+    echo "         Install from: https://cli.github.com/"
+    echo "         Then run: gh auth login"
   fi
 }
 
@@ -1123,15 +1144,13 @@ substitute_api_keys() {
     --arg env_zai '${env:Z_AI_API_KEY}' \
     --arg env_openalex '${env:OPENALEX_EMAIL}' \
     '
-    # Authorization: replace TAVILY_API_KEY or Z_AI_API_KEY with Bearer ${env:VAR}
     if (.headers.Authorization // "" | test("TAVILY_API_KEY|Z_AI_API_KEY")) and $tavily != "" then
       .headers.Authorization = "Bearer " + $tavily
     elif (.headers.AUTHORIZATION // "" | test("TAVILY_API_KEY|Z_AI_API_KEY")) and $zai != "" then
       .headers.AUTHORIZATION = "Bearer " + $zai
     else .
     end
-    # Direct key replacement: ${env:VAR} format for each optional key
-    if (.headers.CONTEXT7_API_KEY // null) and $context7 != "" then .headers.CONTEXT7_API_KEY = $env_context7 else . end
+    | if (.headers.CONTEXT7_API_KEY // null) and $context7 != "" then .headers.CONTEXT7_API_KEY = $env_context7 else . end
     | if (.env.Z_AI_API_KEY // null) and $zai != "" then .env.Z_AI_API_KEY = $env_zai else . end
     | if (.env.OPENALEX_EMAIL // null) and $openalex != "" then .env.OPENALEX_EMAIL = $env_openalex else . end
   '
@@ -1384,12 +1403,12 @@ safe_json_update() {
     return 0
   fi
 
-  if jq "$jq_filter" "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"; then
+  if jq "$jq_filter" "$file" > "${file}.tmp" && dry_run_aware_mv "${file}.tmp" "$file"; then
     log_success "Updated $label"
     return 0
   else
     log_error "Failed to update $label, restoring from backup"
-    mv "$backup" "$file"
+    dry_run_aware_mv "$backup" "$file"
     return 1
   fi
 }
@@ -1461,7 +1480,7 @@ configure_mcp_platform() {
         log_info "[DRY RUN] Would ensure section $section_key exists in $config_path"
       else
         jq ".$section_key = {}" "$config_path" > "${config_path}.tmp" && \
-          mv "${config_path}.tmp" "$config_path"
+          dry_run_aware_mv "${config_path}.tmp" "$config_path"
       fi
     fi
     
@@ -2021,21 +2040,29 @@ add_or_update_hook() {
   else
     matcher_exists=$(jq -r ".hooks.${hook_type}[] | select(.matcher == \"${tool_matcher}\") | .matcher" "$AGENT_CONFIG" 2>/dev/null || true)
     if [ -n "$matcher_exists" ]; then
-      jq --arg hook_script "$full_command" \
-        --arg hook_type "$hook_type" \
-        --arg tool_matcher "$tool_matcher" \
-        '(.hooks[$hook_type][] | select(.matcher == $tool_matcher)).hooks += [{ type: "command", command: $hook_script }]' \
-        "$AGENT_CONFIG" > "${AGENT_CONFIG}.tmp" && \
-        mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
+      if [ "$DRY_RUN" = true ]; then
+        log_info "[DRY RUN] Would update hook matcher '${tool_matcher}' in $AGENT_CONFIG"
+      else
+        jq --arg hook_script "$full_command" \
+          --arg hook_type "$hook_type" \
+          --arg tool_matcher "$tool_matcher" \
+          '(.hooks[$hook_type][] | select(.matcher == $tool_matcher)).hooks += [{ type: "command", command: $hook_script }]' \
+          "$AGENT_CONFIG" > "${AGENT_CONFIG}.tmp" && \
+          mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
+      fi
     else
       new_hook=$(jq -n --arg hook_script "$full_command" --arg tool_matcher "$tool_matcher" '{
         matcher: $tool_matcher,
         hooks: [{ type: "command", command: $hook_script }]
       }')
-      jq --argjson new_hook "$new_hook" --arg hook_type "$hook_type" \
-        '.hooks[$hook_type] += [$new_hook]' \
-        "$AGENT_CONFIG" > "${AGENT_CONFIG}.tmp" && \
-        mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
+      if [ "$DRY_RUN" = true ]; then
+        log_info "[DRY RUN] Would add new hook matcher '${tool_matcher}' to $AGENT_CONFIG"
+      else
+        jq --argjson new_hook "$new_hook" --arg hook_type "$hook_type" \
+          '.hooks[$hook_type] += [$new_hook]' \
+          "$AGENT_CONFIG" > "${AGENT_CONFIG}.tmp" && \
+          mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
+      fi
     fi
     return 0
   fi
@@ -2045,12 +2072,16 @@ ensure_hook_array() {
   local hook_type="$1"
   
   if ! jq -e ".hooks.${hook_type}" "$AGENT_CONFIG" > /dev/null 2>&1; then
-    if jq -e '.hooks' "$AGENT_CONFIG" > /dev/null 2>&1; then
-      jq --arg hook_type "$hook_type" '.hooks[$hook_type] = []' "$AGENT_CONFIG" > "${AGENT_CONFIG}.tmp" && \
-        mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
+    if [ "$DRY_RUN" = true ]; then
+      log_info "[DRY RUN] Would ensure hook array for ${hook_type} in $AGENT_CONFIG"
     else
-      jq --arg hook_type "$hook_type" '.hooks = { ($hook_type): [] }' "$AGENT_CONFIG" > "${AGENT_CONFIG}.tmp" && \
-        mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
+      if jq -e '.hooks' "$AGENT_CONFIG" > /dev/null 2>&1; then
+        jq --arg hook_type "$hook_type" '.hooks[$hook_type] = []' "$AGENT_CONFIG" > "${AGENT_CONFIG}.tmp" && \
+          mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
+      else
+        jq --arg hook_type "$hook_type" '.hooks = { ($hook_type): [] }' "$AGENT_CONFIG" > "${AGENT_CONFIG}.tmp" && \
+          mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
+      fi
     fi
   fi
 }
@@ -2080,14 +2111,14 @@ configure_agent_hooks() {
   if [ -f "$AGENT_CONFIG" ]; then
     if ! jq empty "$AGENT_CONFIG" 2>/dev/null; then
       log_error "Existing agent config is not valid JSON. Creating backup and starting fresh..."
-      mv "$AGENT_CONFIG" "${AGENT_CONFIG}.invalid.$(date +%s).backup"
-      echo '{}' > "$AGENT_CONFIG"
+      dry_run_aware_mv "$AGENT_CONFIG" "${AGENT_CONFIG}.invalid.$(date +%s).backup"
+      echo '{}' | dry_run_aware_write "$AGENT_CONFIG"
     else
-      cp "$AGENT_CONFIG" "${AGENT_CONFIG}.backup"
+      dry_run_aware_cp "$AGENT_CONFIG" "${AGENT_CONFIG}.backup"
       log_info "Backup created: ${AGENT_CONFIG}.backup"
     fi
   else
-    echo '{}' > "$AGENT_CONFIG"
+    echo '{}' | dry_run_aware_write "$AGENT_CONFIG"
   fi
   
   local added=0
@@ -2182,10 +2213,14 @@ configure_agent_hooks() {
         continue
       fi
       
-      jq --arg hook_type "$hook_type" --arg hook_script "${full_path}" \
-        '.hooks[$hook_type] |= map(.hooks |= map(select((.command // "") | endswith($hook_script) | not)))' \
-        "$AGENT_CONFIG" > "${AGENT_CONFIG}.tmp" && \
-        mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
+      if [ "$DRY_RUN" = true ]; then
+        log_info "[DRY RUN] Would clean up existing hook script references for ${full_path}"
+      else
+        jq --arg hook_type "$hook_type" --arg hook_script "${full_path}" \
+          '.hooks[$hook_type] |= map(.hooks |= map(select((.command // "") | endswith($hook_script) | not)))' \
+          "$AGENT_CONFIG" > "${AGENT_CONFIG}.tmp" && \
+          mv "${AGENT_CONFIG}.tmp" "$AGENT_CONFIG"
+      fi
       
       if add_or_update_hook "$full_path" "$hook_type" "$hook_matcher"; then
         log_success "Added hook: ${hook_desc}"
