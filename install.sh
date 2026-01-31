@@ -623,8 +623,8 @@ resolve_skills_config() {
 #   $1 - Optional path to env file (defaults to $ENV_FILE)
 # Returns:
 #   0 (always) - success whether or not .env file exists
+# shellcheck disable=SC2120
 load_env_file() {
-  # shellcheck disable=SC2120
   local env_file="${1:-$ENV_FILE}"
   if [ -f "$env_file" ]; then
     while IFS='=' read -r key value || [ -n "$key" ]; do
