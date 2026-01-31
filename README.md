@@ -49,7 +49,7 @@ See `content/skills/README.md` for full usage details and scripts.
 
 ```bash
 # 1. Install AI Dev Atelier
-curl -fsSL https://raw.githubusercontent.com/LukasStrickler/ai-dev-atelier/main/install.sh | bash
+curl -sSfL https://raw.githubusercontent.com/LukasStrickler/ai-dev-atelier/main/install.sh | bash
 
 # 2. Verify installation
 # Ask OpenCode: "What skills are available?"
@@ -67,7 +67,7 @@ Curl install notes:
 Install a specific ref:
 
 ```bash
-AI_DEV_ATELIER_REF=<branch-or-tag> curl -fsSL \
+AI_DEV_ATELIER_REF=<branch-or-tag> curl -sSfL \
   https://raw.githubusercontent.com/LukasStrickler/ai-dev-atelier/<branch-or-tag>/install.sh | bash
 ```
 
