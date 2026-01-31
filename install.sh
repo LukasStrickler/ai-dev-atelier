@@ -2327,6 +2327,13 @@ post_install_check() {
 #   0 - Success
 #   1 - Error (invalid source, missing dependencies, etc.)
 main() {
+  # Check Bash version (4.0+ required for modern features)
+  if [[ "${BASH_VERSINFO:-0}" -lt 4 ]]; then
+    log_error "Bash 4.0+ is required. You are running: $BASH_VERSION"
+    log_info "Please upgrade Bash or use a compatible shell."
+    exit 1
+  fi
+
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo "AI Dev Atelier Skills & MCP Installer"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
