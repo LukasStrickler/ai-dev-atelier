@@ -30,22 +30,78 @@ time_remaining() { echo $((MAX_WAIT_SECONDS - $(date +%s) + START_TIME)); }
 is_timed_out() { [ "$(time_remaining)" -le 0 ]; }
 
 load_ci_filters() {
+  [ "${CI_FILTERS_LOADED:-0}" -eq 1 ] && return 0
+  CI_FILTERS_LOADED=1
+  CI_FILTER_SCOPES=()
+  CI_FILTER_PATTERNS=()
+
   [ ! -f "$CI_FILTERS_FILE" ] && return 0
-  grep -v '^[[:space:]]*#' "$CI_FILTERS_FILE" 2>/dev/null | grep -v '^[[:space:]]*$' || true
+
+  local line prefix value scope
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line#"${line%%[![:space:]]*}"}"
+    line="${line%"${line##*[![:space:]]}"}"
+    [ -z "$line" ] && continue
+    [[ "$line" == \#* ]] && continue
+
+    scope="legacy"
+    value="$line"
+
+    if [[ "$line" == *:* ]]; then
+      prefix="${line%%:*}"
+      value="${line#*:}"
+      value="${value#"${value%%[![:space:]]*}"}"
+      value="${value%"${value##*[![:space:]]}"}"
+      case "${prefix,,}" in
+        name|context|url)
+          [ -z "$value" ] && continue
+          scope="${prefix,,}"
+          ;;
+        *)
+          value="$line"
+          ;;
+      esac
+    fi
+
+    CI_FILTER_SCOPES+=("$scope")
+    CI_FILTER_PATTERNS+=("$value")
+  done < "$CI_FILTERS_FILE"
 }
 
-is_ignored_job() {
-  local job_name_lower filters
-  job_name_lower=$(echo "$1" | tr '[:upper:]' '[:lower:]')
-  filters=$(load_ci_filters)
-  [ -z "$filters" ] && return 1
-  
-  while IFS= read -r pattern; do
-    [ -z "$pattern" ] && continue
-    local regex
-    regex=$(echo "$pattern" | tr '[:upper:]' '[:lower:]' | sed 's/\*/.*/g')
-    [[ "$job_name_lower" =~ ^${regex}$ ]] && return 0
-  done <<< "$filters"
+matches_filter_pattern() {
+  local value="$1" pattern="$2" value_lower pattern_lower regex
+  value_lower="${value,,}"
+  pattern_lower="${pattern,,}"
+  regex=$(echo "$pattern_lower" | sed -e 's/[].[^$+?(){}|\\]/\\&/g' -e 's/\*/.*/g')
+  [[ "$value_lower" =~ ^${regex}$ ]]
+}
+
+is_ignored_check() {
+  local name="$1" context="$2" url="$3"
+  local i scope pattern
+  load_ci_filters
+  [ "${#CI_FILTER_PATTERNS[@]}" -eq 0 ] && return 1
+
+  for i in "${!CI_FILTER_PATTERNS[@]}"; do
+    scope="${CI_FILTER_SCOPES[$i]}"
+    pattern="${CI_FILTER_PATTERNS[$i]}"
+    case "$scope" in
+      name)
+        matches_filter_pattern "$name" "$pattern" && return 0
+        ;;
+      context)
+        matches_filter_pattern "$context" "$pattern" && return 0
+        ;;
+      url)
+        [ -n "$url" ] && matches_filter_pattern "$url" "$pattern" && return 0
+        ;;
+      legacy)
+        matches_filter_pattern "$name" "$pattern" && return 0
+        matches_filter_pattern "$context" "$pattern" && return 0
+        ;;
+    esac
+  done
+
   return 1
 }
 
@@ -87,57 +143,65 @@ get_ci_status() {
   rollup=$(gh pr view "$pr" --repo "$repo" --json statusCheckRollup 2>/dev/null || echo "")
   [ -z "$rollup" ] && rollup='{"statusCheckRollup":[]}'
   
-  while IFS=$'\t' read -r name status conclusion; do
-    [ -z "$name" ] && continue
-    is_ignored_job "$name" && continue
+  while IFS=$'\t' read -r name context status conclusion details_url target_url; do
+    local display_name check_url
+    display_name="${name:-$context}"
+    [ -z "$display_name" ] && continue
+    check_url="${details_url:-$target_url}"
+    is_ignored_check "$display_name" "$context" "$check_url" && continue
     
     case "$status" in
       COMPLETED|SUCCESS)
         case "$conclusion" in
-          FAILURE|TIMED_OUT|CANCELLED|ACTION_REQUIRED) record_state "$name" failed ;;
-          *) record_state "$name" passed ;;
+          FAILURE|TIMED_OUT|CANCELLED|ACTION_REQUIRED) record_state "$display_name" failed ;;
+          *) record_state "$display_name" passed ;;
         esac
         ;;
       PENDING|QUEUED|IN_PROGRESS|WAITING|REQUESTED|"")
-        record_state "$name" pending
+        record_state "$display_name" pending
         ;;
     esac
-  done < <(echo "$rollup" | jq -r '.statusCheckRollup[] | select(.name != null or .context != null) | "\(.name // .context)\t\(.status // .state)\t\(.conclusion // "")"')
+  done < <(echo "$rollup" | jq -r '.statusCheckRollup[] | select(.name != null or .context != null) | "\(.name // "")\t\(.context // "")\t\(.status // .state // "")\t\(.conclusion // "")\t\(.detailsUrl // "")\t\(.targetUrl // "")"')
   
   sha=$(gh pr view "$pr" --repo "$repo" --json headRefOid -q '.headRefOid' 2>/dev/null || echo "")
   if [ -n "$sha" ]; then
-    while IFS=$'\t' read -r name status conclusion; do
-      [ -z "$name" ] && continue
-      is_ignored_job "$name" && continue
+    while IFS=$'\t' read -r name status conclusion details_url html_url; do
+      local display_name check_url
+      display_name="$name"
+      [ -z "$display_name" ] && continue
+      check_url="${details_url:-$html_url}"
+      is_ignored_check "$display_name" "" "$check_url" && continue
       
       case "$status" in
         COMPLETED|SUCCESS)
           case "$conclusion" in
-            FAILURE|TIMED_OUT|CANCELLED|ACTION_REQUIRED) record_state "$name" failed ;;
-            *) record_state "$name" passed ;;
+            FAILURE|TIMED_OUT|CANCELLED|ACTION_REQUIRED) record_state "$display_name" failed ;;
+            *) record_state "$display_name" passed ;;
           esac
           ;;
         PENDING|QUEUED|IN_PROGRESS|WAITING|REQUESTED|"")
-          record_state "$name" pending
+          record_state "$display_name" pending
           ;;
       esac
-    done < <(gh api "repos/${repo}/commits/${sha}/check-runs" 2>/dev/null | jq -r '.check_runs[] | "\(.name)\t\(.status // "")\t\(.conclusion // "")"' || true)
+    done < <(gh api "repos/${repo}/commits/${sha}/check-runs" 2>/dev/null | jq -r '.check_runs[] | "\(.name)\t\(.status // "")\t\(.conclusion // "")\t\(.details_url // "")\t\(.html_url // "")"' || true)
     
-    while IFS=$'\t' read -r name status; do
-      [ -z "$name" ] && continue
-      is_ignored_job "$name" && continue
+    while IFS=$'\t' read -r context status target_url; do
+      local display_name
+      display_name="$context"
+      [ -z "$display_name" ] && continue
+      is_ignored_check "$display_name" "$context" "$target_url" && continue
       
       case "$status" in
-        success) record_state "$name" passed ;;
-        failure|error) record_state "$name" failed ;;
-        pending) record_state "$name" pending ;;
+        success) record_state "$display_name" passed ;;
+        failure|error) record_state "$display_name" failed ;;
+        pending) record_state "$display_name" pending ;;
       esac
-    done < <(gh api "repos/${repo}/commits/${sha}/status" 2>/dev/null | jq -r '.statuses[] | "\(.context)\t\(.state)"' || true)
+    done < <(gh api "repos/${repo}/commits/${sha}/status" 2>/dev/null | jq -r '.statuses[] | "\(.context // "")\t\(.state // "")\t\(.target_url // "")"' || true)
   fi
   
   while IFS=$'\t' read -r name bucket; do
     [ -z "$name" ] && continue
-    is_ignored_job "$name" && continue
+    is_ignored_check "$name" "" "" && continue
     
     case "$bucket" in
       pass) record_state "$name" passed ;;
@@ -159,7 +223,7 @@ get_ci_status() {
   
   while IFS= read -r required_check; do
     [ -z "$required_check" ] && continue
-    is_ignored_job "$required_check" && continue
+    is_ignored_check "$required_check" "$required_check" "" && continue
     if [ -z "${check_state["${required_check,,}"]+x}" ]; then
       pending=$((pending + 1))
       pending_jobs="${pending_jobs}${required_check}, "

@@ -543,49 +543,36 @@ test_filter_NOT_exists "cubic" "Cubic NOT in filters (we wait for it)"
 test_filter_NOT_exists "gemini" "Gemini NOT in filters (we wait for it)"
 
 echo ""
-echo "--- is_ignored_job function tests ---"
+echo "--- is_ignored_check function tests ---"
 echo ""
 
-test_ignored_job() {
-  local job_name="$1"
-  local should_ignore="$2"
-  local description="$3"
-  
-  local result=0
-  bash -c "
-    source '$WAIT_SCRIPT' 2>/dev/null
-    is_ignored_job '$job_name' && exit 0 || exit 1
-  " 2>/dev/null || result=$?
-  
-  if [ "$should_ignore" = "yes" ] && [ "$result" -eq 0 ]; then
-    pass "$description"
-  elif [ "$should_ignore" = "no" ] && [ "$result" -ne 0 ]; then
-    pass "$description"
-  else
-    fail "$description (expected ignore=$should_ignore, got result=$result)"
-  fi
+make_ignore_harness() {
+  local filter_file="$1"
+  local body="$2"
+  local tmp
+  tmp=$(mktemp)
+  {
+    echo "#!/bin/bash"
+    echo "set -euo pipefail"
+    sed -n '/^load_ci_filters()/,/^get_ci_status()/p' "$WAIT_SCRIPT" | head -n -1
+    echo "CI_FILTERS_FILE=\"$filter_file\""
+    echo "$body"
+  } > "$tmp"
+  chmod +x "$tmp"
+  echo "$tmp"
 }
-
-# Create temp test script with the function
-TEMP_TEST=$(mktemp)
-cat > "$TEMP_TEST" << 'TESTEOF'
-#!/bin/bash
-set -euo pipefail
-TESTEOF
-sed -n '/^load_ci_filters()/,/^get_ci_status()/p' "$WAIT_SCRIPT" | head -n -1 >> "$TEMP_TEST"
-echo "" >> "$TEMP_TEST"
-echo "CI_FILTERS_FILE=\"$CI_FILTERS\"" >> "$TEMP_TEST"
-echo 'is_ignored_job "$1"' >> "$TEMP_TEST"
-chmod +x "$TEMP_TEST"
 
 test_ignored_with_script() {
-  local job_name="$1"
-  local should_ignore="$2"
-  local description="$3"
-  
+  local harness="$1"
+  local name="$2"
+  local context="$3"
+  local url="$4"
+  local should_ignore="$5"
+  local description="$6"
+
   local result=0
-  bash "$TEMP_TEST" "$job_name" 2>/dev/null || result=$?
-  
+  bash "$harness" "$name" "$context" "$url" 2>/dev/null || result=$?
+
   if [ "$should_ignore" = "yes" ] && [ "$result" -eq 0 ]; then
     pass "$description"
   elif [ "$should_ignore" = "no" ] && [ "$result" -ne 0 ]; then
@@ -595,19 +582,44 @@ test_ignored_with_script() {
   fi
 }
 
+TEMP_TEST=$(make_ignore_harness "$CI_FILTERS" 'is_ignored_check "$1" "$2" "$3"')
+
 # AI reviewers should NOT be ignored - we wait for their comments
-test_ignored_with_script "CodeRabbit Review" "no" "Does NOT ignore: CodeRabbit Review (we wait for it)"
-test_ignored_with_script "coderabbit-lint" "no" "Does NOT ignore: coderabbit-lint (we wait for it)"
-test_ignored_with_script "Copilot code review" "no" "Does NOT ignore: Copilot code review (we wait for it)"
-test_ignored_with_script "cubic-review" "no" "Does NOT ignore: cubic-review (we wait for it)"
-test_ignored_with_script "gemini-review" "no" "Does NOT ignore: gemini-review (we wait for it)"
-# Regular CI jobs should still not be ignored
-test_ignored_with_script "build" "no" "Does not ignore: build"
-test_ignored_with_script "test" "no" "Does not ignore: test"
-test_ignored_with_script "lint" "no" "Does not ignore: lint"
-test_ignored_with_script "deploy" "no" "Does not ignore: deploy"
+test_ignored_with_script "$TEMP_TEST" "CodeRabbit Review" "" "" "no" "Does NOT ignore: CodeRabbit Review (we wait for it)"
+test_ignored_with_script "$TEMP_TEST" "coderabbit-lint" "" "" "no" "Does NOT ignore: coderabbit-lint (we wait for it)"
+test_ignored_with_script "$TEMP_TEST" "Copilot code review" "" "" "no" "Does NOT ignore: Copilot code review (we wait for it)"
+test_ignored_with_script "$TEMP_TEST" "cubic-review" "" "" "no" "Does NOT ignore: cubic-review (we wait for it)"
+test_ignored_with_script "$TEMP_TEST" "gemini-review" "" "" "no" "Does NOT ignore: gemini-review (we wait for it)"
+
+test_ignored_with_script "$TEMP_TEST" "visual-check" "UI Tests" "" "yes" "Ignores typed context filter: context:UI Tests"
+test_ignored_with_script "$TEMP_TEST" "visual-check" "Other Context" "https://www.chromatic.com/builds/123" "yes" "Ignores typed url filter: url:https://www.chromatic.com/*"
+test_ignored_with_script "$TEMP_TEST" "visual-check" "Other Context" "" "no" "Does not match url filter when URL is missing"
+
+test_ignored_with_script "$TEMP_TEST" "chromatic" "" "" "yes" "Legacy unprefixed pattern matches name"
+test_ignored_with_script "$TEMP_TEST" "visual-check" "Chromatic" "" "yes" "Legacy unprefixed pattern matches context"
+test_ignored_with_script "$TEMP_TEST" "build" "" "" "no" "Does not ignore unrelated name"
+test_ignored_with_script "$TEMP_TEST" "test" "" "" "no" "Does not ignore: test"
+test_ignored_with_script "$TEMP_TEST" "lint" "" "" "no" "Does not ignore: lint"
+test_ignored_with_script "$TEMP_TEST" "deploy" "" "" "no" "Does not ignore: deploy"
 
 rm -f "$TEMP_TEST"
+
+CUSTOM_FILTERS=$(mktemp)
+cat > "$CUSTOM_FILTERS" << 'TEST_FILTERS_EOF'
+CoNtExT:Ui TeStS
+URL:https://www.chromatic.com/*
+foo:bar
+url:
+TEST_FILTERS_EOF
+
+CUSTOM_TEST=$(make_ignore_harness "$CUSTOM_FILTERS" 'is_ignored_check "$1" "$2" "$3"')
+
+test_ignored_with_script "$CUSTOM_TEST" "whatever" "ui tests" "" "yes" "Mixed-case typed prefix is supported (context:)"
+test_ignored_with_script "$CUSTOM_TEST" "whatever" "not this" "https://www.chromatic.com/runs/42" "yes" "Mixed-case typed prefix is supported (url:)"
+test_ignored_with_script "$CUSTOM_TEST" "foo:bar" "" "" "yes" "Unknown prefix remains legacy-compatible"
+test_ignored_with_script "$CUSTOM_TEST" "random" "" "" "no" "Empty typed value is treated as no-op"
+
+rm -f "$CUSTOM_TEST" "$CUSTOM_FILTERS"
 
 
 echo ""
