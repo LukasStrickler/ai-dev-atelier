@@ -111,8 +111,24 @@ get_required_checks() {
   [ -z "$base_ref" ] && return 0
 
   {
-    gh api "repos/${repo}/rules/branches/${base_ref}" 2>/dev/null | jq -r '.[] | select(.type == "required_status_checks") | .parameters.required_status_checks[]? | .context' || true
-    gh api "repos/${repo}/branches/${base_ref}/protection/required_status_checks" 2>/dev/null | jq -r '.contexts[]?, .checks[]?.context' || true
+    gh api "repos/${repo}/rules/branches/${base_ref}" 2>/dev/null | jq -r '
+      if type == "array" then
+        .[]
+        | select(type == "object" and .type == "required_status_checks")
+        | (.parameters.required_status_checks // [])[]?
+        | .context // empty
+      else
+        empty
+      end
+    ' || true
+    gh api "repos/${repo}/branches/${base_ref}/protection/required_status_checks" 2>/dev/null | jq -r '
+      if type == "object" then
+        (.contexts // [])[]?,
+        ((.checks // [])[]? | .context // empty)
+      else
+        empty
+      end
+    ' || true
   } | awk 'NF' | sort -u
 }
 
@@ -144,15 +160,17 @@ get_ci_status() {
   [ -z "$rollup" ] && rollup='{"statusCheckRollup":[]}'
   
   while IFS=$'\t' read -r name context status conclusion details_url target_url; do
-    local display_name check_url
+    local display_name check_url status_norm conclusion_norm
     display_name="${name:-$context}"
     [ -z "$display_name" ] && continue
     check_url="${details_url:-$target_url}"
     is_ignored_check "$display_name" "$context" "$check_url" && continue
-    
-    case "$status" in
+    status_norm="${status^^}"
+    conclusion_norm="${conclusion^^}"
+
+    case "$status_norm" in
       COMPLETED|SUCCESS)
-        case "$conclusion" in
+        case "$conclusion_norm" in
           FAILURE|TIMED_OUT|CANCELLED|ACTION_REQUIRED) record_state "$display_name" failed ;;
           *) record_state "$display_name" passed ;;
         esac
@@ -166,15 +184,17 @@ get_ci_status() {
   sha=$(gh pr view "$pr" --repo "$repo" --json headRefOid -q '.headRefOid' 2>/dev/null || echo "")
   if [ -n "$sha" ]; then
     while IFS=$'\t' read -r name status conclusion details_url html_url; do
-      local display_name check_url
+      local display_name check_url status_norm conclusion_norm
       display_name="$name"
       [ -z "$display_name" ] && continue
       check_url="${details_url:-$html_url}"
       is_ignored_check "$display_name" "" "$check_url" && continue
-      
-      case "$status" in
+      status_norm="${status^^}"
+      conclusion_norm="${conclusion^^}"
+
+      case "$status_norm" in
         COMPLETED|SUCCESS)
-          case "$conclusion" in
+          case "$conclusion_norm" in
             FAILURE|TIMED_OUT|CANCELLED|ACTION_REQUIRED) record_state "$display_name" failed ;;
             *) record_state "$display_name" passed ;;
           esac
@@ -186,12 +206,13 @@ get_ci_status() {
     done < <(gh api "repos/${repo}/commits/${sha}/check-runs" 2>/dev/null | jq -r '.check_runs[] | "\(.name)\t\(.status // "")\t\(.conclusion // "")\t\(.details_url // "")\t\(.html_url // "")"' || true)
     
     while IFS=$'\t' read -r context status target_url; do
-      local display_name
+      local display_name status_norm
       display_name="$context"
       [ -z "$display_name" ] && continue
       is_ignored_check "$display_name" "$context" "$target_url" && continue
-      
-      case "$status" in
+      status_norm="${status,,}"
+
+      case "$status_norm" in
         success) record_state "$display_name" passed ;;
         failure|error) record_state "$display_name" failed ;;
         pending) record_state "$display_name" pending ;;

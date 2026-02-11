@@ -713,6 +713,81 @@ test_bot_review_request_pending() {
 test_ci_pending_from_pr_checks
  test_bot_review_request_pending
 
+test_check_runs_lowercase_pending() {
+  local tmp output state passed pending
+  export GH_STATUS_ROLLUP_JSON='{"statusCheckRollup":[]}'
+  export GH_PR_CHECKS_JSON='[]'
+  export GH_CHECK_RUNS_JSON='{"check_runs":[{"name":"external-check","status":"in_progress","conclusion":null,"details_url":"https://ci.example/runs/1","html_url":"https://github.com/example"}]}'
+  export GH_COMMIT_STATUS_JSON='{"statuses":[]}'
+  export GH_HEAD_SHA="abc"
+  tmp=$(make_wait_harness 'get_ci_status "owner/repo" "28"')
+  output=$(PATH="$MOCK_GH_WAIT:$PATH" bash "$tmp" 2>/dev/null)
+  rm -f "$tmp"
+  IFS='|' read -r state passed pending _ _ <<< "$output"
+  if [ "$state" = "pending" ] && [ "$pending" -eq 1 ]; then
+    pass "Lowercase check-runs pending is treated as pending"
+  else
+    fail "Expected lowercase check-runs pending state (got: $output)"
+  fi
+}
+
+test_check_runs_lowercase_failure() {
+  local tmp output
+  export GH_STATUS_ROLLUP_JSON='{"statusCheckRollup":[]}'
+  export GH_PR_CHECKS_JSON='[]'
+  export GH_CHECK_RUNS_JSON='{"check_runs":[{"name":"external-check","status":"completed","conclusion":"failure","details_url":"https://ci.example/runs/1","html_url":"https://github.com/example"}]}'
+  export GH_COMMIT_STATUS_JSON='{"statuses":[]}'
+  export GH_HEAD_SHA="abc"
+  tmp=$(make_wait_harness 'get_ci_status "owner/repo" "28"')
+  output=$(PATH="$MOCK_GH_WAIT:$PATH" bash "$tmp" 2>/dev/null)
+  rm -f "$tmp"
+  if echo "$output" | grep -q '^failed|'; then
+    pass "Lowercase check-runs failure is treated as failed"
+  else
+    fail "Expected lowercase check-runs failure state (got: $output)"
+  fi
+}
+
+test_check_runs_lowercase_success() {
+  local tmp output state passed pending
+  export GH_STATUS_ROLLUP_JSON='{"statusCheckRollup":[]}'
+  export GH_PR_CHECKS_JSON='[]'
+  export GH_CHECK_RUNS_JSON='{"check_runs":[{"name":"external-check","status":"completed","conclusion":"success","details_url":"https://ci.example/runs/1","html_url":"https://github.com/example"}]}'
+  export GH_COMMIT_STATUS_JSON='{"statuses":[]}'
+  export GH_HEAD_SHA="abc"
+  tmp=$(make_wait_harness 'get_ci_status "owner/repo" "28"')
+  output=$(PATH="$MOCK_GH_WAIT:$PATH" bash "$tmp" 2>/dev/null)
+  rm -f "$tmp"
+  IFS='|' read -r state passed pending _ _ <<< "$output"
+  if [ "$state" = "passed" ] && [ "$passed" -eq 1 ] && [ "$pending" -eq 0 ]; then
+    pass "Lowercase check-runs success is treated as passed"
+  else
+    fail "Expected lowercase check-runs success state (got: $output)"
+  fi
+}
+
+test_rollup_and_check_runs_precedence() {
+  local tmp output
+  export GH_STATUS_ROLLUP_JSON='{"statusCheckRollup":[{"name":"validate","status":"COMPLETED","conclusion":"SUCCESS"}]}'
+  export GH_PR_CHECKS_JSON='[]'
+  export GH_CHECK_RUNS_JSON='{"check_runs":[{"name":"validate","status":"completed","conclusion":"failure","details_url":"https://ci.example/runs/1","html_url":"https://github.com/example"}]}'
+  export GH_COMMIT_STATUS_JSON='{"statuses":[]}'
+  export GH_HEAD_SHA="abc"
+  tmp=$(make_wait_harness 'get_ci_status "owner/repo" "28"')
+  output=$(PATH="$MOCK_GH_WAIT:$PATH" bash "$tmp" 2>/dev/null)
+  rm -f "$tmp"
+  if echo "$output" | grep -q '^failed|'; then
+    pass "When sources disagree, failed state takes precedence"
+  else
+    fail "Expected failed precedence across rollup/check-runs (got: $output)"
+  fi
+}
+
+test_check_runs_lowercase_pending
+test_check_runs_lowercase_failure
+test_check_runs_lowercase_success
+test_rollup_and_check_runs_precedence
+
  test_required_check_missing_is_pending() {
    local tmp output
    export GH_STATUS_ROLLUP_JSON='{"statusCheckRollup":[]}'
@@ -739,6 +814,28 @@ test_ci_pending_from_pr_checks
  }
 
  test_required_check_missing_is_pending
+
+ test_required_check_payload_is_resilient() {
+   local tmp output
+   export GH_STATUS_ROLLUP_JSON='{"statusCheckRollup":[]}'
+   export GH_PR_CHECKS_JSON='[]'
+   export GH_CHECK_RUNS_JSON='{"check_runs":[]}'
+   export GH_COMMIT_STATUS_JSON='{"statuses":[]}'
+   export GH_RULES_BRANCH_JSON='"forbidden"'
+   export GH_REQUIRED_STATUS_JSON='"forbidden"'
+   export GH_HEAD_SHA="abc"
+   export GH_BASE_REF="main"
+   tmp=$(make_wait_harness 'get_ci_status "owner/repo" "28"')
+   output=$(PATH="$MOCK_GH_WAIT:$PATH" bash "$tmp" 2>&1 || true)
+   rm -f "$tmp"
+   if echo "$output" | grep -q "jq: error"; then
+     fail "Required checks parsing should not emit jq errors on unexpected payload"
+   else
+     pass "Required checks parsing handles unexpected payload safely"
+   fi
+ }
+
+ test_required_check_payload_is_resilient
 
  test_ci_failure_does_not_abort() {
    local tmp output
