@@ -72,7 +72,7 @@ matches_filter_pattern() {
   local value="$1" pattern="$2" value_lower pattern_lower regex
   value_lower="${value,,}"
   pattern_lower="${pattern,,}"
-  regex=$(echo "$pattern_lower" | sed -e 's/[].[^$+?(){}|\\]/\\&/g' -e 's/\*/.*/g')
+  regex=$(printf '%s\n' "$pattern_lower" | sed -e 's/[].[^$+?(){}|\\]/\\&/g' -e 's/\*/.*/g')
   [[ "$value_lower" =~ ^${regex}$ ]]
 }
 
@@ -137,6 +137,7 @@ get_ci_status() {
   local rollup failed_jobs="" pending_jobs="" sha=""
   local pending=0 passed=0
   local missing_required=()
+  local display_name check_url status_norm conclusion_norm context target_url html_url details_url name bucket key value current
   
   declare -A check_state
   declare -A check_name
@@ -160,7 +161,6 @@ get_ci_status() {
   [ -z "$rollup" ] && rollup='{"statusCheckRollup":[]}'
   
   while IFS=$'\t' read -r name context status conclusion details_url target_url; do
-    local display_name check_url status_norm conclusion_norm
     display_name="${name:-$context}"
     [ -z "$display_name" ] && continue
     check_url="${details_url:-$target_url}"
@@ -184,7 +184,6 @@ get_ci_status() {
   sha=$(gh pr view "$pr" --repo "$repo" --json headRefOid -q '.headRefOid' 2>/dev/null || echo "")
   if [ -n "$sha" ]; then
     while IFS=$'\t' read -r name status conclusion details_url html_url; do
-      local display_name check_url status_norm conclusion_norm
       display_name="$name"
       [ -z "$display_name" ] && continue
       check_url="${details_url:-$html_url}"
@@ -206,7 +205,6 @@ get_ci_status() {
     done < <(gh api "repos/${repo}/commits/${sha}/check-runs" 2>/dev/null | jq -r '.check_runs[] | "\(.name)\t\(.status // "")\t\(.conclusion // "")\t\(.details_url // "")\t\(.html_url // "")"' || true)
     
     while IFS=$'\t' read -r context status target_url; do
-      local display_name status_norm
       display_name="$context"
       [ -z "$display_name" ] && continue
       is_ignored_check "$display_name" "$context" "$target_url" && continue
