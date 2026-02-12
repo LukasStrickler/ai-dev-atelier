@@ -87,7 +87,7 @@ is_ignored_check() {
     pattern="${CI_FILTER_PATTERNS[$i]}"
     case "$scope" in
       name)
-        matches_filter_pattern "$name" "$pattern" && return 0
+        [ -n "$name" ] && matches_filter_pattern "$name" "$pattern" && return 0
         ;;
       context)
         [ -n "$context" ] && matches_filter_pattern "$context" "$pattern" && return 0

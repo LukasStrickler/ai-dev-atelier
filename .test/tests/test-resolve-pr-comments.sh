@@ -556,6 +556,7 @@ make_ignore_harness() {
     echo "set -euo pipefail"
     sed -n '/^load_ci_filters()/,/^get_ci_status()/p' "$WAIT_SCRIPT" | head -n -1
     echo "CI_FILTERS_FILE=\"$filter_file\""
+    echo "type is_ignored_check &>/dev/null || { echo 'harness extraction failed' >&2; exit 99; }"
     echo "$body"
   } > "$tmp"
   chmod +x "$tmp"
