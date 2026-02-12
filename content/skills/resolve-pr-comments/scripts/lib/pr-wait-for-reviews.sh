@@ -90,14 +90,14 @@ is_ignored_check() {
         matches_filter_pattern "$name" "$pattern" && return 0
         ;;
       context)
-        matches_filter_pattern "$context" "$pattern" && return 0
+        [ -n "$context" ] && matches_filter_pattern "$context" "$pattern" && return 0
         ;;
       url)
         [ -n "$url" ] && matches_filter_pattern "$url" "$pattern" && return 0
         ;;
       legacy)
         matches_filter_pattern "$name" "$pattern" && return 0
-        matches_filter_pattern "$context" "$pattern" && return 0
+        [ -n "$context" ] && matches_filter_pattern "$context" "$pattern" && return 0
         ;;
     esac
   done
@@ -210,12 +210,12 @@ get_ci_status() {
       display_name="$context"
       [ -z "$display_name" ] && continue
       is_ignored_check "$display_name" "$context" "$target_url" && continue
-      status_norm="${status,,}"
+      status_norm="${status^^}"
 
       case "$status_norm" in
-        success) record_state "$display_name" passed ;;
-        failure|error) record_state "$display_name" failed ;;
-        pending) record_state "$display_name" pending ;;
+        SUCCESS) record_state "$display_name" passed ;;
+        FAILURE|ERROR) record_state "$display_name" failed ;;
+        PENDING) record_state "$display_name" pending ;;
       esac
     done < <(gh api "repos/${repo}/commits/${sha}/status" 2>/dev/null | jq -r '.statuses[] | "\(.context // "")\t\(.state // "")\t\(.target_url // "")"' || true)
   fi

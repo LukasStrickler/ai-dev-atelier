@@ -621,6 +621,17 @@ test_ignored_with_script "$CUSTOM_TEST" "random" "" "" "no" "Empty typed value i
 
 rm -f "$CUSTOM_TEST" "$CUSTOM_FILTERS"
 
+WILDCARD_CTX_FILTERS=$(mktemp)
+cat > "$WILDCARD_CTX_FILTERS" << 'WILDCARD_EOF'
+context:*
+WILDCARD_EOF
+
+WILDCARD_TEST=$(make_ignore_harness "$WILDCARD_CTX_FILTERS" 'is_ignored_check "$1" "$2" "$3"')
+
+test_ignored_with_script "$WILDCARD_TEST" "build" "" "" "no" "context:* does NOT match empty context (guard)"
+test_ignored_with_script "$WILDCARD_TEST" "build" "some-context" "" "yes" "context:* matches non-empty context"
+
+rm -f "$WILDCARD_TEST" "$WILDCARD_CTX_FILTERS"
 
 echo ""
 echo "--- wait logic for checks and bot reviews ---"
