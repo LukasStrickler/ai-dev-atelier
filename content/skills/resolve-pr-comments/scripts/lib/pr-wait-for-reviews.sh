@@ -179,7 +179,7 @@ get_ci_status() {
         record_state "$display_name" pending
         ;;
     esac
-  done < <(echo "$rollup" | jq -r '.statusCheckRollup[] | select(.name != null or .context != null) | "\(.name // "")\t\(.context // "")\t\(.status // .state // "")\t\(.conclusion // "")\t\(.detailsUrl // "")\t\(.targetUrl // "")"')
+  done < <(echo "$rollup" | jq -r '.statusCheckRollup[] | select(.name != null or .context != null) | "\(.name // "")\t\(.context // "")\t\(.status // .state // "")\t\(.conclusion // "")\t\(.detailsUrl // "")\t\(.targetUrl // "")"' || true)
   
   sha=$(gh pr view "$pr" --repo "$repo" --json headRefOid -q '.headRefOid' 2>/dev/null || echo "")
   if [ -n "$sha" ]; then
