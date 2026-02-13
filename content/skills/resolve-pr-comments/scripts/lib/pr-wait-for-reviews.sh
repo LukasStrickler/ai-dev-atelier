@@ -70,6 +70,7 @@ load_ci_filters() {
 
 matches_filter_pattern() {
   local value="$1" pattern="$2"
+  # shellcheck disable=SC2053 - Glob matching is intentional
   [[ "${value,,}" == ${pattern,,} ]]
 }
 
