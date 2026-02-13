@@ -69,11 +69,8 @@ load_ci_filters() {
 }
 
 matches_filter_pattern() {
-  local value="$1" pattern="$2" value_lower pattern_lower regex
-  value_lower="${value,,}"
-  pattern_lower="${pattern,,}"
-  regex=$(printf '%s\n' "$pattern_lower" | sed -e 's/[].[^$+?(){}|\\]/\\&/g' -e 's/\*/.*/g')
-  [[ "$value_lower" =~ ^${regex}$ ]]
+  local value="$1" pattern="$2"
+  [[ "${value,,}" == ${pattern,,} ]]
 }
 
 is_ignored_check() {
@@ -96,7 +93,7 @@ is_ignored_check() {
         [ -n "$url" ] && matches_filter_pattern "$url" "$pattern" && return 0
         ;;
       legacy)
-        matches_filter_pattern "$name" "$pattern" && return 0
+        [ -n "$name" ] && matches_filter_pattern "$name" "$pattern" && return 0
         [ -n "$context" ] && matches_filter_pattern "$context" "$pattern" && return 0
         ;;
     esac

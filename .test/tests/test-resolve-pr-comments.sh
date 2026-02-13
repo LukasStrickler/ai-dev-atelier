@@ -634,6 +634,34 @@ test_ignored_with_script "$WILDCARD_TEST" "build" "some-context" "" "yes" "conte
 
 rm -f "$WILDCARD_TEST" "$WILDCARD_CTX_FILTERS"
 
+SLASH_FILTERS=$(mktemp)
+cat > "$SLASH_FILTERS" << 'SLASH_EOF'
+name:build/test/*
+url:https://ci.example.com/jobs/*
+SLASH_EOF
+
+SLASH_TEST=$(make_ignore_harness "$SLASH_FILTERS" 'is_ignored_check "$1" "$2" "$3"')
+
+test_ignored_with_script "$SLASH_TEST" "build/test/unit" "" "" "yes" "Pattern with slashes matches correctly (name:)"
+test_ignored_with_script "$SLASH_TEST" "build-other" "" "" "no" "Slash pattern does not match unrelated name"
+test_ignored_with_script "$SLASH_TEST" "check" "" "https://ci.example.com/jobs/123" "yes" "URL pattern with slashes matches correctly"
+test_ignored_with_script "$SLASH_TEST" "check" "" "https://other.com/jobs/123" "no" "URL pattern does not match different domain"
+
+rm -f "$SLASH_TEST" "$SLASH_FILTERS"
+
+LEGACY_EMPTY_FILTERS=$(mktemp)
+cat > "$LEGACY_EMPTY_FILTERS" << 'LEGACY_EOF'
+*
+LEGACY_EOF
+
+LEGACY_EMPTY_TEST=$(make_ignore_harness "$LEGACY_EMPTY_FILTERS" 'is_ignored_check "$1" "$2" "$3"')
+
+test_ignored_with_script "$LEGACY_EMPTY_TEST" "" "" "" "no" "Legacy wildcard * does NOT match empty name (guard)"
+test_ignored_with_script "$LEGACY_EMPTY_TEST" "any-job" "" "" "yes" "Legacy wildcard * matches non-empty name"
+test_ignored_with_script "$LEGACY_EMPTY_TEST" "" "any-context" "" "yes" "Legacy wildcard * matches non-empty context"
+
+rm -f "$LEGACY_EMPTY_TEST" "$LEGACY_EMPTY_FILTERS"
+
 echo ""
 echo "--- wait logic for checks and bot reviews ---"
 echo ""
