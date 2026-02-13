@@ -1,6 +1,11 @@
 # CI Job Filters for pr-wait-for-reviews.sh
 # Jobs matching these patterns will be IGNORED when waiting for CI
 # Use wildcards (*) for pattern matching
+# Supported syntax:
+# - <pattern> (legacy): matches check name or status context
+# - name:<pattern>: matches check run name
+# - context:<pattern>: matches status context
+# - url:<pattern>: matches details/target URL when present
 #
 # NOTE: AI reviewers (CodeRabbit, Copilot, Cubic, Gemini) are NOT filtered.
 # We MUST wait for them because pr-resolver needs their comments.
@@ -15,6 +20,8 @@ netlify*
 
 # Visual/snapshot testing (often slow and non-blocking)
 # Chromatic visual approval jobs (run indefinitely, skip wait)
+context:UI Tests
+url:https://www.chromatic.com/*
 chromatic
 chromatic-*
 *chromatic*
