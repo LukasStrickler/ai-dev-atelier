@@ -163,6 +163,6 @@ Complete reference for all Tavily MCP tool parameters.
 - Tool: `webSearchPrime` (via `zai-web-search-prime` MCP)
 - `search_query` (string, required) - Search query
 - `count` (integer, 1-50, default: 10) - Number of results
-- `search_engine` (string, default: `search-prime`)
+- `search_engine` (string, required: `search-prime`)
 - `search_recency_filter` (enum: `oneDay`, `oneWeek`, `oneMonth`, `oneYear`, `noLimit`)
 - `search_domain_filter` (string, optional) - Domain restriction (for example `github.com`)

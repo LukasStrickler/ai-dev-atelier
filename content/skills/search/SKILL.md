@@ -109,7 +109,7 @@ background_task({
 | Tool | When to Use | Key Params |
 |------|-------------|------------|
 | `websearch_web_search_exa` | **Secondary fallback** when Tavily quota/execution fails | `numResults`: 5-20, `type`: "auto"/"fast" |
-| `webSearchPrime` (via `zai-web-search-prime` MCP) | **Tertiary fallback** when Exa also fails or returns empty/low-value results | `search_query` (required), `count`: 1-50, `search_recency_filter`, `search_domain_filter` |
+| `webSearchPrime` (via `zai-web-search-prime` MCP) | **Tertiary fallback** when Exa also fails or returns empty/low-value results | `search_query` (required), `search_engine` (required: `search-prime`), `count`: 1-50, `search_recency_filter`, `search_domain_filter` |
 
 ### Context7 (Library Docs)
 | Tool | When to Use | Key Params |

@@ -63,6 +63,7 @@ Practical examples of search workflows at different levels.
 2. **Secondary (Exa):** `websearch_web_search_exa` returns empty or low-value results
 3. **Tertiary (Z.AI):** `webSearchPrime` with:
    - `search_query`: "latest MCP security incidents this month"
+   - `search_engine`: `search-prime`
    - `count`: 5
    - `search_recency_filter`: `oneMonth`
 4. ✅ Use Z.AI results and continue without retry loops across failed providers
