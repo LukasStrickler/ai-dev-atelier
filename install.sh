@@ -2750,7 +2750,7 @@ main() {
   echo ""
   echo "Required for full functionality:"
   echo "  - TAVILY_API_KEY     (for web search skill)"
-  echo "  - Z_AI_API_KEY       (for Z.AI vision features)"
+  echo "  - Z_AI_API_KEY       (for Z.AI search/vision features)"
   echo "  - CONTEXT7_API_KEY   (for documentation lookup)"
   echo "  - OPENALEX_EMAIL     (for academic research)"
   echo ""
