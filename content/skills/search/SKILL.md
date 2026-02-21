@@ -227,8 +227,12 @@ useRegexp: true
 
 **Quota Management:**
 - Default to Tavily for important/critical searches (better relevance when quota available)
-- Fallback to Exa (`websearch_web_search_exa`) when Tavily quota/execution fails
-- If Exa also fails or is empty/low-quality, fallback to Z.AI `webSearchPrime`
+- If Tavily fails due to quota/rate limit (429), fail over immediately to Exa (no retry)
+- For other transient Tavily failures (timeout/5xx), do one jittered retry (~300-800ms)
+- Fallback to Exa (`websearch_web_search_exa`) when Tavily still fails after that retry
+- If Exa fails due to quota/rate limit, fail over immediately to Z.AI `webSearchPrime` (no retry)
+- For other transient Exa failures (timeout/5xx), do one jittered retry (~300-800ms), then fail over to Z.AI
+- If Exa is empty/low-quality, fallback to Z.AI `webSearchPrime`
 - Don't loop retries across providers; fail over immediately to next provider
 
 For advanced techniques: See `references/advanced-techniques.md`

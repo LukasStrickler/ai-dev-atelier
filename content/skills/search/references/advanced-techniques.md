@@ -64,8 +64,13 @@
 ## Error Handling
 
 - The Tavily MCP automatically handles rate limits, timeouts, and network failures
-- If Tavily fails, fail over to Exa; if Exa fails/returns empty, fail over to Z.AI `webSearchPrime`
-- If a provider fails, retry with simpler parameters only once before failing over
+- If Tavily returns quota/rate-limit failure (429), fail over to Exa immediately (no retry)
+- If Tavily returns other transient failures (timeout/5xx), retry once with jitter (~300-800ms)
+- If Tavily still fails, fail over to Exa
+- If Exa returns quota/rate-limit failure, fail over to Z.AI immediately (no retry)
+- If Exa returns other transient failures (timeout/5xx), retry once with jitter (~300-800ms), then fail over to Z.AI
+- If Exa returns empty/low-quality results, fail over to Z.AI `webSearchPrime`
+- Keep retries provider-local (max one retry); do not retry previous providers after failover
 - Use `return_exceptions=True` pattern when running multiple concurrent searches
 
 ## Credit Management
