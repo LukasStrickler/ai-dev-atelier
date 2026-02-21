@@ -57,7 +57,7 @@
       }
     },
     "zai-web-search-prime": {
-      "_description": "Z.AI Web Search MCP - Web search fallback for 'search' skill when Tavily/Exa fail.",
+      "_description": "Z.AI Web Search Prime MCP - Web search fallback for 'search' skill when Tavily/Exa fail.",
       "_quota": "Shared monthly quota with Z.AI web reader by plan (Lite/Pro/Max).",
       "_skills": ["search"],
       "_enabledTools": {

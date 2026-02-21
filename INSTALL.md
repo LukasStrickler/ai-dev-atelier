@@ -364,8 +364,8 @@ Follow [README.md](./README.md) for quick start and install commands. See [AGENT
   - **Usage:** Finding real-world code examples, implementation patterns, API usage, error handling patterns
   - **Note:** All MCPs from `config/mcps.json` are automatically configured by the installer. Update API keys after installation.
 
-- **Exa Web Search MCP** - Secondary fallback web search
-  - **Installation:** Built-in tool integration (`websearch_web_search_exa`)
+- **Exa Web Search (Built-in Tool)** - Secondary fallback web search
+  - **Installation:** None (built-in OpenCode tool: `websearch_web_search_exa`)
   - **API Key Required:** No
   - **Usage:** Fallback when Tavily fails due to quota or runtime errors
 
@@ -377,7 +377,7 @@ Follow [README.md](./README.md) for quick start and install commands. See [AGENT
   - **Usage:** Semantic GitHub search and image/video analysis
 
 - **Z.AI Web Search MCP (`zai-web-search-prime`)** - Tertiary web search fallback
-  - **Installation:** `npx -y @z_ai/mcp-server` (same package as other Z.AI MCPs)
+  - **Installation:** No local installation needed; configured automatically via URL in `config/mcps.json`
   - **API Key Required:** `Z_AI_API_KEY`
   - **Usage:** Fallback when both Tavily and Exa fail; tool name: `webSearchPrime`
   - **Endpoint:** `https://api.z.ai/api/mcp/web_search_prime/mcp`
