@@ -1147,9 +1147,13 @@ substitute_api_keys() {
     --arg env_zai '${env:Z_AI_API_KEY}' \
     --arg env_openalex '${env:OPENALEX_EMAIL}' \
     '
-    if (.headers.Authorization // "" | test("TAVILY_API_KEY|Z_AI_API_KEY")) and $tavily != "" then
+    if (.headers.Authorization // "" | test("TAVILY_API_KEY")) and $tavily != "" then
       .headers.Authorization = "Bearer " + $tavily
-    elif (.headers.AUTHORIZATION // "" | test("TAVILY_API_KEY|Z_AI_API_KEY")) and $zai != "" then
+    elif (.headers.Authorization // "" | test("Z_AI_API_KEY")) and $zai != "" then
+      .headers.Authorization = "Bearer " + $zai
+    elif (.headers.AUTHORIZATION // "" | test("TAVILY_API_KEY")) and $tavily != "" then
+      .headers.AUTHORIZATION = "Bearer " + $tavily
+    elif (.headers.AUTHORIZATION // "" | test("Z_AI_API_KEY")) and $zai != "" then
       .headers.AUTHORIZATION = "Bearer " + $zai
     else .
     end

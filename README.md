@@ -27,7 +27,7 @@ AI Dev Atelier is a curated skill pack for OpenCode and Cursor. Agent Skills are
 ## What You Get
 
 * 10 production-ready [Agent Skills](https://agentskills.io/specification) from `config/skills.json`
-* 9 MCP servers configured from `config/mcps.json`
+* 10 MCP servers configured from `config/mcps.json`
 * PreToolUse guardrails defined in `config/hooks.json`
 
 

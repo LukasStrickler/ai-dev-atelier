@@ -364,12 +364,23 @@ Follow [README.md](./README.md) for quick start and install commands. See [AGENT
   - **Usage:** Finding real-world code examples, implementation patterns, API usage, error handling patterns
   - **Note:** All MCPs from `config/mcps.json` are automatically configured by the installer. Update API keys after installation.
 
+- **Exa Web Search MCP** - Secondary fallback web search
+  - **Installation:** Built-in tool integration (`websearch_web_search_exa`)
+  - **API Key Required:** No
+  - **Usage:** Fallback when Tavily fails due to quota or runtime errors
+
 **Optional for Search/Research:**
 
 - **Z.AI MCP (zai-zread + zai-vision)** - Repo semantic search and vision tools
   - **Installation:** `npx -y @z_ai/mcp-server`
   - **API Key Required:** `Z_AI_API_KEY`
   - **Usage:** Semantic GitHub search and image/video analysis
+
+- **Z.AI Web Search MCP (`zai-web-search-prime`)** - Tertiary web search fallback
+  - **Installation:** `npx -y @z_ai/mcp-server` (same package as other Z.AI MCPs)
+  - **API Key Required:** `Z_AI_API_KEY`
+  - **Usage:** Fallback when both Tavily and Exa fail; tool name: `webSearchPrime`
+  - **Endpoint:** `https://api.z.ai/api/mcp/web_search_prime/mcp`
 
 **Required for Research Skill:**
 
@@ -398,7 +409,7 @@ Follow [README.md](./README.md) for quick start and install commands. See [AGENT
 - **OpenCode**: MCP configuration is created/updated at `~/.opencode/opencode.json` (or `$XDG_CONFIG_HOME/opencode/opencode.json`). Skills go to `~/.opencode/skills/`.
 - **Cursor**: Skills are installed to `~/.cursor/skills/` (user-level per [Cursor docs](https://cursor.com/docs/context/skills)). MCP configuration is created/updated at `~/.cursor/mcp.json` ([Cursor MCP docs](https://cursor.com/docs/context/mcp)). Set `CURSOR_HOME` to override the Cursor base path.
 - Existing MCP configurations are preserved; only missing MCPs are added.
-- All MCPs from the example file are configured for both agents: Tavily, Context7, OpenAlex, PDF Reader, Paper-search, Grep, Z.AI, and Graphite.
+- All MCPs from the example file are configured for both agents: Tavily, Context7, OpenAlex, PDF Reader, Paper-search, Grep, Z.AI (zread, vision, web-search-prime), and Graphite.
 - Requires `jq` to be installed for automatic configuration.
 - **Important:** After installation, update API keys in the `.env` file or directly in the config.
 

@@ -1,6 +1,6 @@
 ---
 name: search
-description: "Search the web, library documentation, and GitHub repositories using Tavily, Context7, and GitHub Grep MCPs. Use when: (1) Looking up documentation for libraries or frameworks, (2) Searching for code examples or tutorials, (3) Finding API references or specifications, (4) Researching best practices or solutions, (5) Looking up error messages or troubleshooting guides, (6) Finding library installation instructions, (7) Searching for real-world code patterns in GitHub repositories, or (8) When you need current web information or documentation. Triggers: search, look up, find documentation, search web, lookup, find examples, search for, how to, tutorial, API reference, documentation for, error message, troubleshoot, best practices, find code examples, GitHub search."
+description: "Search the web, library documentation, and GitHub repositories using Tavily, Context7, GitHub Grep, Exa fallback, and Z.AI Search MCP fallback. Use when: (1) Looking up documentation for libraries or frameworks, (2) Searching for code examples or tutorials, (3) Finding API references or specifications, (4) Researching best practices or solutions, (5) Looking up error messages or troubleshooting guides, (6) Finding library installation instructions, (7) Searching for real-world code patterns in GitHub repositories, or (8) When you need current web information or documentation. Triggers: search, look up, find documentation, search web, lookup, find examples, search for, how to, tutorial, API reference, documentation for, error message, troubleshoot, best practices, find code examples, GitHub search."
 metadata:
   author: ai-dev-atelier
   version: "1.0"
@@ -15,7 +15,7 @@ Search web, library docs, and GitHub code using progressive escalation.
 **Decision Tree:**
 - **Library/framework docs?** → Context7 `get-library-docs`
 - **Code examples/patterns?** → GitHub Grep `grep_searchGitHub`
-- **Web info/tutorials?** → Tavily `tavily_search`
+- **Web info/tutorials?** → Tavily `tavily_search` (fallback chain: Exa → Z.AI `webSearchPrime`)
 - **Error screenshot/diagram?** → Z.AI Vision `diagnose_error_screenshot` / `understand_technical_diagram`
 - **Multiple sources needed?** → Run tools in parallel
 
@@ -104,7 +104,12 @@ background_task({
 | `tavily_extract` | Get full content from specific URLs (after search) | `extract_depth`: "basic"/"advanced", `query`: rerank chunks by relevance |
 | `tavily_crawl` | Crawl multiple pages from a docs site | `max_depth`: 1-3, `limit`: max pages, `select_paths`: regex to include, `instructions`: natural language filter |
 | `tavily_map` | Discover site structure before crawling | `max_depth`: 1-3, `limit`: max URLs to return |
- | `websearch_web_search_exa` | **Fallback web search (unlimited quota)** - Use when Tavily quota exceeded or for bulk searches | `numResults`: 5-20, `type`: "auto"/"fast"/"deep" |
+
+### Web Fallback Providers
+| Tool | When to Use | Key Params |
+|------|-------------|------------|
+| `websearch_web_search_exa` | **Secondary fallback** when Tavily quota/execution fails | `numResults`: 5-20, `type`: "auto"/"fast" |
+| `webSearchPrime` (via `zai-web-search-prime` MCP) | **Tertiary fallback** when Exa also fails or returns empty/low-value results | `search_query` (required), `count`: 1-50, `search_recency_filter`, `search_domain_filter` |
 
 ### Context7 (Library Docs)
 | Tool | When to Use | Key Params |
@@ -222,8 +227,9 @@ useRegexp: true
 
 **Quota Management:**
 - Default to Tavily for important/critical searches (better relevance when quota available)
-- Fallback to Exa (`websearch_web_search_exa`) when Tavily quota exceeded (unlimited)
-- Don't retry quota errors - switch to Exa immediately on first failure
+- Fallback to Exa (`websearch_web_search_exa`) when Tavily quota/execution fails
+- If Exa also fails or is empty/low-quality, fallback to Z.AI `webSearchPrime`
+- Don't loop retries across providers; fail over immediately to next provider
 
 For advanced techniques: See `references/advanced-techniques.md`
 

@@ -18,7 +18,7 @@ Skills are organized directories containing `SKILL.md` files that follow the ope
 | [`use-graphite`](./use-graphite/SKILL.md) | Manage stacked PRs with Graphite CLI, auto-detect Graphite repos, block conflicting git commands | `scripts/graphite*.sh` |
 | [`code-review`](./code-review/SKILL.md) | Review code changes using CodeRabbit - uncommitted files (task mode) or all PR files vs main (pr mode) | `scripts/review-run.sh` |
 | [`resolve-pr-comments`](./resolve-pr-comments/SKILL.md) | Multi-agent PR comment resolution for bot reviews (CodeRabbit, Copilot, Gemini) | `scripts/pr-resolver*.sh` |
-| [`search`](./search/SKILL.md) | Search the web and library documentation using Tavily and Context7 MCPs | N/A (MCP-based skill) |
+| [`search`](./search/SKILL.md) | Search web/docs/code with Tavily + Context7 + GitHub Grep and fallback chain (Exa -> Z.AI Web Search) | N/A (MCP-based skill) |
 | [`research`](./research/SKILL.md) | Conduct academic research using OpenAlex, PDF extraction, and paper search MCPs with evidence cards | `scripts/research-*.sh` |
 | [`ui-animation`](./ui-animation/SKILL.md) | Guide tasteful UI animation implementation with easing, springs, timing, and accessibility | N/A (workflow skill) |
 | [`tdd`](./tdd/SKILL.md) | Implement Test-Driven Development with red-green-refactor workflow, hermetic testing, and test pyramid standards | N/A (workflow skill) |
@@ -68,8 +68,8 @@ Skills are organized directories containing `SKILL.md` files that follow the ope
 
 ### Search
 - **When to use**: Looking up documentation, code examples, API references, troubleshooting guides, best practices
-- **How agents use it**: Agents read `SKILL.md` and use MCP tools (Tavily, Context7)
-- **MCPs**: Tavily (web search), Context7 (library documentation)
+- **How agents use it**: Agents read `SKILL.md` and use MCP tools with fallback orchestration
+- **MCPs**: Tavily (primary web search), Context7 (library docs), Grep (GitHub code), Z.AI Web Search Prime (tertiary fallback)
 - **Setup**: Configure MCP servers in `config/mcps.json`
 
 ### Research

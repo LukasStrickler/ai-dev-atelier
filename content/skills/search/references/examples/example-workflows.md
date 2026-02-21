@@ -54,3 +54,15 @@ Practical examples of search workflows at different levels.
 2. **Level 2:** Add domain filtering: `include_domains: ["nextjs.org", "vercel.com"]`, extract top guides
 3. **Level 3:** Parallel searches for different aspects (performance, security, SEO), systematic comparison
 
+## Example 6: Fallback Chain (Tavily -> Exa -> Z.AI)
+
+**Query:** "latest MCP security incidents this month"
+
+**Workflow:**
+1. **Primary (Tavily):** `tavily_search` fails (quota or timeout)
+2. **Secondary (Exa):** `websearch_web_search_exa` returns empty or low-value results
+3. **Tertiary (Z.AI):** `webSearchPrime` with:
+   - `search_query`: "latest MCP security incidents this month"
+   - `count`: 5
+   - `search_recency_filter`: `oneMonth`
+4. ✅ Use Z.AI results and continue without retry loops across failed providers

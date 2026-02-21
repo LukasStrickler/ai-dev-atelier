@@ -64,7 +64,8 @@
 ## Error Handling
 
 - The Tavily MCP automatically handles rate limits, timeouts, and network failures
-- If a search fails, retry with simpler parameters or break into sub-queries
+- If Tavily fails, fail over to Exa; if Exa fails/returns empty, fail over to Z.AI `webSearchPrime`
+- If a provider fails, retry with simpler parameters only once before failing over
 - Use `return_exceptions=True` pattern when running multiple concurrent searches
 
 ## Credit Management

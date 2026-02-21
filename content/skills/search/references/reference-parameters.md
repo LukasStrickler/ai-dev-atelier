@@ -149,3 +149,20 @@ Complete reference for all Tavily MCP tool parameters.
 - `topic` - Narrow down large documentation sets
 - `page` - Get more content if initial results insufficient
 
+## Exa Fallback Parameters
+
+- Tool: `websearch_web_search_exa`
+- `query` (string, required) - Search query
+- `numResults` (integer, default: 8) - Number of results
+- `livecrawl` (enum: `"fallback"` or `"preferred"`, default: `"fallback"`)
+- `type` (enum: `"auto"` or `"fast"`, default: `"auto"`)
+- `contextMaxCharacters` (integer, default: 10000) - Max returned context characters
+
+## Z.AI Web Search Prime Fallback Parameters
+
+- Tool: `webSearchPrime` (via `zai-web-search-prime` MCP)
+- `search_query` (string, required) - Search query
+- `count` (integer, 1-50, default: 10) - Number of results
+- `search_engine` (string, default: `search-prime`)
+- `search_recency_filter` (enum: `oneDay`, `oneWeek`, `oneMonth`, `oneYear`, `noLimit`)
+- `search_domain_filter` (string, optional) - Domain restriction (for example `github.com`)
