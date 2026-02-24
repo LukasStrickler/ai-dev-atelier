@@ -1,6 +1,6 @@
-# Tavily Parameter Reference
+# Search Parameter Reference
 
-Complete reference for all Tavily MCP tool parameters.
+Complete reference for all search tool parameters: Tavily MCP, Exa fallback, and Z.AI Web Search Prime MCP.
 
 ## tavily_search Parameters
 
