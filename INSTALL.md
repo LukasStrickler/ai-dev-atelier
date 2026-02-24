@@ -376,7 +376,7 @@ Follow [README.md](./README.md) for quick start and install commands. See [AGENT
   - **API Key Required:** `Z_AI_API_KEY`
   - **Usage:** Semantic GitHub search and image/video analysis
 
-- **Z.AI Web Search MCP (`zai-web-search-prime`)** - Tertiary web search fallback
+- **Z.AI Web Search Prime MCP (`zai-web-search-prime`)** - Tertiary web search fallback
   - **Installation:** No local installation needed; configured automatically via URL in `config/mcps.json`
   - **API Key Required:** `Z_AI_API_KEY`
   - **Usage:** Fallback when both Tavily and Exa fail; tool name: `webSearchPrime`
