@@ -69,7 +69,7 @@ Skills are organized directories containing `SKILL.md` files that follow the ope
 ### Search
 - **When to use**: Looking up documentation, code examples, API references, troubleshooting guides, best practices
 - **How agents use it**: Agents read `SKILL.md` and use MCP tools with fallback orchestration
-- **MCPs**: Tavily (primary web search), Context7 (library docs), Grep (GitHub code), Z.AI Web Search Prime (tertiary fallback); Exa (secondary fallback, built-in tool)
+- **MCPs**: Tavily (primary web search), Context7 (library docs), Grep (GitHub code), Exa (secondary fallback, built-in tool), Z.AI Web Search Prime (tertiary fallback)
 - **Setup**: Configure MCP servers in `config/mcps.json`
 
 ### Research
