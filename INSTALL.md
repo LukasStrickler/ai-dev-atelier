@@ -347,14 +347,15 @@ Follow [README.md](./README.md) for quick start and install commands. See [AGENT
 **Required for Search Skill:**
 
 - **Tavily MCP** - Web search for general information, tutorials, and current content
-  - **Installation:** `npm install -g @tavily/mcp-server-tavily` or use `npx -y @tavily/mcp-server-tavily`
+  - **Installation:** Automatically configured by `install.sh` (no manual installation needed)
   - **API Key Required:** Get from https://tavily.com
-  - **Configuration:** Add to `config/mcps.json` with `TAVILY_API_KEY` environment variable
+  - **Configuration:** Added to `config/mcps.json` automatically
   - **Usage:** General web searches, tutorials, error messages, best practices
 
 - **Context7 MCP** - Library documentation and API references
-  - **Installation:** `npm install -g @context7/mcp-server` or use `npx -y @context7/mcp-server`
+  - **Installation:** Automatically configured by `install.sh` (no manual installation needed)
   - **API Key Required:** No
+  - **Configuration:** Added to `config/mcps.json` automatically
   - **Usage:** Library/framework documentation, API references, installation instructions
 
 - **Grep MCP** - Search across a million public GitHub repositories for code examples and patterns

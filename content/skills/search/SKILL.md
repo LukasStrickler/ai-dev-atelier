@@ -100,7 +100,7 @@ background_task({
 ### Tavily (Web Search)
 | Tool | When to Use | Key Params |
 |------|-------------|------------|
-| `tavily_search` | General web search, tutorials, blog posts, news | `search_depth`: "basic"/"advanced", `max_results`: 5-20, `time_range`: "day"/"week"/"month"/"year", `include_domains`: filter to specific sites |
+| `tavily_search` | General web search, tutorials, blog posts, news | `search_depth`: "basic"/"advanced", `maxResults`: 5-20, `time_range`: "day"/"week"/"month"/"year", `include_domains`: filter to specific sites |
 | `tavily_extract` | Get full content from specific URLs (after search) | `extract_depth`: "basic"/"advanced", `query`: rerank chunks by relevance |
 | `tavily_crawl` | Crawl multiple pages from a docs site | `max_depth`: 1-3, `limit`: max pages, `select_paths`: regex to include, `instructions`: natural language filter |
 | `tavily_map` | Discover site structure before crawling | `max_depth`: 1-3, `limit`: max URLs to return |
