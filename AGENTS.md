@@ -4,7 +4,7 @@
 **Context:** AI Dev Atelier - Agent Skills & MCP Pack
 
 ## OVERVIEW
-Production-grade skill pack for OpenCode agents. 10 skills (Agent Skills standard), 9 MCP servers, hooks, and telemetry. Pure Bash implementation + JSON config.
+Production-grade skill pack for OpenCode agents. 10 skills (Agent Skills standard), 10 MCP servers, hooks, and telemetry. Pure Bash implementation + JSON config.
 
 ## STRUCTURE
 ```

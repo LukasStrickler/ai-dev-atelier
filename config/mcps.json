@@ -56,6 +56,18 @@
         "Authorization": "Bearer Z_AI_API_KEY"
       }
     },
+    "zai-web-search-prime": {
+      "_description": "Z.AI Web Search Prime MCP - Web search fallback for 'search' skill when Tavily/Exa fail.",
+      "_quota": "1,000 calls/month shared quota with zai-zread (Pro Plan).",
+      "_skills": ["search"],
+      "_enabledTools": {
+        "webSearchPrime": "Web search fallback for real-time results and long-tail queries"
+      },
+      "url": "https://api.z.ai/api/mcp/web_search_prime/mcp",
+      "headers": {
+        "Authorization": "Bearer Z_AI_API_KEY"
+      }
+    },
     "zai-vision": {
       "_description": "Z.AI Vision MCP - Image/video analysis, UI code gen, diagram understanding. Optional for 'ui-animation', 'code-review', 'docs-write' skills.",
       "_quota": "Uses 5-hour prompt pool (not MCP call quota). Requires GLM Coding Plan.",
